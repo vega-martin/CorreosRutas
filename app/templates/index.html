@@ -2,31 +2,64 @@
 
 {% block content %}
 
-    <h1>Hola</h1>
-    <p class="special">Lorem ipsum dolor sit amet consectetur adipisicing elit. Tempore ducimus cumque pariatur nemo itaque esse quos odit sapiente nobis iusto aspernatur inventore nesciunt architecto ipsa ipsam suscipit, necessitatibus corporis minus.</p>
+    <h1>Visualizador de puntos de parada</h1>
 
+    <div class="formulario">
+        <h2>Elegir fichero A</h2>
+        <form method="POST" action="{{ url_for('subidaArchivos.subir_archivo_A') }}" enctype="multipart/form-data">
+            <input type="file" name="FicheroA" accept=".csv, .xls, .xlsx" required>
+            <input type="submit" value="Subir Fichero A">
+        </form>
+        <br>
 
-    <label for="PDA">Elige al menos una de las siguietnes opciones:</label><br>
-    <select name="PDA" id="PDA" multiple>
-        <!--FIXME: hay que añadir un bucle for para que recorra las pdas disponibles-->
-        <!--TODO: hay que buscar una froma mejor de seleccionar las opciones y que "todas" no sea una de las opciones sino que sea un boton a parte-->
-        <!--{% for dpa in pdas %}{% endfor %}-->
-        <option value="todas">todas</option>
-        <option value="pda1">PDA1</option>
-        <option value="pda2">PDA2</option>
-        <option value="pda3">PDA3</option>
-        <option value="pda4">PDA4</option>
-    </select>
+        <h2>Elegir fichero B</h2>
+        <form method="POST" action="{{ url_for('subidaArchivos.subir_archivo_B') }}" enctype="multipart/form-data">
+            <input type="file" name="FicheroB" accept=".csv, .xls, .xlsx" required>
+            <input type="submit" value="Subir Fichero B">
+        </form>
+        <br>
 
-    <p class="special">Otra posible forma</p>
+        <h2>Elegir fichero C</h2>
+        <form method="POST" action="{{ url_for('subidaArchivos.subir_archivo_C') }}" enctype="multipart/form-data">
+            <input type="file" name="FicheroC" accept=".csv, .xls, .xlsx" required>
+            <input type="submit" value="Subir Fichero C">
+        </form>
+        <br>
+    </div>
+
+    <div class="formulario">
+        <h2>Seleccionar PDAs</h2>
+        <select name="pdaSelect" id="pdaSelect" multiple>
+            
+        </select>
+    </div>
+
+    <div class="formulario">
+        <h2>Seleccionar Fechas</h2>
+        <label for="fechaInicio">Fecha de inicio:</label>
+        <select name="fechaInicio" id="fechaInicio">
+
+        </select>
+
+        <label for="fechaFin">Fecha de final:</label>
+        <select name="fechaFin" id="fechaFin">
+
+        </select>
+        <br>
+    </div>
     <br>
-    <br>
+    <div class="acciones">
+        <button type="button">Generar mapa</button>
+        <button type="button">Detectar paradas</button>
+        <button type="button">Generar mapa con puntos de paradas</button>
+        <button type="button">Gráfica velodad/tiempo</button>
+    </div>
 
-    <p>Selecciona:</p>
-    <label><input type="checkbox" name="PDAs" value="pda5"> PDA5</label>
-    <label><input type="checkbox" name="PDAs" value="pda6"> PDA6</label>
-    <label><input type="checkbox" name="PDAs" value="pda7"> PDA7</label>
-    <label><input type="checkbox" name="PDAs" value="pda8"> PDA8</label>
-    <label><input type="checkbox" name="PDAs" value="pda9"> PDA9</label>
+    <div class="mapa">
+        <h2>Mapa generado</h2>
+        <iframe id="mapaRenderizado" src="" width="100%" height="500px" style="border:1px solid #ccc;"></iframe>
+        <br>
+        <a id="descagarMapa" href="#" target="_blank">Descargar Mapa</a>
+    </div>
 
 {% endblock %}

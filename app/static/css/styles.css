@@ -2,3 +2,15 @@
     color: red;
     font-size: xx-large;
 }
+.formulario, .acciones, .mapa {
+    margin-top: 20 px;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 20 px;
+}
+
+select, input[type="file"], button {
+    margin-top: 5 px;
+} 
