@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+    <h1>Hola</h1>
+    <p class="special">Lorem ipsum dolor sit amet consectetur adipisicing elit. Tempore ducimus cumque pariatur nemo itaque esse quos odit sapiente nobis iusto aspernatur inventore nesciunt architecto ipsa ipsam suscipit, necessitatibus corporis minus.</p>
+
+
+    <label for="PDA">Elige al menos una de las siguietnes opciones:</label><br>
+    <select name="PDA" id="PDA" multiple>
+        <!--FIXME: hay que añadir un bucle for para que recorra las pdas disponibles-->
+        <!--TODO: hay que buscar una froma mejor de seleccionar las opciones y que "todas" no sea una de las opciones sino que sea un boton a parte-->
+        <!--{% for dpa in pdas %}{% endfor %}-->
+        <option value="todas">todas</option>
+        <option value="pda1">PDA1</option>
+        <option value="pda2">PDA2</option>
+        <option value="pda3">PDA3</option>
+        <option value="pda4">PDA4</option>
+    </select>
+
+    <p class="special">Otra posible forma</p>
+    <br>
+    <br>
+
+    <p>Selecciona:</p>
+    <label><input type="checkbox" name="PDAs" value="pda5"> PDA5</label>
+    <label><input type="checkbox" name="PDAs" value="pda6"> PDA6</label>
+    <label><input type="checkbox" name="PDAs" value="pda7"> PDA7</label>
+    <label><input type="checkbox" name="PDAs" value="pda8"> PDA8</label>
+    <label><input type="checkbox" name="PDAs" value="pda9"> PDA9</label>
+
+{% endblock %}
