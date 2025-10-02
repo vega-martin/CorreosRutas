@@ -7,21 +7,21 @@
     <div class="formulario">
         <h2>Elegir fichero A</h2>
         <form method="POST" action="{{ url_for('subidaArchivos.subir_archivo_A') }}" enctype="multipart/form-data">
-            <input type="file" name="FicheroA" accept=".csv, .xls, .xlsx" required>
+            <input type="file" name="FicheroA" accept=".csv" required>
             <input type="submit" value="Subir Fichero A">
         </form>
         <br>
 
         <h2>Elegir fichero B</h2>
         <form method="POST" action="{{ url_for('subidaArchivos.subir_archivo_B') }}" enctype="multipart/form-data">
-            <input type="file" name="FicheroB" accept=".csv, .xls, .xlsx" required>
+            <input type="file" name="FicheroB" accept=".csv" required>
             <input type="submit" value="Subir Fichero B">
         </form>
         <br>
 
         <h2>Elegir fichero C</h2>
         <form method="POST" action="{{ url_for('subidaArchivos.subir_archivo_C') }}" enctype="multipart/form-data">
-            <input type="file" name="FicheroC" accept=".csv, .xls, .xlsx" required>
+            <input type="file" name="FicheroC" accept=".csv" required>
             <input type="submit" value="Subir Fichero C">
         </form>
         <br>
