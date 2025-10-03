@@ -27,6 +27,14 @@
         <br>
     </div>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
     <div class="formulario">
         <h2>Seleccionar PDAs</h2>
         <select name="pdaSelect" id="pdaSelect" multiple>
