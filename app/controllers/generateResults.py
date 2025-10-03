@@ -7,11 +7,10 @@ import os
 generateResults_bp = Blueprint('generateResults', __name__, template_folder='templates')
 
 
-@generateResults_bp.route('/generateMap', methods=['POST'])
-def generate_map():
+@generateResults_bp.route('/generateResults', methods=['POST'])
+def manage_action():
     response = send_data_for_processing("hola".encode('utf-8'))
     print(f"Respuesta del server: {response}")
-
     return redirect(url_for('main.root'))
 
 
