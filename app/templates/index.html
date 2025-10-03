@@ -57,10 +57,18 @@
     </div>
     <br>
     <div class="acciones">
-        <button type="button">Generar mapa</button>
-        <button type="button">Detectar paradas</button>
-        <button type="button">Generar mapa con puntos de paradas</button>
-        <button type="button">Gráfica velodad/tiempo</button>
+        <form action="{{ url_for('generateResults.generate_map') }}" method="post">
+            <button type="submit">Generar mapa</button>
+        </form>
+        <form action="{{ url_for('generateResults.detect_stops') }}" method="post">
+            <button type="submit">Detectar paradas</button>
+        </form>
+        <form action="{{ url_for('generateResults.generate_stops') }}" method="post">
+            <button type="submit">Generar mapa con puntos de paradas</button>
+        </form>
+        <form action="{{ url_for('generateResults.generate_graph') }}" method="post">
+            <button type="submit">Gráfica velodad/tiempo</button>
+        </form>
     </div>
 
     <div class="mapa">
