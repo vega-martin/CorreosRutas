@@ -60,6 +60,8 @@ def generar_mapa():
     fechas = get_fechas(current_app.config['UPLOADED_FILES']['A'])
     return render_template('options.html', pdas=pdas, fechas=fechas)
 
+
+
 @generateResults_bp.route('/detectar_paradas')
 def detectar_paradas():
     if not current_app.config['UPLOADED_FILES']['B'] or not current_app.config['UPLOADED_FILES']['C']:

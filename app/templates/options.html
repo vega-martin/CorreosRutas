@@ -3,9 +3,9 @@
 {% block content %}
 
     <div>
-        <form id="forms" method="POST" action="/generateResults">
+        <form id="forms" method="POST" action="/generateResults" onsubmit="return validarFechas()">
             <h2>Seleccionar PDAs</h2>
-            <select name="pdaSelect" id="pdaSelect" multiple>
+            <select name="pda" id="pda" multiple>
                 {% for pda in pdas %}
                     <option value="{{ pda }}">{{ pda }}</option>
                 {% endfor %}
@@ -27,9 +27,45 @@
                 {% endfor %}
             </select>
             <br>
-            
+            <br><br>
+            <button type="submit">Generar</button> 
         </form>
+        <script>
+            const pdaSelect = document.getElementById('pda');
+            const fechaInicio = document.getElementById('fechaInicio');
+            const fechaFin = document.getElementById('fechaFin');
 
+            pdaSelect.addEventListener('change', function () {
+                const pda = this.value;
+                if (!pda) return;
+
+                fetch(`/fechas_por_pda?pda=${encodeURIComponent(pda)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        fechaInicio.innerHTML = '';
+                        fechaFin.innerHTML = '';
+                        data.fechas.forEach(fecha => {
+                            const opt1 = document.createElement('option');
+                            const opt2 = document.createElement('option');
+                            opt1.value = opt2.value = fecha;
+                            opt1.text = opt2.text = fecha;
+                            fechaInicio.appendChild(opt1);
+                            fechaFin.appendChild(opt2);
+                        });
+                    });
+            });
+
+            function validarFechas() {
+                const ini = fechaInicio.value;
+                const fin = fechaFin.value;
+
+                if (ini >= fin) {
+                    alert("La fecha de fin debe ser mayor que la de inicio.");
+                    return false;
+                }
+                return true;
+            }
+        </script>
     </div>
 
 {% endblock %}
