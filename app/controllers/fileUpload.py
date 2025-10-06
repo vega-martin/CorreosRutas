@@ -16,54 +16,6 @@ def valid_extension(name):
 
 
 # ------------------------------------------------------------
-# OBTENCIÓN DE OPCIONES
-# ------------------------------------------------------------
-
-def get_pdas(path):
-    try:
-        df = pd.read_csv(path, delimiter=';', low_memory=False)
-    except Exception as e:
-        print(f"Error al leer el archivo CSV: {e}")
-        return []
-
-    # Lista de nombres de columnas posibles que pueden contener las PDAs
-    posibles_columnas = ['cod_inv_pda', 'Num Inv', 'COD_SECCION']
-
-    for col in posibles_columnas:
-        if col in df.columns:
-            pdas = sorted(df[col].dropna().unique())
-            return pdas  # Devuelve al encontrar la primera columna válida
-
-    # Si no se encuentra ninguna columna válida
-    print("No se encontró ninguna columna válida para extraer PDAs.")
-    return []
-
-
-def get_fechas(path):
-    try:
-        df = pd.read_csv(path, delimiter=';', low_memory=False)
-    except Exception as e:
-        print(f"Error al leer el archivo CSV: {e}")
-        return []
-
-    # Lista de nombres de columnas posibles que pueden contener las PDAs
-    posibles_columnas = ['cod_inv_pda', 'Num Inv', 'COD_SECCION']
-
-    for col in posibles_columnas:
-        if col in df.columns:
-            fechas = sorted(df[col].dropna().unique())
-            return fechas  # Devuelve al encontrar la primera columna válida
-
-    # Si no se encuentra ninguna columna válida
-    print("No se encontró ninguna columna válida para extraer PDAs.")
-    return []
-
-@fileUpload_bp.route("/options")
-def options():
-    return render_template("options.html")
-
-
-# ------------------------------------------------------------
 # COMPROBACION DE FICHEROS
 # ------------------------------------------------------------
 
@@ -89,7 +41,6 @@ def valid_file(path, file_type):
         return jsonify({'error': f'El fichero CSV debe contener las columnas: {", ".join(required_columns)}'}), 400
     
     return jsonify({'message': 'Archivo válido'}), 200
-
 
 
 # ------------------------------------------------------------

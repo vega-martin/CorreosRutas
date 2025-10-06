@@ -1,10 +1,52 @@
-from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash
+from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template
 from werkzeug.utils import secure_filename
 from app.utils.socketClient import send_data_for_processing
 import pandas as pd
-import os
 
 generateResults_bp = Blueprint('generateResults', __name__, template_folder='templates')
+
+# ------------------------------------------------------------
+# OBTENCIÓN DE OPCIONES
+# ------------------------------------------------------------
+
+def get_pdas(path):
+    try:
+        df = pd.read_csv(path, delimiter=';', low_memory=False)
+    except Exception as e:
+        print(f"Error al leer el archivo CSV: {e}")
+        return []
+
+    # Lista de nombres de columnas posibles que pueden contener las PDAs
+    posibles_columnas = ['cod_inv_pda', 'Num Inv', 'COD_SECCION']
+
+    for col in posibles_columnas:
+        if col in df.columns:
+            pdas = sorted(df[col].dropna().unique())
+            return pdas  # Devuelve al encontrar la primera columna válida
+
+    # Si no se encuentra ninguna columna válida
+    print("No se encontró ninguna columna válida para extraer PDAs.")
+    return []
+
+
+def get_fechas(path):
+    try:
+        df = pd.read_csv(path, delimiter=';', low_memory=False)
+    except Exception as e:
+        print(f"Error al leer el archivo CSV: {e}")
+        return []
+
+    # Lista de nombres de columnas posibles que pueden contener las PDAs
+    posibles_columnas = ['fec_lectura_medicion', 'Fec Actividad', 'INSTANTE']
+
+    for col in posibles_columnas:
+        if col in df.columns:
+            fechas = sorted(df[col].dropna().unique())
+            return fechas  # Devuelve al encontrar la primera columna válida
+
+    # Si no se encuentra ninguna columna válida
+    print("No se encontró ninguna columna válida para extraer PDAs.")
+    return []
 
 
 
@@ -14,7 +56,9 @@ def generar_mapa():
         flash("Error: Necesitas subir el fichero A para generar el mapa.", 'error')
         return redirect(url_for('main.root'))
     # Aquí iría la lógica de generar el mapa
-    return "Mapa generado con éxito."
+    pdas = get_pdas(current_app.config['UPLOADED_FILES']['A'])
+    fechas = get_fechas(current_app.config['UPLOADED_FILES']['A'])
+    return render_template('options.html', pdas=pdas, fechas=fechas)
 
 @generateResults_bp.route('/detectar_paradas')
 def detectar_paradas():
