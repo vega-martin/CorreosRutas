@@ -28,59 +28,38 @@
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
+      {% if messages %}
+        <ul>
+          {% for category, message in messages %}
+            <li style="color: {{ 'red' if category == 'error' else 'green' }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
     {% endwith %}
 
-    <div>
-        <form id="forms" method="POST" action="/generateResults">
-            <h2>Seleccionar PDAs</h2>
-            <select name="pdaSelect" id="pdaSelect" multiple>
-                <!-- opciones aquí -->
-            </select>
-            <br>
+    <h2>Acciones</h2>
+    <form action="{{ url_for('generateResults.generar_mapa') }}" method="get">
+        <button type="submit">Generar Mapa</button>
+    </form>
 
-            <h2>Seleccionar Fechas</h2>
-            <label for="fechaInicio">Fecha de inicio:</label>
-            <select name="fechaInicio" id="fechaInicio">
-                <!-- opciones aquí -->
-            </select>
+    <form action="{{ url_for('generateResults.detectar_paradas') }}" method="get">
+        <button type="submit">Detectar Paradas</button>
+    </form>
 
-            <label for="fechaFin">Fecha de final:</label>
-            <select name="fechaFin" id="fechaFin">
-                <!-- opciones aquí -->
-            </select>
-            <br>
+    <form action="{{ url_for('generateResults.generar_paradas') }}" method="get">
+        <button type="submit">Generar Paradas</button>
+    </form>
 
-            <input type="text" name="someTextInput"> <!-- Ejemplo de campo adicional -->
-
-            <!-- Campo oculto para la acción -->
-            <input type="hidden" name="action" id="action">
-
-            <!-- Botones -->
-            <button type="submit" onclick="setAction('generate_map')">Generar mapa</button>
-            <button type="submit" onclick="setAction('detect_stops')">Detectar paradas</button>
-            <button type="submit" onclick="setAction('generate_stops')">Generar mapa con puntos de paradas</button>
-            <button type="submit" onclick="setAction('generate_graph')">Gráfica velocidad/tiempo</button>
-        </form>
-
-        <script>
-            // Función para actualizar el campo oculto con la acción seleccionada
-            function setAction(action) {
-                document.getElementById('action').value = action;
-            }
-        </script>
-
-    </div>
-
+    <form action="{{ url_for('generateResults.grafica_vel_tiempo') }}" method="get">
+        <button type="submit">Gráfica Vel/Tiempo</button>
+    </form>
+    
+<!--
     <div class="mapa">
         <h2>Mapa generado</h2>
         <iframe id="mapaRenderizado" src="" width="100%" height="500px" style="border:1px solid #ccc;"></iframe>
         <br>
         <a id="descagarMapa" href="#" target="_blank">Descargar Mapa</a>
     </div>
-
+-->
 {% endblock %}

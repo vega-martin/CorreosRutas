@@ -1,4 +1,4 @@
-from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash
+from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template
 from werkzeug.utils import secure_filename
 import pandas as pd
 import os
@@ -6,10 +6,66 @@ import os
 fileUpload_bp = Blueprint('fileUpload', __name__, template_folder='templates')
 
 
+# ------------------------------------------------------------
+# FUNCIONES AUXILIARES
+# ------------------------------------------------------------
+
 def valid_extension(name):
     valid_ext = current_app.config['ALLOWED_EXTENSIONS']
     return '.' in name and name.rsplit('.', 1)[1].lower() in valid_ext
 
+
+# ------------------------------------------------------------
+# OBTENCIÓN DE OPCIONES
+# ------------------------------------------------------------
+
+def get_pdas(path):
+    try:
+        df = pd.read_csv(path, delimiter=';', low_memory=False)
+    except Exception as e:
+        print(f"Error al leer el archivo CSV: {e}")
+        return []
+
+    # Lista de nombres de columnas posibles que pueden contener las PDAs
+    posibles_columnas = ['cod_inv_pda', 'Num Inv', 'COD_SECCION']
+
+    for col in posibles_columnas:
+        if col in df.columns:
+            pdas = sorted(df[col].dropna().unique())
+            return pdas  # Devuelve al encontrar la primera columna válida
+
+    # Si no se encuentra ninguna columna válida
+    print("No se encontró ninguna columna válida para extraer PDAs.")
+    return []
+
+
+def get_fechas(path):
+    try:
+        df = pd.read_csv(path, delimiter=';', low_memory=False)
+    except Exception as e:
+        print(f"Error al leer el archivo CSV: {e}")
+        return []
+
+    # Lista de nombres de columnas posibles que pueden contener las PDAs
+    posibles_columnas = ['cod_inv_pda', 'Num Inv', 'COD_SECCION']
+
+    for col in posibles_columnas:
+        if col in df.columns:
+            fechas = sorted(df[col].dropna().unique())
+            return fechas  # Devuelve al encontrar la primera columna válida
+
+    # Si no se encuentra ninguna columna válida
+    print("No se encontró ninguna columna válida para extraer PDAs.")
+    return []
+
+@fileUpload_bp.route("/options")
+def options():
+    return render_template("options.html")
+
+
+# ------------------------------------------------------------
+# COMPROBACION DE FICHEROS
+# ------------------------------------------------------------
 
 @fileUpload_bp.route('/validateFile', methods=['POST'])
 def valid_file(path, file_type):
@@ -35,6 +91,11 @@ def valid_file(path, file_type):
     return jsonify({'message': 'Archivo válido'}), 200
 
 
+
+# ------------------------------------------------------------
+# LECTURA Y DESCARGA DE FICHEROS EN LOCAL
+# ------------------------------------------------------------
+
 @fileUpload_bp.route('/fileUploadA', methods=['POST'])
 def upload_file_A():
     f = request.files['fileA']
@@ -43,12 +104,12 @@ def upload_file_A():
     if f and valid_extension(data_filename):
         save_path = os.path.join(current_app.config['UPLOAD_FOLDER'], data_filename)
         f.save(save_path)
-        session['uploaded_data_A_file_path'] = save_path
 
-        response = valid_file(session['uploaded_data_A_file_path'], "A")
+        response = valid_file(save_path, "A")
         if response[1] != 200:
             os.remove(save_path)
             flash(response[0].json['error'], 'error')
+        current_app.config['UPLOADED_FILES']['A'] = save_path
 
         return redirect(url_for('main.root'))
     
@@ -66,10 +127,11 @@ def upload_file_B():
         f.save(save_path)
         session['uploaded_data_B_file_path'] = save_path
 
-        response = valid_file(session['uploaded_data_B_file_path'], "B")
+        response = valid_file(save_path, "B")
         if response[1] != 200:
             os.remove(save_path)
             flash(response[0].json['error'], 'error')
+        current_app.config['UPLOADED_FILES']['B'] = save_path
         
         return redirect(url_for('main.root'))
     
@@ -87,10 +149,11 @@ def upload_file_C():
         f.save(save_path)
         session['uploaded_data_C_file_path'] = save_path
 
-        response = valid_file(session['uploaded_data_C_file_path'], "C")
+        response = valid_file(save_path, "C")
         if response[1] != 200:
             os.remove(save_path)
             flash(response[0].json['error'], 'error')
+        current_app.config['UPLOADED_FILES']['C'] = save_path
         
         return redirect(url_for('main.root'))
     

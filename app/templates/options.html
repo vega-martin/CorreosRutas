@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+    <div>
+        <form id="forms" method="POST" action="/generateResults">
+            <h2>Seleccionar PDAs</h2>
+            <select name="pdaSelect" id="pdaSelect" multiple>
+                {% for pda in pdas %}
+                    <option value="{{ pda }}">{{ pda }}</option>
+                {% endfor %}
+            </select>
+            <br>
+
+            <h2>Seleccionar Fechas</h2>
+            <label for="fechaInicio">Fecha de inicio:</label>
+            <select name="fechaInicio" id="fechaInicio">
+                {% for fecha in fechas %}
+                    <option value="{{ fecha }}">{{ fecha }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="fechaFin">Fecha de final:</label>
+            <select name="fechaFin" id="fechaFin">
+                {% for fecha in fechas %}
+                    <option value="{{ fecha }}">{{ fecha }}</option>
+                {% endfor %}
+            </select>
+            <br>
+            
+            <input type="hidden" name="action" id="action">
+            <!-- Botones -->
+            <button type="submit" onclick="setAction('generate_map')">Generar mapa</button>
+            <button type="submit" onclick="setAction('detect_stops')">Detectar paradas</button>
+            <button type="submit" onclick="setAction('generate_stops')">Generar mapa con puntos de paradas</button>
+            <button type="submit" onclick="setAction('generate_graph')">Gráfica velocidad/tiempo</button>
+        </form>
+
+        <script>
+            // Función para actualizar el campo oculto con la acción seleccionada
+            function setAction(action) {
+                document.getElementById('action').value = action;
+            }
+        </script>
+    </div>
+
+{% endblock %}

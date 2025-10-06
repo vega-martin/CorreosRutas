@@ -7,32 +7,35 @@ import os
 generateResults_bp = Blueprint('generateResults', __name__, template_folder='templates')
 
 
-@generateResults_bp.route('/generateResults', methods=['POST'])
-def manage_action():
-    response = send_data_for_processing("hola".encode('utf-8'))
-    print(f"Respuesta del server: {response}")
-    return redirect(url_for('main.root'))
 
+@generateResults_bp.route('/generar_mapa')
+def generar_mapa():
+    if not current_app.config['UPLOADED_FILES']['A']:
+        flash("Error: Necesitas subir el fichero A para generar el mapa.", 'error')
+        return redirect(url_for('main.root'))
+    # Aquí iría la lógica de generar el mapa
+    return "Mapa generado con éxito."
 
-@generateResults_bp.route('/detectStops', methods=['POST'])
-def detect_stops():
-    response = send_data_for_processing("hola".encode('utf-8'))
-    print(f"Respuesta del server: {response}")
+@generateResults_bp.route('/detectar_paradas')
+def detectar_paradas():
+    if not current_app.config['UPLOADED_FILES']['B'] or not current_app.config['UPLOADED_FILES']['C']:
+        flash("Error: Necesitas subir los ficheros B y C para detectar paradas.", 'error')
+        return redirect(url_for('main.root'))
+    # Lógica de detección de paradas
+    return "Paradas detectadas correctamente."
 
-    return redirect(url_for('main.root'))
+@generateResults_bp.route('/generar_paradas')
+def generar_paradas():
+    if not all([current_app.config['UPLOADED_FILES']['A'], current_app.config['UPLOADED_FILES']['B'], current_app.config['UPLOADED_FILES']['C']]):
+        flash("Error: Necesitas subir los ficheros A, B y C para generar paradas.", 'error')
+        return redirect(url_for('main.root'))
+    # Lógica para generar paradas
+    return "Paradas generadas correctamente."
 
-
-@generateResults_bp.route('/generateStops', methods=['POST'])
-def generate_stops():
-    response = send_data_for_processing("hola".encode('utf-8'))
-    print(f"Respuesta del server: {response}")
-
-    return redirect(url_for('main.root'))
-
-
-@generateResults_bp.route('/generateGraph', methods=['POST'])
-def generate_graph():
-    response = send_data_for_processing("hola".encode('utf-8'))
-    print(f"Respuesta del server: {response}")
-
-    return redirect(url_for('main.root'))
+@generateResults_bp.route('/grafica_vel_tiempo')
+def grafica_vel_tiempo():
+    if not current_app.config['UPLOADED_FILES']['A']:
+        flash("Error: Necesitas subir el fichero A para generar la gráfica velocidad/tiempo.", 'error')
+        return redirect(url_for('main.root'))
+    # Lógica para gráfica
+    return "Gráfica velocidad/tiempo generada."
