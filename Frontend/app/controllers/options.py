@@ -4,9 +4,12 @@ import pandas as pd
 
 options_bp = Blueprint('options', __name__, template_folder='templates')
 
+
+
 @options_bp.route('/options')
 def options():
     return render_template('options.html')
+
 
 
 def normalizar_fechas(lista_fechas):
@@ -15,10 +18,10 @@ def normalizar_fechas(lista_fechas):
     for fecha in lista_fechas:
         try:
             # Convertir con pandas, autodetecta formato
-            fecha_convertida = pd.to_datetime(fecha, dayfirst=True, errors='coerce')
+            fecha_convertida = pd.to_datetime(fecha, errors='coerce')
             if pd.isna(fecha_convertida):
                 continue  # si no se pudo convertir, se ignora
-            fechas_convertidas.append(fecha_convertida.strftime('%Y-%m-%d'))
+            fechas_convertidas.append(fecha_convertida.strftime('%d-%m-%Y'))
         except Exception as e:
             print(f"Error al convertir la fecha {fecha}: {e}")
 
@@ -27,13 +30,7 @@ def normalizar_fechas(lista_fechas):
 
 
 
-def get_fechas_por_pda(path, pda):
-    try:
-        df = pd.read_csv(path, delimiter=';', low_memory=False)
-    except Exception as e:
-        print(f"Error al leer el archivo CSV: {e}")
-        return []
-
+def get_fechas_por_pda(df, pda):
     posibles_columnas_fecha = ['fec_lectura_medicion', 'Fec Actividad', 'INSTANTE']
     posibles_columnas_pda = ['cod_inv_pda', 'Num Inv', 'COD_SECCION']
 
@@ -48,16 +45,42 @@ def get_fechas_por_pda(path, pda):
         print("No se encontraron columnas válidas para fechas o PDAs.")
         return []
 
+
+
+def get_fechas_por_todas_las_pdas(df):
+    posibles_columnas_fecha = ['fec_lectura_medicion', 'Fec Actividad', 'INSTANTE']
+    col_fecha = next((col for col in posibles_columnas_fecha if col in df.columns), None)
+
+    if col_fecha:
+        fechas = sorted(df[col_fecha].dropna().unique())
+        return normalizar_fechas(fechas)
+    else:
+        print("No se encontró una columna válida de fechas.")
+        return []
+
+
+
 @options_bp.route('/fechas_por_pda')
 def fechas_por_pda():
     pda = request.args.get('pda')
     path = current_app.config['UPLOADED_FILES']['A']
+    try:
+        df = pd.read_csv(path, delimiter=';', low_memory=False)
+    except Exception as e:
+        print(f"Error al leer el archivo CSV: {e}")
+        return []
 
     if not path or not pda:
         return jsonify({'fechas': []})
 
-    fechas = get_fechas_por_pda(path, pda)
+    if pda == "TODAS":
+        fechas = get_fechas_por_todas_las_pdas(df)
+    else:
+        fechas = get_fechas_por_pda(df, pda)
+
     return jsonify({'fechas': fechas})
+
+
 
 @options_bp.route('/procesar_mapa', methods=['POST'])
 def procesar_mapa():
@@ -73,5 +96,4 @@ def procesar_mapa():
         flash("La fecha de fin debe ser mayor que la de inicio", "error")
         return redirect(url_for('options_bp.generar_mapa'))
 
-    # Procesar datos (mapa, gráfico, etc.)
-    return f"Procesando mapa para PDA {pda} entre {fecha_inicio} y {fecha_fin}"
+    return f"Procesando mapa para PDA: {pda} entre {fecha_inicio} y {fecha_fin}"

@@ -3,33 +3,27 @@
 {% block content %}
 
     <div>
-        <form id="forms" method="POST" action="/generateResults" onsubmit="return validarFechas()">
-            <h2>Seleccionar PDAs</h2>
-            <select name="pda" id="pda" multiple>
+        <form id="forms" method="POST" action="/procesar_mapa" onsubmit="return validarFormulario();">
+            <h2>Seleccionar PDA</h2>
+            <select name="pda" id="pda" size="6">
+                <option value="TODAS">Todas</option>
                 {% for pda in pdas %}
                     <option value="{{ pda }}">{{ pda }}</option>
                 {% endfor %}
             </select>
-            <br>
+            <br><br>
 
             <h2>Seleccionar Fechas</h2>
             <label for="fechaInicio">Fecha de inicio:</label>
-            <select name="fechaInicio" id="fechaInicio">
-                {% for fecha in fechas %}
-                    <option value="{{ fecha }}">{{ fecha }}</option>
-                {% endfor %}
-            </select>
+            <select name="fecha_inicio" id="fechaInicio"></select>
 
             <label for="fechaFin">Fecha de final:</label>
-            <select name="fechaFin" id="fechaFin">
-                {% for fecha in fechas %}
-                    <option value="{{ fecha }}">{{ fecha }}</option>
-                {% endfor %}
-            </select>
-            <br>
-            <br><br>
-            <button type="submit">Generar</button> 
+            <select name="fecha_fin" id="fechaFin"></select>
+            <br><br><br>
+
+            <button type="submit">Generar</button>
         </form>
+
         <script>
             const pdaSelect = document.getElementById('pda');
             const fechaInicio = document.getElementById('fechaInicio');
@@ -37,7 +31,12 @@
 
             pdaSelect.addEventListener('change', function () {
                 const pda = this.value;
-                if (!pda) return;
+
+                if (!pda) {
+                    fechaInicio.innerHTML = '';
+                    fechaFin.innerHTML = '';
+                    return;
+                }
 
                 fetch(`/fechas_por_pda?pda=${encodeURIComponent(pda)}`)
                     .then(response => response.json())
@@ -55,14 +54,20 @@
                     });
             });
 
-            function validarFechas() {
+            function validarFormulario() {
                 const ini = fechaInicio.value;
                 const fin = fechaFin.value;
+
+                if (!ini || !fin) {
+                    alert("Debes seleccionar una fecha de inicio y de fin.");
+                    return false;
+                }
 
                 if (ini >= fin) {
                     alert("La fecha de fin debe ser mayor que la de inicio.");
                     return false;
                 }
+
                 return true;
             }
         </script>
