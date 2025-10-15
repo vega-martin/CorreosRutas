@@ -76,3 +76,157 @@ h1, h2 {
 .logout-btn:hover {
     background-color: #e74c3c;
 }
+.generate-btn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.generate-btn:hover {
+    background-color: #218838;
+    transform: translateY(-2px);
+}
+
+.generate-btn:active {
+    background-color: #1e7e34;
+    transform: translateY(0);
+}
+
+.contenedor {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+}
+
+.custom-select {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.select-btn {
+    background-color: #e9eff6;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    width: 100%;
+    text-align: left;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.select-btn:hover {
+    background-color: #dce7f3;
+}
+
+.options {
+    display: none;
+    position: absolute;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    width: 100%;
+    z-index: 10;
+    max-height: 180px;
+    overflow-y: auto;
+    margin-top: 4px;
+}
+
+.options div {
+    padding: 10px 15px;
+    cursor: pointer;
+}
+
+.options div:hover {
+    background-color: #f1f4f9;
+}
+
+input[type="date"] {
+    border: 1px solid #ccd3db;
+    border-radius: 8px;
+    padding: 8px 12px;
+    width: 100%;
+    font-size: 15px;
+    margin-top: 4px;
+    background-color: #f9fafc;
+}
+
+input[type="date"]:focus {
+    outline: none;
+    border-color: #3a7bd5;
+    background-color: #fff;
+}
+
+.tabla-resumen {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    width: 40%;
+}
+
+.tabla-resumen table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+}
+
+.tabla-resumen th {
+    text-align: left;
+    padding-bottom: 8px;
+    color: #2c3e50;
+    font-size: 17px;
+}
+
+.tabla-resumen td {
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+}
+
+/* Tabla de resultados */
+#tabla-resultados {
+    margin-top: 40px;
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+table th, table td {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+}
+
+table th {
+    background-color: #f1f4f9;
+    font-weight: 600;
+}
+
+.filters {
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.filters input {
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    width: 100%;
+}

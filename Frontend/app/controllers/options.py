@@ -21,7 +21,7 @@ def normalizar_fechas(lista_fechas):
             fecha_convertida = pd.to_datetime(fecha, errors='coerce')
             if pd.isna(fecha_convertida):
                 continue  # si no se pudo convertir, se ignora
-            fechas_convertidas.append(fecha_convertida.strftime('%d-%m-%Y'))
+            fechas_convertidas.append(fecha_convertida.strftime('%Y-%m-%d'))
         except Exception as e:
             print(f"Error al convertir la fecha {fecha}: {e}")
 
@@ -63,7 +63,8 @@ def get_fechas_por_todas_las_pdas(df):
 @options_bp.route('/fechas_por_pda')
 def fechas_por_pda():
     pda = request.args.get('pda')
-    path = current_app.config['UPLOADED_FILES']['A']
+    uploaded = session.get('uploaded_files', {})
+    path = uploaded.get('A')
     try:
         df = pd.read_csv(path, delimiter=';', low_memory=False)
     except Exception as e:

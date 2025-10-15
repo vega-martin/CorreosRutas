@@ -3,79 +3,208 @@
 {% block content %}
 
     <form action="{{ url_for('main.root') }}" method="get">
-        <button type="submit">Volver</button>
+        <button type="submit" class="logout-btn">Volver</button>
     </form>
 
-    <div>
-        <form id="forms" method="POST" action="/procesar_mapa" onsubmit="return validarFormulario();">
+    <div class="contenedor">
+        <form id="forms" class="formulario" method="POST" action="/procesar_mapa" onsubmit="return validarFormulario();">
             <h2>Seleccionar PDA</h2>
-            <select name="pda" id="pda" size="6">
-                <option value="TODAS">Todas</option>
-                {% for pda in pdas %}
-                    <option value="{{ pda }}">{{ pda }}</option>
-                {% endfor %}
-            </select>
+            <div class="custom-select">
+                <button type="button" class="select-btn" id="pdaBtn">Selecciona una PDA</button>
+                <div class="options" id="pdaOptions">
+                    <!--
+                    <div data-value="TODAS">Todas</div>
+                    -->
+                    {% for pda in pdas %}
+                        <div data-value="{{ pda }}">{{ pda }}</div>
+                    {% endfor %}
+                </div>
+            </div>
             <br><br>
 
+            <input type="hidden" name="pda" id="pdaInput">
+
             <h2>Seleccionar Fechas</h2>
-            <label for="fechaInicio">Fecha de inicio:</label>
-            <select name="fecha_inicio" id="fechaInicio"></select>
+            <label>Fecha de inicio:</label>
+            <input type="date" name="fecha_inicio" id="fechaInicio">
+            
+            <br>
 
-            <label for="fechaFin">Fecha de final:</label>
-            <select name="fecha_fin" id="fechaFin"></select>
-            <br><br><br>
+            <label>Fecha de fin: (no implementado)</label>
+            <input type="date" name="fecha_fin" id="fechaFin" disabled>
+            <br>
+            
+            <small id="fechaAviso" style="color: red; display: none;">⚠️ Fecha fuera de los datos disponibles</small>
 
-            <button type="submit">Generar</button>
+            <br><br>
+
+            <button type="submit" class="generate-btn">Generar tabla</button>
         </form>
 
-        <script>
-            const pdaSelect = document.getElementById('pda');
-            const fechaInicio = document.getElementById('fechaInicio');
-            const fechaFin = document.getElementById('fechaFin');
 
-            pdaSelect.addEventListener('change', function () {
-                const pda = this.value;
-
-                if (!pda) {
-                    fechaInicio.innerHTML = '';
-                    fechaFin.innerHTML = '';
-                    return;
-                }
-
-                fetch(`/fechas_por_pda?pda=${encodeURIComponent(pda)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        fechaInicio.innerHTML = '';
-                        fechaFin.innerHTML = '';
-                        data.fechas.forEach(fecha => {
-                            const opt1 = document.createElement('option');
-                            const opt2 = document.createElement('option');
-                            opt1.value = opt2.value = fecha;
-                            opt1.text = opt2.text = fecha;
-                            fechaInicio.appendChild(opt1);
-                            fechaFin.appendChild(opt2);
-                        });
-                    });
-            });
-
-            function validarFormulario() {
-                const ini = fechaInicio.value;
-                const fin = fechaFin.value;
-
-                if (!ini || !fin) {
-                    alert("Debes seleccionar una fecha de inicio y de fin.");
-                    return false;
-                }
-
-                if (ini >= fin) {
-                    alert("La fecha de fin debe ser mayor que la de inicio.");
-                    return false;
-                }
-
-                return true;
-            }
-        </script>
+        <div class="tabla-resumen">
+            <table>
+                <tr><th colspan="2">Tabla resumen</th></tr>
+                <tr><td>Puntos totales:</td><td id="res-puntos">—</td></tr>
+                <tr><td>Distancia total:</td><td id="res-distancia">—</td></tr>
+                <tr><td>Tiempo total:</td><td id="res-tiempo">—</td></tr>
+                <tr><td>Velocidad media:</td><td id="res-velocidad">—</td></tr>
+            </table>
+        </div>
     </div>
 
+
+    <div id="tabla-resultados" style="display:none;">
+        <h2>Resultados — <span id="titulo-pda"></span> (<span id="titulo-fecha"></span>)</h2>
+        <p>Filtros no implementados</p>
+        <div class="filters">
+            <input type="text" id="filterPunto" placeholder="Filtrar por nº punto">
+            <input type="text" id="filterHora" placeholder="Filtrar por hora">
+            <input type="text" id="filterVelocidad" placeholder="Filtrar por velocidad">
+        </div>
+
+        <table id="tablaDatos">
+            <thead>
+                <tr>
+                    <th>nº punto</th>
+                    <th>hora</th>
+                    <th>longitud</th>
+                    <th>latitud</th>
+                    <th>distancia</th>
+                    <th>tiempo</th>
+                    <th>velocidad</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        // --------- SELECT PERSONALIZADO ---------
+        const selectBtn = document.getElementById('pdaBtn');
+        const options = document.getElementById('pdaOptions');
+        const pdaInput = document.getElementById('pdaInput');
+        const fechaInicio = document.getElementById('fechaInicio');
+        const fechaFin = document.getElementById('fechaFin');
+        const aviso = document.getElementById('fechaAviso');
+
+        let fechasDisponibles = new Set();
+
+        selectBtn.addEventListener('click', () => {
+            options.style.display = options.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // Al seleccionar PDA:
+        options.querySelectorAll('div').forEach(opt => {
+            opt.addEventListener('click', () => {
+                selectBtn.textContent = opt.textContent;
+                pdaInput.value = opt.getAttribute('data-value');
+                options.style.display = 'none';
+                
+                // Bloquear campos y limpiar valores
+                fechaInicio.disabled = true;
+                fechaFin.disabled = true;
+                fechaInicio.value = "";
+                fechaFin.value = "";
+                aviso.style.display = "none";
+                fechasDisponibles.clear();
+
+                // Obtener fechas disponibles desde el backend
+                fetch(`/fechas_por_pda?pda=${encodeURIComponent(pdaInput.value)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.fechas && data.fechas.length > 0) {
+                            fechaInicio.disabled = false;
+                            fechaFin.disabled = true;
+
+                            // Guardamos fechas válidas
+                            fechasDisponibles = new Set(data.fechas);
+
+                            // Ajustar límites del calendario
+                            fechaInicio.setAttribute("min", data.fechas[0]);
+                            fechaInicio.setAttribute("max", data.fechas[data.fechas.length - 1]);
+                            fechaFin.setAttribute("min", data.fechas[0]);
+                            fechaFin.setAttribute("max", data.fechas[data.fechas.length - 1]);
+                        }
+                    });
+            });
+        });
+
+        // --------- VALIDACIÓN DE FECHAS ---------
+        function validarFecha(campo) {
+            const fecha = campo.value;
+            if (fecha === "") return;
+
+            if (!fechasDisponibles.has(fecha)) {
+                aviso.style.display = "inline";
+                campo.style.borderColor = "red";
+                campo.style.backgroundColor = "#ffecec";
+            } else {
+                aviso.style.display = "none";
+                campo.style.borderColor = "#ccc";
+                campo.style.backgroundColor = "";
+            }
+        }
+
+        fechaInicio.addEventListener("change", () => validarFecha(fechaInicio));
+        fechaFin.addEventListener("change", () => validarFecha(fechaFin));
+
+        // --------- VALIDACIÓN DEL FORMULARIO ---------
+        function validarFormulario() {
+            const pda = pdaInput.value;
+            const ini = fechaInicio.value;
+            const fin = fechaFin.value;
+
+            if (!pda) {
+                alert("Debes seleccionar una PDA.");
+                return false;
+            }
+            if (!ini) {
+                alert("Debes seleccionar una fecha de inicio.");
+                return false;
+            }
+
+            // Simulación de actualización de tablas
+            document.getElementById('res-puntos').textContent = "152";
+            document.getElementById('res-distancia').textContent = "8.6 km";
+            document.getElementById('res-tiempo').textContent = "2h 15min";
+            document.getElementById('res-velocidad').textContent = "3.8 km/h";
+
+            document.getElementById('titulo-pda').textContent = pda;
+            document.getElementById('titulo-fecha').textContent = ini + (fin ? " → " + fin : "");
+
+            const tbody = document.querySelector('#tablaDatos tbody');
+            tbody.innerHTML = `
+                <tr><td>1</td><td>09:00</td><td>-3.703</td><td>40.416</td><td>—</td><td>—</td><td>—</td></tr>
+                <tr><td>2</td><td>09:10</td><td>-3.705</td><td>40.417</td><td>0.2 km</td><td>10 min</td><td>1.2 km/h</td></tr>
+                <tr><td>3</td><td>09:30</td><td>-3.708</td><td>40.419</td><td>0.5 km</td><td>20 min</td><td>1.5 km/h</td></tr>
+            `;
+
+            document.getElementById('tabla-resultados').style.display = 'block';
+
+            return false;
+        }
+
+        // --------- FILTROS ---------
+        const filtros = ['filterPunto', 'filterHora', 'filterVelocidad'];
+        filtros.forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                const rows = document.querySelectorAll('#tablaDatos tbody tr');
+                const puntoVal = document.getElementById('filterPunto').value.toLowerCase();
+                const horaVal = document.getElementById('filterHora').value.toLowerCase();
+                const velVal = document.getElementById('filterVelocidad').value.toLowerCase();
+
+                rows.forEach(row => {
+                    const punto = row.cells[0].textContent.toLowerCase();
+                    const hora = row.cells[1].textContent.toLowerCase();
+                    const vel = row.cells[6].textContent.toLowerCase();
+
+                    row.style.display = (punto.includes(puntoVal) &&
+                                        hora.includes(horaVal) &&
+                                        vel.includes(velVal)) ? '' : 'none';
+                });
+            });
+        });
+    </script>
 
 {% endblock %}
