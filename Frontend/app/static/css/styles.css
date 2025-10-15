@@ -1,16 +1,78 @@
-.special {
-    color: red;
-    font-size: xx-large;
-}
-.formulario, .acciones, .mapa {
-    margin-top: 20 px;
-}
-
 body {
     font-family: Arial, sans-serif;
-    margin: 20 px;
+    margin: 40px;
+    background-color: #f7f9fa;
 }
-
-select, input[type="file"], button {
-    margin-top: 5 px;
-} 
+h1, h2 {
+    color: #333;
+}
+.formulario {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+.file-section {
+    margin-bottom: 20px;
+}
+.file-section input[type="submit"] {
+    margin-top: 10px;
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.file-section input[type="submit"]:hover {
+    background-color: #45a049;
+}
+.uploaded-files {
+    background-color: #eef3f6;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+.uploaded-files ul {
+    list-style-type: none;
+    padding: 0;
+}
+.uploaded-files li {
+    margin-bottom: 5px;
+}
+.actions form {
+    display: inline-block;
+    margin: 10px;
+}
+.actions button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.actions button:hover {
+    background-color: #0056b3;
+}
+.messages {
+    margin-top: 15px;
+}
+.messages li {
+    list-style-type: none;
+    margin-bottom: 5px;
+}
+.logout-btn {
+    background-color: #c0392b;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+.logout-btn:hover {
+    background-color: #e74c3c;
+}

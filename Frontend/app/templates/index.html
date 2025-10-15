@@ -5,27 +5,43 @@
     <h1>Visualizador de puntos de parada</h1>
 
     <div class="formulario">
-        <h2>Elegir fichero A</h2>
-        <form method="POST" action="{{ url_for('fileUpload.upload_file_A') }}" enctype="multipart/form-data">
-            <input type="file" name="fileA" accept=".csv" required>
-            <input type="submit" value="Subir Fichero A">
-        </form>
-        <br>
+        <h2>Subir ficheros CSV</h2>
 
-        <h2>Elegir fichero B</h2>
-        <form method="POST" action="{{ url_for('fileUpload.upload_file_B') }}" enctype="multipart/form-data">
-            <input type="file" name="fileB" accept=".csv" required>
-            <input type="submit" value="Subir Fichero B">
-        </form>
-        <br>
+        <div class="file-section">
+            <form method="POST" action="{{ url_for('fileUpload.upload_file', file_type='A') }}" enctype="multipart/form-data">
+                <label>Fichero A:</label>
+                <input type="file" name="fileA" accept=".csv" required>
+                <input type="submit" value="Subir Fichero A">
+            </form>
+        </div>
 
-        <h2>Elegir fichero C</h2>
-        <form method="POST" action="{{ url_for('fileUpload.upload_file_C') }}" enctype="multipart/form-data">
-            <input type="file" name="fileC" accept=".csv" required>
-            <input type="submit" value="Subir Fichero C">
-        </form>
-        <br>
+        <div class="file-section">
+            <form method="POST" action="{{ url_for('fileUpload.upload_file', file_type='B') }}" enctype="multipart/form-data">
+                <label>Fichero B:</label>
+                <input type="file" name="fileB" accept=".csv" required>
+                <input type="submit" value="Subir Fichero B">
+            </form>
+        </div>
+
+        <div class="file-section">
+            <form method="POST" action="{{ url_for('fileUpload.upload_file', file_type='C') }}" enctype="multipart/form-data">
+                <label>Fichero C:</label>
+                <input type="file" name="fileC" accept=".csv" required>
+                <input type="submit" value="Subir Fichero C">
+            </form>
+        </div>
     </div>
+
+    {% if session.get('uploaded_files') %}
+    <div class="uploaded-files">
+        <h2>📂 Ficheros cargados en sesión</h2>
+        <ul>
+            {% for key, path in session['uploaded_files'].items() %}
+                <li><strong>{{ key }}:</strong> {{ path.split('/')[-1] }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -53,6 +69,17 @@
     <form action="{{ url_for('generateResults.grafica_vel_tiempo') }}" method="get">
         <button type="submit">Gráfica Vel/Tiempo</button>
     </form>
+
+    <h2>Sesión</h2>
+    <form action="{{ url_for('main.logout') }}" method="get" onsubmit="return confirmLogout();">
+        <button type="submit" class="logout-btn">Cerrar sesión / Limpiar sesión</button>
+    </form>
+
+    <script>
+    function confirmLogout() {
+        return confirm("¿Seguro que deseas cerrar la sesión y eliminar los ficheros subidos?");
+    }
+    </script>
     
 <!--
     <div class="mapa">

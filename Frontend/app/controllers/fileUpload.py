@@ -1,7 +1,7 @@
 from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template
 from werkzeug.utils import secure_filename
 import pandas as pd
-import os
+import os, uuid, tempfile
 
 fileUpload_bp = Blueprint('fileUpload', __name__, template_folder='templates')
 
@@ -13,6 +13,19 @@ fileUpload_bp = Blueprint('fileUpload', __name__, template_folder='templates')
 def valid_extension(name):
     valid_ext = current_app.config['ALLOWED_EXTENSIONS']
     return '.' in name and name.rsplit('.', 1)[1].lower() in valid_ext
+
+
+def ensure_session_folder():
+    """Crea una carpeta única para cada sesión (si no existe)"""
+    session_id = session.get("id")
+    if not session_id:
+        session_id = str(uuid.uuid4())
+        session["id"] = session_id
+
+    base_upload = current_app.config.get("UPLOAD_FOLDER")
+    user_folder = os.path.join(base_upload, session_id)
+    os.makedirs(user_folder, exist_ok=True)
+    return user_folder
 
 
 # ------------------------------------------------------------
@@ -47,66 +60,38 @@ def valid_file(path, file_type):
 # LECTURA Y DESCARGA DE FICHEROS EN LOCAL
 # ------------------------------------------------------------
 
-@fileUpload_bp.route('/fileUploadA', methods=['POST'])
-def upload_file_A():
-    f = request.files['fileA']
-    data_filename = secure_filename(f.filename)
+@fileUpload_bp.route('/fileUpload/<file_type>', methods=['POST'])
+def upload_file(file_type):
+    if file_type not in ('A', 'B', 'C'):
+        flash('Tipo de fichero no reconocido.', 'error')
+        return redirect(url_for('main.root'))
 
-    if f and valid_extension(data_filename):
-        save_path = os.path.join(current_app.config['UPLOAD_FOLDER'], data_filename)
-        f.save(save_path)
+    file_key = f'file{file_type}'
+    f = request.files.get(file_key)
 
-        response = valid_file(save_path, "A")
-        if response[1] != 200:
-            os.remove(save_path)
-            flash(response[0].json['error'], 'error')
-        current_app.config['UPLOADED_FILES']['A'] = save_path
-
+    if not f or f.filename == '':
+        flash('No se ha seleccionado ningún archivo.', 'error')
         return redirect(url_for('main.root'))
     
-    flash('Extensión no permitida. Asegurese de que el archivo tiene extensión CSV, XLS o XLSX', 'error')
-    return redirect(url_for('main.root'))
-
-
-@fileUpload_bp.route('/fileUploadB', methods=['POST'])
-def upload_file_B():
-    f = request.files['fileB']
     data_filename = secure_filename(f.filename)
 
-    if f and valid_extension(data_filename):
-        save_path = os.path.join(current_app.config['UPLOAD_FOLDER'], data_filename)
-        f.save(save_path)
-        session['uploaded_data_B_file_path'] = save_path
+    if not valid_extension(data_filename):
+        flash('Extensión no permitida. Asegúrese de que el archivo tiene extensión CSV, XLS o XLSX', 'error')
+        return redirect(url_for('main.root'))
 
-        response = valid_file(save_path, "B")
-        if response[1] != 200:
-            os.remove(save_path)
-            flash(response[0].json['error'], 'error')
-        current_app.config['UPLOADED_FILES']['B'] = save_path
-        
+    user_folder = ensure_session_folder()
+    save_path = os.path.join(user_folder, data_filename)
+    f.save(save_path)
+
+    response = valid_file(save_path, file_type)
+    if response[1] != 200:
+        os.remove(save_path)
+        flash(response[0].json['error'], 'error')
         return redirect(url_for('main.root'))
     
-    flash('Extensión no permitida. Asegurese de que el archivo tiene extensión CSV, XLS o XLSX', 'error')
-    return redirect(url_for('main.root'))
+    uploaded = session.get("uploaded_files", {})
+    uploaded[file_type] = save_path
+    session["uploaded_files"] = uploaded
 
-
-@fileUpload_bp.route('/fileUploadC', methods=['POST'])
-def upload_file_C():
-    f = request.files['fileC']
-    data_filename = secure_filename(f.filename)
-
-    if f and valid_extension(data_filename):
-        save_path = os.path.join(current_app.config['UPLOAD_FOLDER'], data_filename)
-        f.save(save_path)
-        session['uploaded_data_C_file_path'] = save_path
-
-        response = valid_file(save_path, "C")
-        if response[1] != 200:
-            os.remove(save_path)
-            flash(response[0].json['error'], 'error')
-        current_app.config['UPLOADED_FILES']['C'] = save_path
-        
-        return redirect(url_for('main.root'))
-    
-    flash('Extensión no permitida. Asegurese de que el archivo tiene extensión CSV, XLS o XLSX', 'error')
+    flash(f'Fichero "{data_filename}" ({file_type}) subido correctamente.', 'success')
     return redirect(url_for('main.root'))
