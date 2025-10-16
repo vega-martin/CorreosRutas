@@ -91,10 +91,10 @@ def procesar_mapa():
 
     if not (pda and fecha_inicio and fecha_fin):
         flash("Todos los campos son obligatorios", "error")
-        return redirect(url_for('options_bp.generar_mapa'))
+        return redirect(url_for('generateResults.generar_mapa'))
 
     if fecha_inicio >= fecha_fin:
         flash("La fecha de fin debe ser mayor que la de inicio", "error")
-        return redirect(url_for('options_bp.generar_mapa'))
+        return redirect(url_for('generateResults.generar_mapa'))
 
     return f"Procesando mapa para PDA: {pda} entre {fecha_inicio} y {fecha_fin}"

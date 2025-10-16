@@ -7,7 +7,7 @@
     </form>
 
     <div class="contenedor">
-        <form id="forms" class="formulario" method="POST" action="/procesar_mapa" onsubmit="return validarFormulario();">
+        <form id="forms" class="formulario" method="POST" onsubmit="return validarFormulario();">
             <h2>Seleccionar PDA</h2>
             <div class="custom-select">
                 <button type="button" class="select-btn" id="pdaBtn">Selecciona una PDA</button>
@@ -77,6 +77,13 @@
             </thead>
             <tbody></tbody>
         </table>
+
+        <div id="paginador" style="display:none; justify-content:center; align-items:center; gap:10px; margin-top:10px;">
+            <button id="btn-prev" onclick="if(paginaActual>1){paginaActual--; renderPagina(paginaActual);}">Anterior</button>
+            <span id="pagina-info">Página 1 de 1</span>
+            <button id="btn-next" onclick="if(paginaActual<Math.ceil(tablaDatos.length/filasPorPagina)){paginaActual++; renderPagina(paginaActual);}">Siguiente</button>
+        </div>
+
     </div>
 
     <script>
@@ -149,6 +156,50 @@
         fechaInicio.addEventListener("change", () => validarFecha(fechaInicio));
         fechaFin.addEventListener("change", () => validarFecha(fechaFin));
 
+        // --------- PAGINACIÓN Y RENDERIZADO ---------
+        let tablaDatos = [];
+        let paginaActual = 1;
+        const filasPorPagina = 50;
+
+        function renderPagina(pagina) {
+            const tbody = document.querySelector('#tablaDatos tbody');
+            tbody.innerHTML = "";
+
+            const inicio = (pagina - 1) * filasPorPagina;
+            const fin = inicio + filasPorPagina;
+            const fragment = document.createDocumentFragment();
+
+            const filas = tablaDatos.slice(inicio, fin);
+            filas.forEach(fila => {
+                const tr = document.createElement('tr');
+                const celdas = [
+                    fila.n,
+                    fila.hora,
+                    fila.longitud,
+                    fila.latitud,
+                    fila.distancia,
+                    fila.tiempo,
+                    fila.velocidad
+                ];
+                celdas.forEach(valor => {
+                    const td = document.createElement('td');
+                    td.textContent = valor ?? '';
+                    tr.appendChild(td);
+                });
+                fragment.appendChild(tr);
+            });
+
+            tbody.appendChild(fragment);
+
+            // Actualizar el texto del paginador
+            document.getElementById('pagina-info').textContent =
+                `Página ${pagina} de ${Math.ceil(tablaDatos.length / filasPorPagina)}`;
+
+            // Desactivar botones si es necesario
+            document.getElementById('btn-prev').disabled = pagina === 1;
+            document.getElementById('btn-next').disabled = pagina >= Math.ceil(tablaDatos.length / filasPorPagina);
+        }
+
         // --------- VALIDACIÓN DEL FORMULARIO ---------
         function validarFormulario() {
             const pda = pdaInput.value;
@@ -164,23 +215,40 @@
                 return false;
             }
 
-            // Simulación de actualización de tablas
-            document.getElementById('res-puntos').textContent = "152";
-            document.getElementById('res-distancia').textContent = "8.6 km";
-            document.getElementById('res-tiempo').textContent = "2h 15min";
-            document.getElementById('res-velocidad').textContent = "3.8 km/h";
+            fetch('/generar_mapa/datos_tabla', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pda, ini })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error("Error al obtener los datos del servidor");
+                return response.json();
+            })
+            .then(data => {
+                // === Actualizar los resultados del resumen ===
+                const resumen = data.resumen;
+                document.getElementById('res-puntos').textContent = resumen.puntos_totales;
+                document.getElementById('res-distancia').textContent = resumen.distancia_total;
+                document.getElementById('res-tiempo').textContent = resumen.tiempo_total;
+                document.getElementById('res-velocidad').textContent = resumen.velocidad_media;
 
-            document.getElementById('titulo-pda').textContent = pda;
-            document.getElementById('titulo-fecha').textContent = ini + (fin ? " → " + fin : "");
+                // === Actualizar los títulos ===
+                document.getElementById('titulo-pda').textContent = pda;
+                document.getElementById('titulo-fecha').textContent = ini + (fin ? " → " + fin : "");
 
-            const tbody = document.querySelector('#tablaDatos tbody');
-            tbody.innerHTML = `
-                <tr><td>1</td><td>09:00</td><td>-3.703</td><td>40.416</td><td>—</td><td>—</td><td>—</td></tr>
-                <tr><td>2</td><td>09:10</td><td>-3.705</td><td>40.417</td><td>0.2 km</td><td>10 min</td><td>1.2 km/h</td></tr>
-                <tr><td>3</td><td>09:30</td><td>-3.708</td><td>40.419</td><td>0.5 km</td><td>20 min</td><td>1.5 km/h</td></tr>
-            `;
+                // === Guardar los datos globalmente y renderizar ===
+                tablaDatos = data.tabla;
+                paginaActual = 1;
+                renderPagina(paginaActual);
 
-            document.getElementById('tabla-resultados').style.display = 'block';
+                // === Mostrar la tabla y los controles de paginación ===
+                document.getElementById('tabla-resultados').style.display = 'block';
+                document.getElementById('paginador').style.display = 'flex';
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Ocurrió un error al procesar la solicitud.");
+            });
 
             return false;
         }
