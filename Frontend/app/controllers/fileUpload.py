@@ -11,20 +11,30 @@ fileUpload_bp = Blueprint('fileUpload', __name__, template_folder='templates')
 # ------------------------------------------------------------
 
 def valid_extension(name):
+    """Comprueba si la extensión es valida"""
+
     valid_ext = current_app.config['ALLOWED_EXTENSIONS']
     return '.' in name and name.rsplit('.', 1)[1].lower() in valid_ext
 
 
 def ensure_session_folder():
-    """Crea una carpeta única para cada sesión (si no existe)"""
+    """Crea una carpeta única para cada sesión y crea sesión (si no existe)"""
+
     session_id = session.get("id")
     if not session_id:
         session_id = str(uuid.uuid4())
         session["id"] = session_id
+        current_app.logger.info(f"Sesion creada: {session["id"]}")
 
     base_upload = current_app.config.get("UPLOAD_FOLDER")
     user_folder = os.path.join(base_upload, session_id)
     os.makedirs(user_folder, exist_ok=True)
+
+    if not os.path.exists(user_folder):
+        current_app.logger.error(f"Error: no se creó la carpeta {user_folder}")
+    else:
+        current_app.logger.info(f"Carpeta creada correctamente: {user_folder}")
+    
     return user_folder
 
 
@@ -48,11 +58,14 @@ def valid_file(path, file_type):
     required_columns = required_columns_map.get(file_type)
 
     if not required_columns:
+        current_app.logger.error('Error: el fichero no cumple con los criterios')
         return jsonify({'error': f'El archivo no cumple con los criterios'}), 400
     
     if not required_columns.issubset(df.columns):
         return jsonify({'error': f'El fichero CSV debe contener las columnas: {", ".join(required_columns)}'}), 400
     
+    current_app.logger.info('Archivo subido válido')
+
     return jsonify({'message': 'Archivo válido'}), 200
 
 
@@ -93,5 +106,10 @@ def upload_file(file_type):
     uploaded[file_type] = save_path
     session["uploaded_files"] = uploaded
 
+    if not os.path.exists(save_path):
+        current_app.logger.error(f"Error: el archivo no se guardó en {save_path}")
+    else:
+        current_app.logger.info(f"Archivo guardado correctamente en {save_path}")
+    
     flash(f'Fichero "{data_filename}" ({file_type}) subido correctamente.', 'success')
     return redirect(url_for('main.root'))

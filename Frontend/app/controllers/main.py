@@ -24,6 +24,7 @@ def index():
     """Main page - create an ID if doesn't exist"""
     if "id" not in session:
         session["id"] = str(uuid.uuid4())
+        current_app.logger.info(f"Sesion creada: {session["id"]}")
     return render_template('index.html')
 
 

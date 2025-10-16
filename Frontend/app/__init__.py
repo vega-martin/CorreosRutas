@@ -7,6 +7,7 @@ from app.controllers.options import options_bp
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.DevConfig')
+    app.logger.info(f"Localizacion de descargar para la aplicación {app.config.get("UPLOAD_FOLDER")}")
 
     # Blueprints
     app.register_blueprint(main_bp)
