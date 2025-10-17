@@ -137,6 +137,7 @@ def calcular_metricas(df_filtrado):
             punto1 = (float(str(fila_prev['latitud_wgs84_gd']).replace(',', '.')), float(str(fila_prev['longitud_wgs84_gd']).replace(',', '.')))
             punto2 = (lat, lon)
             distancia_km = geodesic(punto1, punto2).kilometers
+            distancia_m = geodesic(punto1, punto2).meters
 
             # Calcular tiempo en horas
             delta_t = (fila['fec_lectura_medicion'] - fila_prev['fec_lectura_medicion']).total_seconds()
@@ -149,8 +150,8 @@ def calcular_metricas(df_filtrado):
                 velocidad_kmh = 0.0
 
             # Formatear resultados legibles
-            distancia = f"{distancia_km:.3f} km"
-            tiempo = f"{int(delta_t // 60)} min"
+            distancia = f"{distancia_m:.3f} m"
+            tiempo = f"{int(delta_t)} sec"
             velocidad = f"{velocidad_kmh:.2f} km/h"
 
         resultados.append({
