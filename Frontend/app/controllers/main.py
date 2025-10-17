@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, session, redirect, url_for, flash, current_app
-from datetime import timedelta
+from flask import Blueprint, render_template, session, redirect, url_for, flash, current_app, request
+from datetime import timedelta, datetime
 import uuid
 import os
 import shutil
@@ -13,7 +13,19 @@ main_bp = Blueprint('main', __name__, template_folder='templates')
 def make_session_permanent():
     """Set the session as permanent and define its duration."""
     session.permanent = True
-    current_app.permanent_session_lifetime = timedelta(minutes=30)
+    current_app.permanent_session_lifetime = timedelta(minutes=5)
+
+    now = datetime.now()
+    last_activity = session.get("last_activity")
+
+    if last_activity:
+        elapsed = now - datetime.fromisoformat(last_activity)
+        if elapsed > current_app.permanent_session_lifetime:
+            sid = session.get("id")
+            return redirect(url_for("main.logout", sid=sid))
+
+    # Actualiza la marca de tiempo
+    session["last_activity"] = now.isoformat()
 
 
 # ------------------------------------------------------------
@@ -34,7 +46,7 @@ def index():
 @main_bp.route('/logout', methods=['GET'])
 def logout():
     """Delete temp folder associated with the session and clear the session."""
-    session_id = session.get("id")
+    session_id = session.get("id") or request.args.get("sid")
     if session_id:
         base_upload = current_app.config.get("UPLOAD_FOLDER")
         user_folder = os.path.join(base_upload, session_id)
@@ -47,6 +59,7 @@ def logout():
                 current_app.logger.warning(f"No se pudo eliminar {user_folder}: {e}")
 
     session.clear()
+    current_app.logger.info(f"Sesion cerrada: {session["id"]}")
     flash("Sesión cerrada correctamente.", "success")
 
     return redirect(url_for('main.root'))
