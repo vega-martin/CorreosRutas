@@ -20,13 +20,16 @@
                     {% endfor %}
                 </div>
             </div>
+
+            <div id="waitMessage"></div>
+
             <br><br>
 
             <input type="hidden" name="pda" id="pdaInput">
 
             <h2>Seleccionar Fechas</h2>
             <label>Fecha de inicio:</label>
-            <input type="date" name="fecha_inicio" id="fechaInicio">
+            <input type="date" name="fecha_inicio" id="fechaInicio" disabled>
             
             <br>
 
@@ -91,6 +94,7 @@
         const selectBtn = document.getElementById('pdaBtn');
         const options = document.getElementById('pdaOptions');
         const pdaInput = document.getElementById('pdaInput');
+        const waitMessage = document.getElementById('waitMessage');
         const fechaInicio = document.getElementById('fechaInicio');
         const fechaFin = document.getElementById('fechaFin');
         const aviso = document.getElementById('fechaAviso');
@@ -107,6 +111,10 @@
                 selectBtn.textContent = opt.textContent;
                 pdaInput.value = opt.getAttribute('data-value');
                 options.style.display = 'none';
+
+                // Mostrar mensaje de espera al usuario
+                waitMessage.textContent = 'Procesando fechas válidas.';
+                waitMessage.style.display = 'block';
                 
                 // Bloquear campos y limpiar valores
                 fechaInicio.disabled = true;
@@ -133,6 +141,14 @@
                             fechaFin.setAttribute("min", data.fechas[0]);
                             fechaFin.setAttribute("max", data.fechas[data.fechas.length - 1]);
                         }
+                    })
+                    .catch(error => {
+                        // Mostrar mensaje de error al usuario
+                        waitMessage.textContent = 'Error al cargar las fechas.'
+                    })
+                    .finally(() => {
+                        // Ocultar mensaje de espera al usuario
+                        waitMessage.style.display = 'none';
                     });
             });
         });

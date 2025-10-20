@@ -1,7 +1,7 @@
 from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template
 from werkzeug.utils import secure_filename
 from geopy.distance import geodesic
-from datetime import timedelta
+from dateutil import parser
 import pandas as pd
 import os
 
@@ -187,7 +187,8 @@ def get_datos(pda, fecha):
         return []
 
     try:
-        df['fec_lectura_medicion'] = pd.to_datetime(df['fec_lectura_medicion'], utc=False, errors='coerce')
+        df['fec_lectura_medicion'] = df['fec_lectura_medicion'].apply(lambda x: parser.parse(x).replace(tzinfo=None))
+        #df['fec_lectura_medicion'] = pd.to_datetime(df['fec_lectura_medicion'], utc=True, errors='coerce')
     except Exception as e:
         print(f"Error al convertir las fechas: {e}")
         return []
