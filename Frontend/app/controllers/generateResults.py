@@ -74,16 +74,16 @@ def calcular_resumen(resultados):
         try:
             if r["distancia"] != "-" and r["tiempo"] != "-":
                 # Extraer valores numéricos
-                d = float(r["distancia"].replace(" km", ""))
-                t_min = float(r["tiempo"].replace(" min", ""))
+                d = float(r["distancia"].replace(" m", ""))
+                t_sec = float(r["tiempo"].replace(" sec", ""))
                 distancias.append(d)
-                tiempos.append(t_min)
+                tiempos.append(t_sec)
         except Exception:
             continue
 
     puntos_totales = len(resultados)
-    distancia_total = sum(distancias)
-    tiempo_total_min = sum(tiempos)
+    distancia_total = sum(distancias) / 1000.0
+    tiempo_total_min = sum(tiempos) / 60.0
     tiempo_total_h = tiempo_total_min / 60.0 if tiempo_total_min > 0 else 0
 
     velocidad_media = (distancia_total / tiempo_total_h) if tiempo_total_h > 0 else 0
@@ -174,23 +174,23 @@ def get_datos(pda, fecha):
     # Obtener fichero
     uploaded = session.get('uploaded_files', {})
     path = uploaded.get('A')
-    print(path)
+    
     # Abrir fichero
     try:
         df = pd.read_csv(path, delimiter=';', low_memory=False)
     except Exception as e:
-        print(f"Error al leer el archivo CSV: {e}")
-        return []
-    # Convertir columna de fecha-hora a tipo datetime (UTC con zona)
-    if 'fec_lectura_medicion' not in df.columns:
-        print("No se encontró la columna 'fec_lectura_medicion' en el CSV.")
+        current_app.logger.error(f"Error al leer el archivo CSV: {e}")
         return []
 
+    if 'fec_lectura_medicion' not in df.columns:
+        current_app.logger.error("No se encontró la columna 'fec_lectura_medicion' en el CSV.")
+        return []
+    # Convertir columna de fecha-hora a tipo datetime (UTC con zona)
     try:
         df['fec_lectura_medicion'] = df['fec_lectura_medicion'].apply(lambda x: parser.parse(x).replace(tzinfo=None))
-        #df['fec_lectura_medicion'] = pd.to_datetime(df['fec_lectura_medicion'], utc=True, errors='coerce')
     except Exception as e:
-        print(f"Error al convertir las fechas: {e}")
+        #df['fec_lectura_medicion'] = pd.to_datetime(df['fec_lectura_medicion'], utc=True, errors='coerce')
+        current_app.logger.error(f"Error al convertir las fechas: {e}")
         return []
 
     # Filtrar por PDA y fecha (ignorando hora)
@@ -200,7 +200,7 @@ def get_datos(pda, fecha):
     ].copy()
 
     if df_filtrado.empty:
-        print(f"No hay datos para PDA={pda} y fecha={fecha}")
+        current_app.logger.error(f"No hay datos para PDA={pda} y fecha={fecha}")
         return []
 
     # Extraer solo las columnas que interesan
