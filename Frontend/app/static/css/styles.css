@@ -6,12 +6,40 @@ body {
 h1, h2 {
     color: #333;
 }
+
+.section {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px;
+    & .column:first-child {
+        flex: 0.6;
+    }
+    & .column:last-child {
+        flex: 1.4;
+    }
+}
+
+.column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.double-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+}
+
 .formulario {
     background-color: #fff;
     padding: 20px;
     border-radius: 12px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    margin-bottom: 30px;
 }
 .file-section {
     margin-bottom: 20px;
@@ -100,10 +128,34 @@ h1, h2 {
     transform: translateY(0);
 }
 
+.accept-btn {
+    background-color: #2889a7;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.accept-btn:hover {
+    background-color: #216b88;
+    transform: translateY(-2px);
+}
+
+.accept-btn:active {
+    background-color: #1e587e;
+    transform: translateY(0);
+}
+
 .contenedor {
     display: flex;
-    gap: 40px;
+    gap: 10px;
     align-items: flex-start;
+    margin-bottom: 10px;
 }
 
 .custom-select {
@@ -173,7 +225,7 @@ input[type="date"]:focus {
     padding: 20px;
     border-radius: 12px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    width: 40%;
+    width: 100%;
 }
 
 .tabla-resumen table {
@@ -192,6 +244,55 @@ input[type="date"]:focus {
 .tabla-resumen td {
     padding: 6px 0;
     border-bottom: 1px solid #eee;
+}
+
+.tabla-filtros {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    width: 100%;
+}
+
+.select-sign-btn {
+    background-color: #e9eff6;
+    border: none;
+    padding: 7px 12px;
+    border-radius: 8px;
+    width: 10%;
+    text-align: left;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.select-sign-btn:hover {
+    background-color: #dce7f3;
+}
+
+input[type="number"] {
+    border: 1px solid #ccd3db;
+    border-radius: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    width: 25%;
+    font-size: 15px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    background-color: #f9fafc;
+}
+
+input[type="number"]:focus {
+    outline: none;
+    border-color: #3a7bd5;
+    background-color: #fff;
+}
+
+.map {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    width: 95%;
 }
 
 /* Tabla de resultados */
@@ -230,6 +331,6 @@ table th {
 .filters input {
     padding: 6px 8px;
     border: 1px solid #ccc;
-    border-radius: 6px;
+    border-radius: 12px;
     width: 100%;
 }
