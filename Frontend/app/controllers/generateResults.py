@@ -1,9 +1,10 @@
 from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template
 from werkzeug.utils import secure_filename
 from geopy.distance import geodesic
-from dateutil import parser
+from datetime import timezone
 import pandas as pd
 import os
+import pytz
 
 generateResults_bp = Blueprint('generateResults', __name__, template_folder='templates')
 
@@ -187,9 +188,9 @@ def get_datos(pda, fecha):
         return []
     # Convertir columna de fecha-hora a tipo datetime (UTC con zona)
     try:
-        df['fec_lectura_medicion'] = df['fec_lectura_medicion'].apply(lambda x: parser.parse(x).replace(tzinfo=None))
+        df['fec_lectura_medicion'] = pd.to_datetime(df['fec_lectura_medicion'], utc=True, errors='coerce')
+        df['fec_lectura_medicion'] = df['fec_lectura_medicion'].dt.tz_convert(pytz.timezone('Europe/Paris'))
     except Exception as e:
-        #df['fec_lectura_medicion'] = pd.to_datetime(df['fec_lectura_medicion'], utc=True, errors='coerce')
         current_app.logger.error(f"Error al convertir las fechas: {e}")
         return []
 
