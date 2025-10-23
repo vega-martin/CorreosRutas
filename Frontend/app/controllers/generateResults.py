@@ -1,8 +1,7 @@
 from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template
-from werkzeug.utils import secure_filename
 from geopy.distance import geodesic
-from datetime import timezone
 import pandas as pd
+import folium
 import os
 import pytz
 
@@ -213,6 +212,100 @@ def get_datos(pda, fecha):
 
 
 # ------------------------------------------------------------
+# TODO: Esto se elimina, deberia ser una llamada a la API
+# CREACION DE MAPA
+# ------------------------------------------------------------
+
+def create_map(pda, fecha):
+    """Crea un archivo html temporal con el mapa y agrega la dirección a la sesion"""
+    # Obtener fichero
+    uploaded = session.get('uploaded_files', {})
+    path = uploaded.get('A')
+    
+    # Abrir fichero
+    try:
+        df = pd.read_csv(path, delimiter=';', low_memory=False)
+    except Exception as e:
+        current_app.logger.error(f"Error al leer el archivo CSV: {e}")
+        return []
+    if 'fec_lectura_medicion' not in df.columns:
+        current_app.logger.error("No se encontró la columna 'fec_lectura_medicion' en el CSV.")
+        return []
+    # Convertir columna de fecha-hora a tipo datetime (UTC con zona)
+    try:
+        df['fec_lectura_medicion'] = pd.to_datetime(df['fec_lectura_medicion'], utc=True, errors='coerce')
+        df['fec_lectura_medicion'] = df['fec_lectura_medicion'].dt.tz_convert(pytz.timezone('Europe/Paris'))
+    except Exception as e:
+        current_app.logger.error(f"Error al convertir las fechas: {e}")
+        return []
+
+    # Filtrar por PDA y fecha (ignorando hora)
+    df_filtrado = df[
+        (df['cod_inv_pda'] == pda) &
+        (df['fec_lectura_medicion'].dt.strftime('%Y-%m-%d') == fecha)
+    ].copy()
+
+    if df_filtrado.empty:
+        current_app.logger.error(f"No hay datos para PDA={pda} y fecha={fecha}")
+        return []
+
+    df_filtrado = df_filtrado.sort_values('fec_lectura_medicion')
+
+    # Centrar mapa en promedio lat/lon
+    lat_promedio = df_filtrado['latitud_wgs84_gd'].mean()
+    lon_promedio = df_filtrado['longitudwgs84_gd'].mean()
+
+    mapa = folium.Map(location=[lat_promedio, lon_promedio], zoom_start=14, control_scale=True)
+
+    coordenadas = []
+
+    for _, fila in df.iterrows():
+        coord = [fila['latitud_wgs84_gd'], fila['longitudwgs84_gd']]
+        coordenadas.append(coord)
+        folium.CircleMarker(
+            location=coord,
+            radius=4,
+            color='blue',
+            fill=True,
+            fill_color='blue',
+            fill_opacity=0.7,
+            popup=f"Fecha: {fila['fec_lectura_medicion']}<br>Coordenada: {fila['latitud_wgs84_gd']}, {fila['longitudwgs84_gd']}"
+        ).add_to(mapa)
+
+    for i in range(len(coordenadas)-1):
+        folium.PolyLine(
+            locations=[coordenadas[i], coordenadas[i+1]],
+            color='blue',
+            weight=3,
+            opacity=0.7
+        ).add_to(mapa)
+    
+    inicio = df_filtrado[0]
+    folium.Marker(
+        location=[inicio['latitud_wgs84_gd'], fila['longitudwgs84_gd']],
+        icon=folium.Icon(color='green', icon='play', prefix='fa'),
+        popup="INICIO"
+    ).add_to(mapa)
+
+    fin = df_filtrado[-1]
+    folium.Marker(
+        location=[fin['latitud_wgs84_gd'], fin['longitudwgs84_gd']],
+        icon=folium.Icon(color='red', icon='play', prefix='fa'),
+        popup="FIN"
+    ).add_to(mapa)
+
+    # TODO: guardar mapa en local y meter ruta en sesion
+
+
+
+
+
+
+
+
+
+
+# ------------------------------------------------------------
 # ENDPOINTS
 # ------------------------------------------------------------
 
@@ -248,6 +341,16 @@ def datos_tabla():
     resultados = get_datos(pda, ini)
 
     return jsonify(resultados)
+
+@generateResults_bp.route('/generar_mapa/get_mapa', methods=['GET', 'POST'])
+def get_mapa():
+    data = request.get_json()
+    pda = data.get('pda')
+    ini = data.get('ini')
+    # TODO: cambiar para que llame a la API del backend y no lo haga aqui
+    create_map(pda, ini)
+    url = session.get[pda]
+    return jsonify({'url': url})
 
 
 
