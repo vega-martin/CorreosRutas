@@ -21,10 +21,6 @@ def ensure_session_folder():
     """Crea una carpeta única para cada sesión y crea sesión (si no existe)"""
 
     session_id = session.get("id")
-    if not session_id:
-        session_id = str(uuid.uuid4())
-        session["id"] = session_id
-        current_app.logger.info(f"Sesion creada: {session["id"]}")
 
     base_upload = current_app.config.get("UPLOAD_FOLDER")
     user_folder = os.path.join(base_upload, session_id)

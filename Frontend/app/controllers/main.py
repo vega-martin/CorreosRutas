@@ -43,11 +43,13 @@ def index():
 # ------------------------------------------------------------
 # CLOSE SESSION
 # ------------------------------------------------------------
-@main_bp.route('/logout', methods=['GET'])
+@main_bp.route('/logout')
 def logout():
     """Delete temp folder associated with the session and clear the session."""
     session_id = session.get("id") or request.args.get("sid")
+    current_app.logger.info(f"******************** CERRANDO LA SESION {session_id} ********************")
     if session_id:
+        # Delete uploads
         base_upload = current_app.config.get("UPLOAD_FOLDER")
         user_folder = os.path.join(base_upload, session_id)
 
@@ -57,9 +59,24 @@ def logout():
                 current_app.logger.info(f"Carpeta eliminada: {user_folder}")
             except Exception as e:
                 current_app.logger.warning(f"No se pudo eliminar {user_folder}: {e}")
+        
 
+        # Delete maps
+        base_dir = os.path.join(current_app.config.get("BASE_DIR"), "app", "static", "maps")
+        current_app.logger.info(f"Se han creado mapas en la sesion: {"created_maps" in session}")
+        if (os.path.exists(base_dir)) and ("created_maps" in session):
+            try:
+                for map in session.get("created_maps"):
+                    map_name = map + ".html"
+                    path = os.path.join(base_dir, map_name)
+                    os.remove(path)
+                    current_app.logger.info(f"Mapa eliminado: {map}")
+            except Exception as e:
+                current_app.logger.warning(f"No se pudo eliminar un mapa: {e}")
+
+
+    current_app.logger.info(f"Sesion cerrada: {session_id}")
     session.clear()
-    current_app.logger.info(f"Sesion cerrada: {session["id"]}")
     flash("Sesión cerrada correctamente.", "success")
 
     return redirect(url_for('main.root'))
