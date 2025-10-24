@@ -216,6 +216,32 @@ def get_datos(pda, fecha):
 # CREACION DE MAPA
 # ------------------------------------------------------------
 
+
+def save_map(pda, fecha, map):
+    """Guardar el mapa"""
+    
+    base_dir = current_app.config.get("BASE_DIR")
+    map_folder = os.path.join(base_dir, "app", "static", "maps")
+    os.makedirs(map_folder, exist_ok=True)
+    if not os.path.exists(map_folder):
+        current_app.logger.error(f"Error: no se creó la carpeta {map_folder}")
+    else:
+        current_app.logger.info(f"Carpeta creada correctamente: {map_folder}")
+
+    map_name = pda + "_" + fecha + ".html"
+    save_path = os.path.join(map_folder, map_name)
+    map.save(save_path)
+
+    if not os.path.exists(save_path):
+        current_app.logger.error(f"Error: el archivo no se guardó en {save_path}")
+    else:
+        current_app.logger.info(f"Archivo guardado correctamente en {save_path}")
+    
+    return save_path
+
+
+
+
 def create_map(pda, fecha):
     """Crea un archivo html temporal con el mapa y agrega la dirección a la sesion"""
     # Obtener fichero
@@ -251,16 +277,24 @@ def create_map(pda, fecha):
 
     df_filtrado = df_filtrado.sort_values('fec_lectura_medicion')
 
+    # Pasar de string a num
+    df_filtrado['latitud_wgs84_gd'] = df_filtrado['latitud_wgs84_gd'].astype(str).str.replace(',', '.')
+    df_filtrado['longitud_wgs84_gd'] = df_filtrado['longitud_wgs84_gd'].astype(str).str.replace(',', '.')
+
+    df_filtrado['latitud_wgs84_gd'] = pd.to_numeric(df_filtrado['latitud_wgs84_gd'], errors='coerce')
+    df_filtrado['longitud_wgs84_gd'] = pd.to_numeric(df_filtrado['longitud_wgs84_gd'], errors='coerce')
+
     # Centrar mapa en promedio lat/lon
     lat_promedio = df_filtrado['latitud_wgs84_gd'].mean()
-    lon_promedio = df_filtrado['longitudwgs84_gd'].mean()
+    lon_promedio = df_filtrado['longitud_wgs84_gd'].mean()
 
-    mapa = folium.Map(location=[lat_promedio, lon_promedio], zoom_start=14, control_scale=True)
+    mapa = folium.Map(location=[lat_promedio, lon_promedio], zoom_start=15, control_scale=True)
+    folium.TileLayer('CartoDB positron', name='Carto claro').add_to(mapa)
 
     coordenadas = []
 
-    for _, fila in df.iterrows():
-        coord = [fila['latitud_wgs84_gd'], fila['longitudwgs84_gd']]
+    for _, fila in df_filtrado.iterrows():
+        coord = [fila['latitud_wgs84_gd'], fila['longitud_wgs84_gd']]
         coordenadas.append(coord)
         folium.CircleMarker(
             location=coord,
@@ -269,7 +303,7 @@ def create_map(pda, fecha):
             fill=True,
             fill_color='blue',
             fill_opacity=0.7,
-            popup=f"Fecha: {fila['fec_lectura_medicion']}<br>Coordenada: {fila['latitud_wgs84_gd']}, {fila['longitudwgs84_gd']}"
+            popup=f"Fecha: {fila['fec_lectura_medicion']}<br>Coordenada: {fila['latitud_wgs84_gd']}, {fila['longitud_wgs84_gd']}"
         ).add_to(mapa)
 
     for i in range(len(coordenadas)-1):
@@ -280,26 +314,21 @@ def create_map(pda, fecha):
             opacity=0.7
         ).add_to(mapa)
     
-    inicio = df_filtrado[0]
+    inicio = df_filtrado.iloc[0]
     folium.Marker(
-        location=[inicio['latitud_wgs84_gd'], fila['longitudwgs84_gd']],
+        location=[inicio['latitud_wgs84_gd'], fila['longitud_wgs84_gd']],
         icon=folium.Icon(color='green', icon='play', prefix='fa'),
         popup="INICIO"
     ).add_to(mapa)
 
-    fin = df_filtrado[-1]
+    fin = df_filtrado.iloc[-1]
     folium.Marker(
-        location=[fin['latitud_wgs84_gd'], fin['longitudwgs84_gd']],
+        location=[fin['latitud_wgs84_gd'], fin['longitud_wgs84_gd']],
         icon=folium.Icon(color='red', icon='play', prefix='fa'),
         popup="FIN"
     ).add_to(mapa)
 
-    # TODO: guardar mapa en local y meter ruta en sesion
-
-
-
-
-
+    return save_map(pda,fecha, mapa)
 
 
 
@@ -348,9 +377,22 @@ def get_mapa():
     pda = data.get('pda')
     ini = data.get('ini')
     # TODO: cambiar para que llame a la API del backend y no lo haga aqui
-    create_map(pda, ini)
-    url = session.get[pda]
-    return jsonify({'url': url})
+    created_maps = session.get('created_maps', [])
+    map = pda + "_" + ini
+    if map in created_maps:
+        path = "/static/maps/" + map + ".html"
+        current_app.logger.info(f"Mapa ya creado. Url del mapa para la {pda}: {path}")
+        return jsonify({'url': path})
+
+    abs_path = create_map(pda, ini)
+    base_dir = current_app.config.get("BASE_DIR")
+    base_dir = os.path.join(base_dir, "app")
+    path = os.path.relpath(abs_path, base_dir)
+    created_maps.append(map)
+    session["created_maps"] = created_maps
+    current_app.logger.info(f"Nuevo mapa creado. Mapas creados: {created_maps}")
+    current_app.logger.info(f"Url del mapa para la {pda}: {path}")
+    return jsonify({'url': path})
 
 
 

@@ -13,7 +13,7 @@ main_bp = Blueprint('main', __name__, template_folder='templates')
 def make_session_permanent():
     """Set the session as permanent and define its duration."""
     session.permanent = True
-    current_app.permanent_session_lifetime = timedelta(minutes=5)
+    current_app.permanent_session_lifetime = timedelta(minutes=55)
 
     now = datetime.now()
     last_activity = session.get("last_activity")

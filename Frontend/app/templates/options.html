@@ -323,8 +323,8 @@
                 body: JSON.stringify({ pda, ini })
             })
             .then(response => response.json())
-            .then(data => {
-                document.getElementById('iMap').src = data.url;
+            .then(map_data => {
+                document.getElementById('iMap').src = map_data.url;
             });
 
             return false;

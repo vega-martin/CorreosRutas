@@ -295,6 +295,13 @@ input[type="number"]:focus {
     width: 95%;
 }
 
+iframe {
+    position: relative;
+    width: 100%;
+    height: 448px;
+    border-radius: 12px;
+}
+
 /* Tabla de resultados */
 #tabla-resultados {
     margin-top: 40px;
