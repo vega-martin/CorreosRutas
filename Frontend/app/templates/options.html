@@ -225,6 +225,7 @@
 
         // --------- PAGINACIÓN Y RENDERIZADO ---------
         let tablaDatos = [];
+        let tablaFiltrada = [];
         let paginaActual = 1;
         const filasPorPagina = 50;
 
@@ -232,11 +233,13 @@
             const tbody = document.querySelector('#tablaDatos tbody');
             tbody.innerHTML = "";
 
+            const datos = tablaFiltrada.length ? tablaFiltrada : tablaDatos;
+
             const inicio = (pagina - 1) * filasPorPagina;
             const fin = inicio + filasPorPagina;
             const fragment = document.createDocumentFragment();
 
-            const filas = tablaDatos.slice(inicio, fin);
+            const filas = datos.slice(inicio, fin);
             filas.forEach(fila => {
                 const tr = document.createElement('tr');
                 const celdas = [
@@ -260,11 +263,11 @@
 
             // Actualizar el texto del paginador
             document.getElementById('pagina-info').textContent =
-                `Página ${pagina} de ${Math.ceil(tablaDatos.length / filasPorPagina)}`;
+                `Página ${pagina} de ${Math.ceil(datos.length / filasPorPagina)}`;
 
             // Desactivar botones si es necesario
             document.getElementById('btn-prev').disabled = pagina === 1;
-            document.getElementById('btn-next').disabled = pagina >= Math.ceil(tablaDatos.length / filasPorPagina);
+            document.getElementById('btn-next').disabled = pagina >= Math.ceil(datos.length / filasPorPagina);
         }
 
         // --------- VALIDACIÓN DEL FORMULARIO ---------
@@ -343,46 +346,41 @@
             if(comp == "no-igual") return val != ref;
             if(comp == "mayor") return val > ref;
             if(comp == "mayor-igual") return val >= ref;
-            return true;
+            return false;
         }
 
         function filtrarTabla() {
-            const rows = document.querySelectorAll('#tablaDatos tbody tr');
-
             const filtros = [
                 {
                     comparador: document.getElementById("distancia-signo").value,
                     valor: parseFloat(document.getElementById("filtroDistancia").value),
-                    columna: 4
+                    campo: "distancia"
                 },
                 {
                     comparador: document.getElementById("tiempo-signo").value,
                     valor: parseFloat(document.getElementById("filtroTiempo").value),
-                    columna: 5
+                    campo: "tiempo"
                 },
                 {
                     comparador: document.getElementById("velocidad-signo").value,
                     valor: parseFloat(document.getElementById("filtroVelocidad").value),
-                    columna: 6
+                    campo: "velocidad"
                 }
             ];
 
-
-            rows.forEach(row => {
-                let mostrar = true;
-
-                filtros.forEach(filtro => {
-                    if(!isNaN(filtro.valor)) {
-                        const text = row.cells[filtro.columna].textContent.trim();
-                        const num = extraerNum(text);
-                        if(!cumpleCondicion(num, filtro.comparador, filtro.valor)) {
-                            mostrar = false;
-                        }
+            tablaFiltrada = tablaDatos.filter(row => {
+                return filtros.every(filtro => {
+                    if (!isNaN(filtro.valor)) {
+                        const text = String(row[filtro.campo]).trim();
+                        const valorFila = extraerNum(text);
+                        return cumpleCondicion(valorFila, filtro.comparador, filtro.valor);
                     }
+                    return true;
                 });
-    
-                row.style.display = mostrar ? '' : 'none';
             });
+            
+            paginaActual = 1;
+            renderPagina(paginaActual)
         }
     </script>
 
