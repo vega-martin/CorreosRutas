@@ -9,7 +9,7 @@ main_bp = Blueprint('main', __name__, template_folder='templates')
 # ------------------------------------------------------------
 # SESSION SETTINGS
 # ------------------------------------------------------------
-@main_bp.before_app_request
+@main_bp.before_request
 def make_session_permanent():
     """Set the session as permanent and define its duration."""
     session.permanent = True
@@ -36,7 +36,7 @@ def index():
     """Main page - create an ID if doesn't exist"""
     if "id" not in session:
         session["id"] = str(uuid.uuid4())
-        current_app.logger.info(f"Sesion creada: {session["id"]}")
+        current_app.logger.info(f"Sesion creada: {session['id']}")
     return render_template('index.html')
 
 

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template
 from werkzeug.utils import secure_filename
 import pandas as pd
-import os, uuid, tempfile
+import os, uuid, tempfile, requests
 
 fileUpload_bp = Blueprint('fileUpload', __name__, template_folder='templates')
 
@@ -98,6 +98,11 @@ def upload_file(file_type):
         flash(response[0].json['error'], 'error')
         return redirect(url_for('main.root'))
     
+    with open(save_path, 'rb') as y:
+        files = {'file': y}
+        api_url = current_app.config.get("API_URL")
+        requests.post(f"{api_url}/upload_file", files=files)
+
     uploaded = session.get("uploaded_files", {})
     uploaded[file_type] = save_path
     session["uploaded_files"] = uploaded

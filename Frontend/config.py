@@ -5,6 +5,7 @@ class Config:
     BASE_DIR = os.path.dirname(__file__)
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
     ALLOWED_EXTENSIONS = {'csv'}
+    API_URL = 'http://0.0.0.0:5001'
 
 class DevConfig(Config):
     DEBUG = True
