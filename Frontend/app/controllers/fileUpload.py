@@ -58,7 +58,7 @@ def valid_file(path, file_type):
         return jsonify({'error': f'El archivo no cumple con los criterios'}), 400
     
     if not required_columns.issubset(df.columns):
-        return jsonify({'error': f'El fichero CSV debe contener las columnas: {", ".join(required_columns)}'}), 400
+        return jsonify({'error': f'El fichero CSV \"{file_type}\" debe contener las columnas: {", ".join(required_columns)}'}), 400
     
     current_app.logger.info('Archivo subido válido')
 
@@ -69,48 +69,35 @@ def valid_file(path, file_type):
 # LECTURA Y DESCARGA DE FICHEROS EN LOCAL
 # ------------------------------------------------------------
 
-@fileUpload_bp.route('/fileUpload/<file_type>', methods=['POST'])
-def upload_file(file_type):
-    if file_type not in ('A', 'B', 'C'):
-        flash('Tipo de fichero no reconocido.', 'error')
-        return redirect(url_for('main.root'))
+@fileUpload_bp.route('/uploadFileToBackend', methods=['POST'])
+def uploadFileToBackend():
+    for file_type in ('A', 'B', 'C'):
+        file_key = f'file{file_type}'
+        f = request.files.get(file_key)
+        data_filename = secure_filename(f.filename)
+        user_folder = ensure_session_folder()
+        save_path = os.path.join(user_folder, data_filename)
+        f.save(save_path)
 
-    file_key = f'file{file_type}'
-    f = request.files.get(file_key)
+        response = valid_file(save_path, file_type)
+        if response[1] != 200:
+            os.remove(save_path)
+            flash(response[0].json['error'], 'error')
+            return redirect(url_for('main.root'))
+        
+        with open(save_path, 'rb') as y:
+            files = {'file': y}
+            api_url = current_app.config.get("API_URL")
+            requests.post(f"{api_url}/upload_file", files=files)
 
-    if not f or f.filename == '':
-        flash('No se ha seleccionado ningún archivo.', 'error')
-        return redirect(url_for('main.root'))
-    
-    data_filename = secure_filename(f.filename)
+        uploaded = session.get("uploaded_files", {})
+        uploaded[file_type] = save_path
+        session["uploaded_files"] = uploaded
 
-    if not valid_extension(data_filename):
-        flash('Extensión no permitida. Asegúrese de que el archivo tiene extensión CSV, XLS o XLSX', 'error')
-        return redirect(url_for('main.root'))
-
-    user_folder = ensure_session_folder()
-    save_path = os.path.join(user_folder, data_filename)
-    f.save(save_path)
-
-    response = valid_file(save_path, file_type)
-    if response[1] != 200:
-        os.remove(save_path)
-        flash(response[0].json['error'], 'error')
-        return redirect(url_for('main.root'))
-    
-    with open(save_path, 'rb') as y:
-        files = {'file': y}
-        api_url = current_app.config.get("API_URL")
-        requests.post(f"{api_url}/upload_file", files=files)
-
-    uploaded = session.get("uploaded_files", {})
-    uploaded[file_type] = save_path
-    session["uploaded_files"] = uploaded
-
-    if not os.path.exists(save_path):
-        current_app.logger.error(f"Error: el archivo no se guardó en {save_path}")
-    else:
-        current_app.logger.info(f"Archivo guardado correctamente en {save_path}")
-    
-    flash(f'Fichero "{data_filename}" ({file_type}) subido correctamente.', 'success')
+        if not os.path.exists(save_path):
+            current_app.logger.error(f"Error: el archivo no se guardó en {save_path}")
+        else:
+            current_app.logger.info(f"Archivo guardado correctamente en {save_path}")
+        
+    flash(f'Ficheros subidos correctamente.', 'success')
     return redirect(url_for('main.root'))

@@ -8,26 +8,14 @@
         <h2>Subir ficheros CSV</h2>
 
         <div class="file-section">
-            <form method="POST" action="{{ url_for('fileUpload.upload_file', file_type='A') }}" enctype="multipart/form-data">
-                <label>Fichero A:</label>
-                <input type="file" name="fileA" accept=".csv" required>
-                <input type="submit" value="Subir Fichero A">
-            </form>
-        </div>
-
-        <div class="file-section">
-            <form method="POST" action="{{ url_for('fileUpload.upload_file', file_type='B') }}" enctype="multipart/form-data">
-                <label>Fichero B:</label>
-                <input type="file" name="fileB" accept=".csv" required>
-                <input type="submit" value="Subir Fichero B">
-            </form>
-        </div>
-
-        <div class="file-section">
-            <form method="POST" action="{{ url_for('fileUpload.upload_file', file_type='C') }}" enctype="multipart/form-data">
-                <label>Fichero C:</label>
-                <input type="file" name="fileC" accept=".csv" required>
-                <input type="submit" value="Subir Fichero C">
+            <form method="POST" action="{{ url_for('fileUpload.uploadFileToBackend') }}" enctype="multipart/form-data">
+                <label for="fileA">Fichero A:</label>
+                <input type="file" name="fileA" accept=".csv" required><br><br>
+                <label for="fileB">Fichero B:</label>
+                <input type="file" name="fileB" accept=".csv" required><br><br>
+                <label for="fileC">Fichero C:</label>
+                <input type="file" name="fileC" accept=".csv" required><br><br>
+                <input type="submit" value="Subir Ficheros">
             </form>
         </div>
     </div>
