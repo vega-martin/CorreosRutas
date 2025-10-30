@@ -4,6 +4,7 @@ import pandas as pd
 import folium
 import os
 import pytz
+import requests
 
 generateResults_bp = Blueprint('generateResults', __name__, template_folder='templates')
 
@@ -395,46 +396,10 @@ def get_mapa():
     return jsonify({'url': path})
 
 
-
-@generateResults_bp.route('/detectar_paradas')
-def detectar_paradas():
-    uploaded = session.get('uploaded_files', {})
-    file_B = uploaded.get('B')
-    file_C = uploaded.get('C')
-
-    if not file_B or not os.path.exists(file_B) or not file_C or not os.path.exists(file_C):
-        flash("Error: Necesitas subir los ficheros B y C para detectar paradas.", 'error')
-        return redirect(url_for('main.root'))
-    
-    # Lógica de detección de paradas
-    return "Paradas detectadas correctamente."
-
-
-@generateResults_bp.route('/generar_paradas')
-def generar_paradas():
-    uploaded = session.get('uploaded_files', {})
-    file_A = uploaded.get('A')
-    file_B = uploaded.get('B')
-    file_C = uploaded.get('C')
-
-    if not all([file_A and os.path.exists(file_A),
-                file_B and os.path.exists(file_B),
-                file_C and os.path.exists(file_C)]):
-        flash("Error: Necesitas subir los ficheros A, B y C para generar paradas.", 'error')
-        return redirect(url_for('main.root'))
-    
-    # Lógica para generar paradas
-    return "Paradas generadas correctamente."
-
-
-@generateResults_bp.route('/grafica_vel_tiempo')
-def grafica_vel_tiempo():
-    uploaded = session.get('uploaded_files', {})
-    file_A = uploaded.get('A')
-
-    if not file_A or not os.path.exists(file_A):
-        flash("Error: Necesitas subir el fichero A para generar la gráfica velocidad/tiempo.", 'error')
-        return redirect(url_for('main.root'))
-    
-    # Lógica para generar la gráfica
-    return "Gráfica velocidad/tiempo generada."
+@generateResults_bp.route('/unifyFiles')
+def unifyFiles():
+    data = {"id": session.get("id")}
+    api_url = current_app.config.get("API_URL")
+    requests.post(f"{api_url}/unifyFiles", data=data)
+    flash(f'Unificando ficheros. Proceso experimental (pueden ocurrir fallos)', 'info')
+    return redirect(url_for('main.root'))

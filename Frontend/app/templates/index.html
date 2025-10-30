@@ -41,23 +41,16 @@
       {% endif %}
     {% endwith %}
 
+
     <h2>Acciones</h2>
     <form action="{{ url_for('generateResults.generar_mapa') }}" method="get">
-        <button type="submit" class="generate-btn">Generar tablas y mapas</button>
-    </form>
-<!--
-    <form action="{{ url_for('generateResults.detectar_paradas') }}" method="get">
-        <button type="submit">Detectar Paradas</button>
-    </form>
-
-    <form action="{{ url_for('generateResults.generar_paradas') }}" method="get">
-        <button type="submit">Generar Paradas</button>
+        <button type="submit" class="generate-btn">Generar tabla y mapa (Fichero A)</button>
+    </form><br>
+    <form action="{{ url_for('generateResults.unifyFiles') }}" method="get">
+        <button type="submit" class="generate-btn">Mandar a unificar ficheros</button>
     </form>
 
-    <form action="{{ url_for('generateResults.grafica_vel_tiempo') }}" method="get">
-        <button type="submit">Gráfica Vel/Tiempo</button>
-    </form>
--->
+
     <h2>Sesión</h2>
     <form action="{{ url_for('main.logout') }}" method="get" onsubmit="return confirmLogout();">
         <button type="submit" class="logout-btn">Cerrar sesión / Limpiar sesión</button>
