@@ -86,9 +86,13 @@ def uploadFileToBackend():
             return redirect(url_for('main.root'))
         
         with open(save_path, 'rb') as y:
+            data = {
+                "id": session.get("id"),
+                "type": file_type
+                }
             files = {'file': y}
             api_url = current_app.config.get("API_URL")
-            requests.post(f"{api_url}/upload_file", files=files)
+            requests.post(f"{api_url}/upload_file", data=data, files=files)
 
         uploaded = session.get("uploaded_files", {})
         uploaded[file_type] = save_path

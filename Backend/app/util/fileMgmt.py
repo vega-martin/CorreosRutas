@@ -1,5 +1,6 @@
 from flask import current_app, request, jsonify
 import pandas as pd
+import os
 
 
 def valid_extension(name):
@@ -9,34 +10,47 @@ def valid_extension(name):
     return '.' in name and name.rsplit('.', 1)[1].lower() in valid_ext
 
 
-def valid_file(path):
+def ensure_folder(name):
+    """Crea una carpeta única para cada conexión"""
+
+
+    base_upload = current_app.config.get("UPLOAD_FOLDER")
+    id_folder = os.path.join(base_upload, name)
+    os.makedirs(id_folder, exist_ok=True)
+
+    if not os.path.exists(id_folder):
+        current_app.logger.error(f"Error: no se creó la carpeta {id_folder}")
+    else:
+        current_app.logger.info(f"Carpeta creada correctamente: {id_folder}")
+    
+    return id_folder
+
+
+def rename_file_columns(path, file_type):
     try:
         df = pd.read_csv(path, delimiter=';', low_memory=False)
     except Exception as e:
         return jsonify({'error': f'Error al leer el archivo: {str(e)}'}), 500
 
-    required_columns_map = {
-        "A": {'fec_lectura_medicion', 'longitud_wgs84_gd', 'latitud_wgs84_gd', 'cod_inv_pda'},
-        "B": {'Num Inv', 'Fec Actividad', 'Seg Transcurrido'},
-        "C": {'COD_SECCION', 'INSTANTE', 'LONGITUD', 'LATITUD'}
-    }
-
-    # Determinar tipo de fichero
-    for type in required_columns_map:
-        required_columns = required_columns_map.get(type)
-        if required_columns.issubset(df.columns):
-            file_type = type
-        
-    if file_type == "A":
-        
-
-    if not required_columns:
-        current_app.logger.error('Error: el fichero no cumple con los criterios')
-        return jsonify({'error': f'El archivo no cumple con los criterios'}), 400
-    
-    if not required_columns.issubset(df.columns):
-        return jsonify({'error': f'El fichero CSV debe contener las columnas: {", ".join(required_columns)}'}), 400
-    
-    current_app.logger.info('Archivo subido válido')
-
-    return jsonify({'message': 'Archivo válido'}), 200
+    if (file_type == "A"):
+        df.rename(columns={
+                "fec_lectura_medicion": "fecha_hora",
+                "longitud_wgs84_gd": "logitud",
+                "latitud_wgs84_gd": "latitud",
+                "cod_inv_pda": "cod_pda"
+            }, inplace=True)
+    elif (file_type == "B"):
+        df.rename(columns={
+                "Num Inv": "cod_pda",
+                "Fec Actividad": "fecha_hora",
+                "Seg Transcurrido": "seg_transcurridos"
+            }, inplace=True)
+    elif (file_type == "C"):
+        df.rename(columns={
+                "COD_SECCION": "cod_pda",
+                "INSTANTE": "fecha_hora",
+                "LONGITUD": "logitud",
+                "LATITUD": "latitud"
+            }, inplace=True)
+    df.to_csv(path, index=False)
+    current_app.logger.info(f"Archivo {file_type} renombrado con éxito")

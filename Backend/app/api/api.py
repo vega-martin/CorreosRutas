@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, session, redirect, url_for, flash, current_app, request, jsonify
+from app.util.fileMgmt import ensure_folder, rename_file_columns
 from datetime import timedelta, datetime
-from werkzeug.utils import secure_filename
 import uuid
 import os
 
@@ -13,12 +13,19 @@ def upload_file():
     # Descargar fichero en local
     current_app.logger.info('Se va a iniciar la descarga en local en el backend')
     base_upload = current_app.config.get("UPLOAD_FOLDER")
-    f = request.files.get('file')
-    data_filename = secure_filename(f.filename)
 
-    save_path = os.path.join(base_upload, data_filename)
+    id = request.form.get('id')
+    type = request.form.get('type')
+    f = request.files.get('file')
+
+    data_filename = f"Fichero_{type}.csv"
+    id_path = ensure_folder(id)
+    save_path_temp = os.path.join(base_upload, id_path)
+    save_path = os.path.join(save_path_temp, data_filename)
     f.save(save_path)
 
+    rename_file_columns(save_path, type)
+    
     if not os.path.exists(save_path):
         current_app.logger.error(f"Error: el archivo no se guardó en {save_path}")
         return jsonify({'error': f'El archivo no se guardó correctamente'}), 400
