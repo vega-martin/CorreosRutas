@@ -1,6 +1,6 @@
 from flask import current_app, request, jsonify
 import pandas as pd
-import os
+import os,pytz
 
 
 def valid_extension(name):
@@ -29,8 +29,8 @@ def ensure_folder(name):
 def rename_file_columns(path, file_type):
     try:
         df = pd.read_csv(path, delimiter=';', low_memory=False)
-    except Exception as e:
-        return jsonify({'error': f'Error al leer el archivo: {str(e)}'}), 500
+    except Exception:
+        return
 
     if (file_type == "A"):
         df.rename(columns={
@@ -54,3 +54,30 @@ def rename_file_columns(path, file_type):
             }, inplace=True)
     df.to_csv(path, index=False)
     current_app.logger.info(f"Archivo {file_type} renombrado con éxito")
+
+
+def standardize_date(date):
+    try:
+        date = pd.to_datetime(date, utc=True, errors='raise')
+        date = date.tz_convert('Europe/Paris')
+    except Exception:
+        try:
+            date = pd.to_datetime(date, format='%y-%m-%d %H:%M:%S', errors='raise')
+            date = date.tz_localize('Europe/Paris')
+        except Exception:
+            return pd.NaT
+
+    return date
+
+def split_date(date):
+    try:
+        date = pd.to_datetime(date)
+        return pd.Series({
+            'solo_fecha': date.date(),
+            'solo_hora': date.time()
+        })
+    except Exception:
+        return pd.Series({
+            'solo_fecha': pd.NaT,
+            'solo_hora': pd.NaT
+        })
