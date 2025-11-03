@@ -56,28 +56,25 @@ def rename_file_columns(path, file_type):
     current_app.logger.info(f"Archivo {file_type} renombrado con éxito")
 
 
-def standardize_date(date):
+def standardize_df_date(df, column):
+    df[column] = standardize_date(df[column])
+    return df
+
+def standardize_date(series):
     try:
-        date = pd.to_datetime(date, utc=True, errors='raise')
+        date = pd.to_datetime(series, utc=True, errors='raise')
         date = date.tz_convert('Europe/Paris')
     except Exception:
         try:
-            date = pd.to_datetime(date, format='%y-%m-%d %H:%M:%S', errors='raise')
+            date = pd.to_datetime(series, format='%y-%m-%d %H:%M:%S', errors='coerce')
             date = date.tz_localize('Europe/Paris')
         except Exception:
             return pd.NaT
 
-    return date
+    return date.dt.strftime('%Y-%m-%d %H:%M:%S')
 
-def split_date(date):
-    try:
-        date = pd.to_datetime(date)
-        return pd.Series({
-            'solo_fecha': date.date(),
-            'solo_hora': date.time()
-        })
-    except Exception:
-        return pd.Series({
-            'solo_fecha': pd.NaT,
-            'solo_hora': pd.NaT
-        })
+def split_date(df, column = 'fecha_hora'):
+    df[column] = pd.to_datetime(df[column], errors='coerce')
+    df['solo_fecha'] = df[column].dt.date
+    df['solo_hora'] = df[column].dt.time
+    return df

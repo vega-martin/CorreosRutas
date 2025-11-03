@@ -1,10 +1,10 @@
 from flask import jsonify, current_app
-from app.util.fileMgmt import standardize_date, split_date
+from app.util.fileMgmt import standardize_df_date, split_date
 import pandas as pd
 
 def count_and_drop_duplicates(df):
     df_length = len(df)
-    df = df.drop_duplicates()
+    df = df.drop_duplicates(ignore_index=True)
     duplicates_count = df_length - len(df)
     return duplicates_count
 
@@ -18,6 +18,7 @@ def unifyAllFiles(pathA, pathB, pathC):
         Returns:
             JSON with all the erased data and its related information
     """
+    current_app.logger.info("+++++++++++++++ ABRIENDO FICHEROS +++++++++++++++++++")
     try:
         df_A = pd.read_csv(pathA, delimiter=',', low_memory=False)
         df_B = pd.read_csv(pathB, delimiter=',', low_memory=False)
@@ -27,23 +28,36 @@ def unifyAllFiles(pathA, pathB, pathC):
         return jsonify({'error' : 'Not able to ope files'})
     
     # 1 - Poner fecha_hora en el mismo formato en los 3 ficheros
-
-    df_A['fecha_hora'] = df_A['fecha_hora'].apply(standardize_date).dt.strftime('%Y-%m-%d %H:%M:%S')
-    df_B['fecha_hora'] = df_B['fecha_hora'].apply(standardize_date).dt.strftime('%Y-%m-%d %H:%M:%S')
-    df_C['fecha_hora'] = df_C['fecha_hora'].apply(standardize_date).dt.strftime('%Y-%m-%d %H:%M:%S')
+    current_app.logger.info("+++++++++++++++ ESTABLECIENDO MISMO FORMATO DE FECHA +++++++++++++++++++")
+    current_app.logger.info("--------------- Procesando Fichero A")
+    df_A = standardize_df_date(df_A, 'fecha_hora')
+    current_app.logger.info("--------------- Procesando Fichero B")
+    df_B = standardize_df_date(df_B, 'fecha_hora')
+    current_app.logger.info("--------------- Procesando Fichero C")
+    df_C = standardize_df_date(df_C, 'fecha_hora')
 
     # 2 - Crear 2 columnas a partir de fecha_hora (la original se puede dejar): fecha, hora
-
-    df_A[['solo_fecha', 'solo_hora']] = df_A['fecha_hora'].apply(split_date)
-    df_B[['solo_fecha', 'solo_hora']] = df_B['fecha_hora'].apply(split_date)
-    df_C[['solo_fecha', 'solo_hora']] = df_C['fecha_hora'].apply(split_date)
+    current_app.logger.info("+++++++++++++++ SEPARANDO FECHA +++++++++++++++++++")
+    current_app.logger.info("--------------- Procesando Fichero A")
+    df_A = split_date(df_A)
+    current_app.logger.info("--------------- Procesando Fichero B")
+    df_B = split_date(df_B)
+    current_app.logger.info("--------------- Procesando Fichero C")
+    df_C = split_date(df_C)
 
     # 3 - Eliminar duplicados
-
+    current_app.logger.info("+++++++++++++++ ELIMINANDO DUPLICADOS +++++++++++++++++++")
+    current_app.logger.info("--------------- Procesando Fichero A")
     duplicates_A = count_and_drop_duplicates(df_A)
+    current_app.logger.info(f"Duplicados: {duplicates_A}")
+    current_app.logger.info("--------------- Procesando Fichero B")
     duplicates_B = count_and_drop_duplicates(df_B)
+    current_app.logger.info(f"Duplicados: {duplicates_B}")
+    current_app.logger.info("--------------- Procesando Fichero C")
     duplicates_C = count_and_drop_duplicates(df_C)
+    current_app.logger.info(f"Duplicados: {duplicates_C}")
     total_duplicates = duplicates_A + duplicates_B + duplicates_C
+    current_app.logger.info(f"Duplicados totales: {total_duplicates}")
     duplicates_info = {
         "Duplicados_totales": total_duplicates,
         "Duplicados_A": duplicates_A,

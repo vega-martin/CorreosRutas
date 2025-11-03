@@ -41,7 +41,7 @@ def unifyFiles():
     id = request.form.get('id')
     files_paths = {}
     base_upload = current_app.config.get("UPLOAD_FOLDER")
-    id_path = os.path.join(base_upload, id)
+    id_path = os.path.join(base_upload, str(id))
 
     for root, _, files in os.walk(id_path):
         for file in files:
