@@ -46,9 +46,9 @@ def valid_file(path, file_type):
         return jsonify({'error': f'Error al leer el archivo: {str(e)}'}), 500
 
     required_columns_map = {
-        "A": {'fec_lectura_medicion', 'longitud_wgs84_gd', 'latitud_wgs84_gd', 'cod_inv_pda'},
-        "B": {'Num Inv', 'Fec Actividad', 'Seg Transcurrido'},
-        "C": {'COD_SECCION', 'INSTANTE', 'LONGITUD', 'LATITUD'}
+        "A": {'fec_lectura_medicion', 'longitud_wgs84_gd', 'latitud_wgs84_gd', 'cod_inv_pda', 'codired'},
+        "B": {'Num Inv', 'Fec Actividad', 'Seg Transcurrido', 'Cod Unidad'},
+        "C": {'COD_SECCION', 'INSTANTE', 'LONGITUD', 'LATITUD', 'codired'}
     }
 
     required_columns = required_columns_map.get(file_type)

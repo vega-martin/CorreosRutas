@@ -10,9 +10,12 @@
         <div class="column">
             <div class="contenedor">
                 <form id="forms" class="formulario" method="POST" onsubmit="return validarFormulario();">
-                    <h2>Seleccionar</h2>
+                    <h2>Introducir código de unidad</h2>
+                    <input type="text" name="codired" id="codired" placeholder="Codired" minlength="7" maxlength="7">
+
+                    <h2>Seleccionar PDA</h2>
                     <div class="custom-select">
-                        <button type="button" class="select-btn" id="pdaBtn">Selecciona una PDA</button>
+                        <button type="button" class="select-btn" id="pdaBtn" disabled>Selecciona una PDA</button>
                         <div class="options" id="pdaOptions">
                             <!--
                             <div data-value="TODAS">Todas</div>
@@ -29,13 +32,13 @@
                     
                     <input type="hidden" name="pda" id="pdaInput">
                     
-                    <h2>Seleccionar</h2>
+                    <h2>Seleccionar fecha</h2>
                     <label>Fecha de inicio:</label>
                     <input type="date" name="fecha_inicio" id="fechaInicio" disabled>
                     
                     <br>
                     
-                    <label>Fecha de fin: (no )</label>
+                    <label>Fecha de fin:(no implementado)</label>
                     <input type="date" name="fecha_fin" id="fechaFin" disabled>
                     <br>
                     
@@ -142,6 +145,7 @@
 
     <script>
         // --------- SELECT PERSONALIZADO ---------
+        const codired = document.getElementById('codired');
         const selectBtn = document.getElementById('pdaBtn');
         const options = document.getElementById('pdaOptions');
         const pdaInput = document.getElementById('pdaInput');
@@ -149,59 +153,103 @@
         const fechaInicio = document.getElementById('fechaInicio');
         const fechaFin = document.getElementById('fechaFin');
         const aviso = document.getElementById('fechaAviso');
-
+        
         let fechasDisponibles = new Set();
 
         selectBtn.addEventListener('click', () => {
             options.style.display = options.style.display === 'block' ? 'none' : 'block';
         });
 
-        // Al seleccionar PDA:
-        options.querySelectorAll('div').forEach(opt => {
-            opt.addEventListener('click', () => {
-                selectBtn.textContent = opt.textContent;
-                pdaInput.value = opt.getAttribute('data-value');
-                options.style.display = 'none';
+        codired.addEventListener("change", () => {
+            const cod = codired.value.trim();
 
-                // Mostrar mensaje de espera al usuario
-                waitMessage.textContent = 'Procesando fechas válidas.';
-                waitMessage.style.display = 'block';
-                
-                // Bloquear campos y limpiar valores
-                fechaInicio.disabled = true;
-                fechaFin.disabled = true;
-                fechaInicio.value = "";
-                fechaFin.value = "";
-                aviso.style.display = "none";
-                fechasDisponibles.clear();
+            if (cod === "") {
+                options.innerHTML = "";
+                selectBtn.disabled = true;
+                pdaInput.value = "";
+                selectBtn.textContent = "Selecciona una PDA";
+                return;
+            }
 
-                // Obtener fechas disponibles desde el backend
-                fetch(`/fechas_por_pda?pda=${encodeURIComponent(pdaInput.value)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.fechas && data.fechas.length > 0) {
-                            fechaInicio.disabled = false;
-                            fechaFin.disabled = true;
+            // Mensaje de cargando
+            selectBtn.textContent = "Cargando...";
 
-                            // Guardamos fechas válidas
-                            fechasDisponibles = new Set(data.fechas);
+            // Obtener pdas disponibles desde el backend
+            fetch(`/pda_por_codired?cod=${encodeURIComponent(codired.value)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const pdas = data.pdas;
+                    options.innerHTML = "";
 
-                            // Ajustar límites del calendario
-                            fechaInicio.setAttribute("min", data.fechas[0]);
-                            fechaInicio.setAttribute("max", data.fechas[data.fechas.length - 1]);
-                            fechaFin.setAttribute("min", data.fechas[0]);
-                            fechaFin.setAttribute("max", data.fechas[data.fechas.length - 1]);
-                        }
-                    })
-                    .catch(error => {
-                        // Mostrar mensaje de error al usuario
-                        waitMessage.textContent = 'Error al cargar las fechas.'
-                    })
-                    .finally(() => {
-                        // Ocultar mensaje de espera al usuario
-                        waitMessage.style.display = 'none';
-                    });
-            });
+                    if (pdas.length === 0) {
+                        options.innerHTML = "<div>No hay PDAs disponibles</div>";
+                    } else {
+                        // Crear los divs de las opciones
+                        pdas.forEach(pda => {
+                            const div = document.createElement("div");
+                            div.dataset.value = pda;
+                            div.textContent = pda;
+
+                            // Añadir funcionalidad al div
+                            div.addEventListener('click', () => {
+                                selectBtn.textContent = pda;
+                                pdaInput.value = pda;
+                                options.style.display = 'none';
+
+                                // Mostrar mensaje de espera al usuario
+                                waitMessage.textContent = 'Procesando fechas válidas.';
+                                waitMessage.style.display = 'block';
+                                
+                                // Bloquear campos y limpiar valores
+                                fechaInicio.disabled = true;
+                                fechaFin.disabled = true;
+                                fechaInicio.value = "";
+                                fechaFin.value = "";
+                                aviso.style.display = "none";
+                                fechasDisponibles.clear();
+
+                                // Obtener fechas disponibles desde el backend
+                                fetch(`/fechas_por_pda?pda=${encodeURIComponent(pdaInput.value)}`)
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.fechas && data.fechas.length > 0) {
+                                            fechaInicio.disabled = false;
+                                            fechaFin.disabled = true;
+
+                                            // Guardamos fechas válidas
+                                            fechasDisponibles = new Set(data.fechas);
+
+                                            // Ajustar límites del calendario
+                                            fechaInicio.setAttribute("min", data.fechas[0]);
+                                            fechaInicio.setAttribute("max", data.fechas[data.fechas.length - 1]);
+                                            fechaFin.setAttribute("min", data.fechas[0]);
+                                            fechaFin.setAttribute("max", data.fechas[data.fechas.length - 1]);
+                                        }
+                                    })
+                                    .catch(error => {
+                                        // Mostrar mensaje de error al usuario
+                                        waitMessage.textContent = 'Error al cargar las fechas.'
+                                    })
+                                    .finally(() => {
+                                        // Ocultar mensaje de espera al usuario
+                                        waitMessage.style.display = 'none';
+                                    });
+                            });
+
+                            options.appendChild(div);
+                        });
+                    }
+                    // Activar el dropdown
+                    selectBtn.textContent = "Selecciona una PDA";
+                    selectBtn.disabled = false;
+                })
+                .catch(err => {
+                    selectBtn.disabled = false;
+                    pdaInput.value = "";
+                    selectBtn.textContent = "PDAs no encontradas";
+                });
+
+            
         });
 
         // --------- VALIDACIÓN DE FECHAS ---------
@@ -272,9 +320,15 @@
 
         // --------- VALIDACIÓN DEL FORMULARIO ---------
         function validarFormulario() {
+            const cod = codired.value;
             const pda = pdaInput.value;
             const ini = fechaInicio.value;
             const fin = fechaFin.value;
+
+            if (!cod) {
+                alert("Debes introducir un código de unidad.");
+                return false;
+            }
 
             if (!pda) {
                 alert("Debes seleccionar una PDA.");
@@ -288,7 +342,7 @@
             fetch('/generar_mapa/datos_tabla', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pda, ini })
+                body: JSON.stringify({ cod, pda, ini })
             })
             .then(response => {
                 if (!response.ok) throw new Error("Error al obtener los datos del servidor");
@@ -323,7 +377,7 @@
             fetch('/generar_mapa/get_mapa', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pda, ini })
+                body: JSON.stringify({ cod, pda, ini })
             })
             .then(response => response.json())
             .then(map_data => {

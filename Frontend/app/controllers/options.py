@@ -1,6 +1,7 @@
 from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template
 from werkzeug.utils import secure_filename
 import pandas as pd
+import numpy as np
 
 options_bp = Blueprint('options', __name__, template_folder='templates')
 
@@ -58,6 +59,29 @@ def get_fechas_por_todas_las_pdas(df):
         print("No se encontró una columna válida de fechas.")
         return []
 
+
+@options_bp.route('/pda_por_codired')
+def pda_por_codired():
+    cod = request.args.get('cod')
+    uploaded = session.get('uploaded_files', {})
+    path = uploaded.get('A')
+    current_app.logger.info("Abriendo fichero A")
+    try:
+        df = pd.read_csv(path, delimiter=';', low_memory=False)
+    except Exception as e:
+        print(f"Error al leer el archivo CSV: {e}")
+        return []
+
+    if not path or not cod:
+        return jsonify({'pdas': []})
+    
+    current_app.logger.info(f"Buscando regsitros perteneciente a la oficina {cod}")
+    df = df[df['codired'] == int(cod)]
+    current_app.logger.info(f"Se han encotrado {len(df)} registros de la oficina {cod}")
+    pdas = df['cod_inv_pda'].dropna().unique()
+    pdas = np.sort(pdas).tolist()
+    current_app.logger.info(f"Se han encontrado {len(pdas)} pdas en la oficina {cod}")
+    return jsonify({'pdas': pdas})
 
 
 @options_bp.route('/fechas_por_pda')

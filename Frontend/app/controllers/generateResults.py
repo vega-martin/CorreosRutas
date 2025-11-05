@@ -171,7 +171,7 @@ def calcular_metricas(df_filtrado):
 
 
 
-def get_datos(pda, fecha):
+def get_datos(cod, pda, fecha):
     # Obtener fichero
     uploaded = session.get('uploaded_files', {})
     path = uploaded.get('A')
@@ -182,6 +182,8 @@ def get_datos(pda, fecha):
     except Exception as e:
         current_app.logger.error(f"Error al leer el archivo CSV: {e}")
         return []
+    
+    df = df[df['codired'] == cod]
 
     if 'fec_lectura_medicion' not in df.columns:
         current_app.logger.error("No se encontró la columna 'fec_lectura_medicion' en el CSV.")
@@ -218,11 +220,11 @@ def get_datos(pda, fecha):
 # ------------------------------------------------------------
 
 
-def save_map(pda, fecha, map):
+def save_map(cod, pda, fecha, map):
     """Guardar el mapa"""
-    
+    current_app.logger.info(f"Guardando mapa")
     base_dir = current_app.config.get("BASE_DIR")
-    map_folder = os.path.join(base_dir, "app", "static", "maps")
+    map_folder = os.path.join(base_dir, "app", "static", "maps", cod)
     os.makedirs(map_folder, exist_ok=True)
     if not os.path.exists(map_folder):
         current_app.logger.error(f"Error: no se creó la carpeta {map_folder}")
@@ -238,12 +240,13 @@ def save_map(pda, fecha, map):
     else:
         current_app.logger.info(f"Archivo guardado correctamente en {save_path}")
     
+    current_app.logger.info(f"Mapa guardado en {save_path}")
     return save_path
 
 
 
 
-def create_map(pda, fecha):
+def create_map(cod, pda, fecha):
     """Crea un archivo html temporal con el mapa y agrega la dirección a la sesion"""
     # Obtener fichero
     uploaded = session.get('uploaded_files', {})
@@ -255,6 +258,12 @@ def create_map(pda, fecha):
     except Exception as e:
         current_app.logger.error(f"Error al leer el archivo CSV: {e}")
         return []
+    
+    df = df[df['codired'] == cod]
+    current_app.logger.info(f"Encontrados {len(df)} en la oficina {cod}")
+
+
+    current_app.logger.info(f"Buscando fecha especifica en el df")
     if 'fec_lectura_medicion' not in df.columns:
         current_app.logger.error("No se encontró la columna 'fec_lectura_medicion' en el CSV.")
         return []
@@ -278,6 +287,7 @@ def create_map(pda, fecha):
 
     df_filtrado = df_filtrado.sort_values('fec_lectura_medicion')
 
+    current_app.logger.info(f"Creando mapa")
     # Pasar de string a num
     df_filtrado['latitud_wgs84_gd'] = df_filtrado['latitud_wgs84_gd'].astype(str).str.replace(',', '.')
     df_filtrado['longitud_wgs84_gd'] = df_filtrado['longitud_wgs84_gd'].astype(str).str.replace(',', '.')
@@ -328,8 +338,8 @@ def create_map(pda, fecha):
         icon=folium.Icon(color='red', icon='play', prefix='fa'),
         popup="FIN"
     ).add_to(mapa)
-
-    return save_map(pda,fecha, mapa)
+    current_app.logger.info(f"Mapa creado")
+    return save_map(cod, pda, fecha, mapa)
 
 
 
@@ -351,15 +361,15 @@ def generar_mapa():
         return redirect(url_for('main.root'))
 
     pdas = get_pdas(file_A_path)
-    fechas = get_fechas(file_A_path)
 
-    return render_template('options.html', pdas=pdas, fechas=fechas)
+    return render_template('options.html', pdas=pdas)
 
 
 
 @generateResults_bp.route('/generar_mapa/datos_tabla', methods=['GET', 'POST'])
 def datos_tabla():
     data = request.get_json()
+    cod = data.get('cod')
     pda = data.get('pda')
     ini = data.get('ini')
 
@@ -368,24 +378,26 @@ def datos_tabla():
     # Los argumentos son strings, por ejemplo
     # pda = "PDA01"
     # ini = "2025-10-18"
-    resultados = get_datos(pda, ini)
+    resultados = get_datos(cod, pda, ini)
 
     return jsonify(resultados)
 
 @generateResults_bp.route('/generar_mapa/get_mapa', methods=['GET', 'POST'])
 def get_mapa():
     data = request.get_json()
+    cod = data.get('cod')
     pda = data.get('pda')
     ini = data.get('ini')
     # TODO: cambiar para que llame a la API del backend y no lo haga aqui
     created_maps = session.get('created_maps', [])
     map = pda + "_" + ini
     if map in created_maps:
-        path = "/static/maps/" + map + ".html"
+        path = "/static/maps/" + cod + "/" + map + ".html"
         current_app.logger.info(f"Mapa ya creado. Url del mapa para la {pda}: {path}")
         return jsonify({'url': path})
 
-    abs_path = create_map(pda, ini)
+    abs_path = create_map(cod, pda, ini)
+    current_app.logger.info(f"Ruta absoluta del mapa: {abs_path}")
     base_dir = current_app.config.get("BASE_DIR")
     base_dir = os.path.join(base_dir, "app")
     path = os.path.relpath(abs_path, base_dir)

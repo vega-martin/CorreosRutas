@@ -20,6 +20,16 @@
         </div>
     </div>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <ul>
+            {% for category, message in messages %}
+            <li style="color: {{ 'red' if category == 'error' else 'green' }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    {% endwith %}
+
     {% if session.get('uploaded_files') %}
     <div class="uploaded-files">
         <h2>📂 Ficheros cargados en sesión</h2>
@@ -30,16 +40,6 @@
         </ul>
     </div>
     {% endif %}
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <ul>
-          {% for category, message in messages %}
-            <li style="color: {{ 'red' if category == 'error' else 'green' }}">{{ message }}</li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
 
 
     <h2>Acciones</h2>
@@ -61,13 +61,4 @@
         return confirm("¿Seguro que deseas cerrar la sesión y eliminar los ficheros subidos?");
     }
     </script>
-    
-<!--
-    <div class="mapa">
-        <h2>Mapa generado</h2>
-        <iframe id="mapaRenderizado" src="" width="100%" height="500px" style="border:1px solid #ccc;"></iframe>
-        <br>
-        <a id="descagarMapa" href="#" target="_blank">Descargar Mapa</a>
-    </div>
--->
 {% endblock %}
