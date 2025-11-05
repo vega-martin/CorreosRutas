@@ -15,7 +15,7 @@
                 <input type="file" name="fileB" accept=".csv" required><br><br>
                 <label for="fileC">Fichero C:</label>
                 <input type="file" name="fileC" accept=".csv" required><br><br>
-                <input type="submit" value="Subir Ficheros">
+                <input type="submit" value="Subir Ficheros" disabled title="Se deben seleccionar los tres ficheros">
             </form>
         </div>
     </div>
@@ -57,8 +57,28 @@
     </form>
 
     <script>
-    function confirmLogout() {
-        return confirm("¿Seguro que deseas cerrar la sesión y eliminar los ficheros subidos?");
-    }
+        document.addEventListener("DOMContentLoaded", () => {
+            const fileInputs = [
+                document.querySelector('input[name="fileA"]'),
+                document.querySelector('input[name="fileB"]'),
+                document.querySelector('input[name="fileC"]')
+            ];
+            const submitBtn = document.querySelector('input[type="submit"]');
+
+            // Función para comprobar si todos los inputs tienen archivo seleccionado
+            function checkFilesSelected() {
+                const allSelected = fileInputs.every(input => input.files.length > 0);
+                submitBtn.disabled = !allSelected;
+            }
+
+            // Añadimos event listeners a cada input
+            fileInputs.forEach(input => {
+                input.addEventListener("change", checkFilesSelected);
+            });
+        });
+
+        function confirmLogout() {
+            return confirm("¿Seguro que deseas cerrar la sesión y eliminar los ficheros subidos?");
+        }
     </script>
 {% endblock %}
