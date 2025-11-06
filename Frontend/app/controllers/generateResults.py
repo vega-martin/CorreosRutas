@@ -1,6 +1,7 @@
 from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template
 from geopy.distance import geodesic
 import pandas as pd
+import numpy as np
 import folium
 import os
 import pytz
@@ -123,8 +124,21 @@ def calcular_metricas(df_filtrado):
         fila = df_filtrado.iloc[i]
 
         hora = fila['fec_lectura_medicion'].strftime('%H:%M:%S')
-        lon = float(str(fila['longitud_wgs84_gd']).replace(',', '.'))
-        lat = float(str(fila['latitud_wgs84_gd']).replace(',', '.'))
+
+        #current_app.logger.info(f"Numero de puntos en la expresión (longitud {fila['longitud_wgs84_gd']}): {fila['longitud_wgs84_gd'].count('.')}")
+        #current_app.logger.info(f"Numero de puntos en la expresión (latitud {fila['latitud_wgs84_gd']}): {fila['latitud_wgs84_gd'].count('.')}")
+
+
+        if ((fila['longitud_wgs84_gd'].count('.') <= 1) and (fila['latitud_wgs84_gd'].count('.') <= 1)):
+            lon = float(str(fila['longitud_wgs84_gd']).replace(',', '.'))
+            lat = float(str(fila['latitud_wgs84_gd']).replace(',', '.'))
+        else:
+            lon_int = fila['longitud_wgs84_gd'].replace('.', '')
+            lon_float = lon_int[:2] + '.' + lon_int[2:]
+            lon = float(lon_float)
+            lat_int = fila['latitud_wgs84_gd'].replace('.', '')
+            lat_float = lat_int[:2] + '.' + lat_int[2:]
+            lat = float(lat_float)
 
         # Primer punto
         if i == 0:
@@ -135,7 +149,16 @@ def calcular_metricas(df_filtrado):
             fila_prev = df_filtrado.iloc[i - 1]
 
             # Calcular distancia (en km)
-            punto1 = (float(str(fila_prev['latitud_wgs84_gd']).replace(',', '.')), float(str(fila_prev['longitud_wgs84_gd']).replace(',', '.')))
+            if ((fila_prev['longitud_wgs84_gd'].count('.') <= 1) and (fila_prev['latitud_wgs84_gd'].count('.') <= 1)):
+                punto1 = (float(str(fila_prev['latitud_wgs84_gd']).replace(',', '.')), float(str(fila_prev['longitud_wgs84_gd']).replace(',', '.')))
+            else:
+                lon_int = ''.join(fila_prev['longitud_wgs84_gd'].split('.'))
+                lon_float = lon_int[:2] + '.' + lon_int[2:]
+                lon2 = float(lon_float)
+                lat_int = ''.join(fila_prev['latitud_wgs84_gd'].split('.'))
+                lat_float = lat_int[:2] + '.' + lat_int[2:]
+                lat2 = float(lat_float)
+                punto1 = (lat2, lon2)
             punto2 = (lat, lon)
             distancia_km = geodesic(punto1, punto2).kilometers
             distancia_m = geodesic(punto1, punto2).meters
@@ -183,7 +206,7 @@ def get_datos(cod, pda, fecha):
         current_app.logger.error(f"Error al leer el archivo CSV: {e}")
         return []
     
-    df = df[df['codired'] == cod]
+    df = df[df['codired'] == int(cod)]
 
     if 'fec_lectura_medicion' not in df.columns:
         current_app.logger.error("No se encontró la columna 'fec_lectura_medicion' en el CSV.")
@@ -218,6 +241,17 @@ def get_datos(cod, pda, fecha):
 # TODO: Esto se elimina, deberia ser una llamada a la API
 # CREACION DE MAPA
 # ------------------------------------------------------------
+
+def corregir_coordenada(series):
+    def corregir(x):
+        try:
+            # Reinsertamos el punto después de los 2 primeros dígitos
+            s = x[:2] + '.' + x[2:]
+            #current_app.logger.info(f"Convirtiendo numero de {x} a {s}")
+            return float(s)
+        except Exception:
+            return np.nan
+    return series.apply(corregir)
 
 
 def save_map(cod, pda, fecha, map):
@@ -259,7 +293,7 @@ def create_map(cod, pda, fecha):
         current_app.logger.error(f"Error al leer el archivo CSV: {e}")
         return []
     
-    df = df[df['codired'] == cod]
+    df = df[df['codired'] == int(cod)]
     current_app.logger.info(f"Encontrados {len(df)} en la oficina {cod}")
 
 
@@ -287,17 +321,41 @@ def create_map(cod, pda, fecha):
 
     df_filtrado = df_filtrado.sort_values('fec_lectura_medicion')
 
-    current_app.logger.info(f"Creando mapa")
-    # Pasar de string a num
-    df_filtrado['latitud_wgs84_gd'] = df_filtrado['latitud_wgs84_gd'].astype(str).str.replace(',', '.')
-    df_filtrado['longitud_wgs84_gd'] = df_filtrado['longitud_wgs84_gd'].astype(str).str.replace(',', '.')
+    current_app.logger.info(f"Creando mapa con {len(df_filtrado)} registros")
 
-    df_filtrado['latitud_wgs84_gd'] = pd.to_numeric(df_filtrado['latitud_wgs84_gd'], errors='coerce')
-    df_filtrado['longitud_wgs84_gd'] = pd.to_numeric(df_filtrado['longitud_wgs84_gd'], errors='coerce')
+    # Contamos cuántos puntos hay en cada valor
+    df_filtrado['num_pts_lon'] = df_filtrado['longitud_wgs84_gd'].astype(str).str.count(r'\.')
+    df_filtrado['num_pts_lat'] = df_filtrado['latitud_wgs84_gd'].astype(str).str.count(r'\.')
+
+    # Comprobamos la media (o el valor típico) de puntos
+    media_lon = df_filtrado['num_pts_lon'].mean()
+    media_lat = df_filtrado['num_pts_lat'].mean()
+
+    if ((media_lon <= 1) and (media_lat <= 1)):
+        current_app.logger.info(f"Probando formato correcto de coordenadas")
+        # Pasar de string a num
+        df_filtrado['latitud_wgs84_gd'] = df_filtrado['latitud_wgs84_gd'].astype(str).str.replace(',', '.')
+        df_filtrado['longitud_wgs84_gd'] = df_filtrado['longitud_wgs84_gd'].astype(str).str.replace(',', '.')
+
+        df_filtrado['latitud_wgs84_gd'] = pd.to_numeric(df_filtrado['latitud_wgs84_gd'], errors='coerce')
+        df_filtrado['longitud_wgs84_gd'] = pd.to_numeric(df_filtrado['longitud_wgs84_gd'], errors='coerce')
+    else:
+        df_filtrado['latitud_wgs84_gd'] = df_filtrado['latitud_wgs84_gd'].astype(str).str.replace('.', '', regex=False)
+        df_filtrado['longitud_wgs84_gd'] = df_filtrado['longitud_wgs84_gd'].astype(str).str.replace('.', '', regex=False)
+
+        current_app.logger.info(f"Probando a corregir coordenadas")
+        # Corregir coordenadas ----------------------------
+        df_filtrado['latitud_wgs84_gd'] = corregir_coordenada(df_filtrado['latitud_wgs84_gd'])
+        df_filtrado['longitud_wgs84_gd'] = corregir_coordenada(df_filtrado['longitud_wgs84_gd'])
+
+    df_filtrado.dropna()
+    current_app.logger.info(f"Quedan {len(df_filtrado)} registros para generar el mapa")
+
 
     # Centrar mapa en promedio lat/lon
     lat_promedio = df_filtrado['latitud_wgs84_gd'].mean()
     lon_promedio = df_filtrado['longitud_wgs84_gd'].mean()
+    current_app.logger.info(f"Mapa centrado en coordenadas {lat_promedio},{lon_promedio}")
 
     mapa = folium.Map(location=[lat_promedio, lon_promedio], zoom_start=15, control_scale=True)
     folium.TileLayer('CartoDB positron', name='Carto claro').add_to(mapa)
