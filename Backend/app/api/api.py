@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, session, redirect, url_for, flash, current_app, request, jsonify
-from app.util.fileMgmt import ensure_folder, rename_file_columns
+from app.util.fileMgmt import ensure_folder, rename_file_columns, extractDataframes
 from app.services.unifyFiles import unifyAllFiles
 from datetime import timedelta, datetime
 import uuid
@@ -38,6 +38,7 @@ def upload_file():
 
 @api_bp.route('/unifyFiles', methods=['POST'])
 def unifyFiles():
+    cod = request.form.get('codired')
     id = request.form.get('id')
     files_paths = {}
     base_upload = current_app.config.get("UPLOAD_FOLDER")
@@ -53,8 +54,10 @@ def unifyFiles():
                     files_paths[type] = os.path.join(root, file)
     
     current_app.logger.info(f"Se han encontrado {len(files_paths)} archivos en la carperta de la sesion {id}")
-
-    erased_info = unifyAllFiles(files_paths['A'], files_paths['B'], files_paths['C'])
+    df_A, df_B, df_C = extractDataframes(files_paths['A'], files_paths['B'], files_paths['C'], cod)
+    if ((len(df_A) == 0) or (len(df_B) == 0) or (len(df_C) == 0)):
+        return jsonify({"Registros totales: 0"})
+    erased_info = unifyAllFiles(df_A, df_B, df_C)
     print(erased_info)
     
     return erased_info

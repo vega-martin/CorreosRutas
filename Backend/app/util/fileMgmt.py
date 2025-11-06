@@ -43,7 +43,8 @@ def rename_file_columns(path, file_type):
         df.rename(columns={
                 "Num Inv": "cod_pda",
                 "Fec Actividad": "fecha_hora",
-                "Seg Transcurrido": "seg_transcurridos"
+                "Seg Transcurrido": "seg_transcurridos",
+                "Cod Unidad": "codired"
             }, inplace=True)
     elif (file_type == "C"):
         df.rename(columns={
@@ -78,3 +79,21 @@ def split_date(df, column = 'fecha_hora'):
     df['solo_fecha'] = df[column].dt.date
     df['solo_hora'] = df[column].dt.time
     return df
+
+
+def extractDataframes(pathA, pathB, pathC, cod):
+    current_app.logger.info("+++++++++++++++ ABRIENDO FICHEROS +++++++++++++++++++")
+    try:
+        df_A = pd.read_csv(pathA, delimiter=',', low_memory=False)
+        df_B = pd.read_csv(pathB, delimiter=',', low_memory=False)
+        df_C = pd.read_csv(pathC, delimiter=',', low_memory=False)
+    except Exception:
+        current_app.logger.error(f"Error al leer archivo CSV")
+        return jsonify({'error' : 'Not able to ope files'})
+    
+    current_app.logger.info("+++++++++++++++ FILTRANDO CODIGO DE UNIDAD +++++++++++++++++++")
+    df_A = df_A[df_A['codired'] == int(cod)]
+    df_B = df_B[df_B['codired'] == int(cod)]
+    df_C = df_C[df_C['codired'] == int(cod)]
+
+    return df_A, df_B, df_C

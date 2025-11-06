@@ -180,7 +180,7 @@ h1, h2 {
     background-color: #dce7f3;
 }
 
-input[type="text"] {
+.codired {
     border: 1px solid #ccd3db;
     border-radius: 8px;
     padding-top: 8px;
@@ -192,7 +192,25 @@ input[type="text"] {
     background-color: #f9fafc;
 }
 
-input[type="text"]:focus {
+.codired:focus {
+    outline: none;
+    border-color: #3a7bd5;
+    background-color: #fff;
+}
+
+.codiredMain {
+    border: 1px solid #ccd3db;
+    border-radius: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    width: 10%;
+    font-size: 15px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    background-color: #f9fafc;
+}
+
+.codiredMain:focus {
     outline: none;
     border-color: #3a7bd5;
     background-color: #fff;

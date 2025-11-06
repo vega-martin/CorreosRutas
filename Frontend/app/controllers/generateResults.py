@@ -466,9 +466,13 @@ def get_mapa():
     return jsonify({'url': path})
 
 
-@generateResults_bp.route('/unifyFiles')
+@generateResults_bp.route('/unifyFiles/')
 def unifyFiles():
-    data = {"id": session.get("id")}
+    cod = request.args.get('codiredMain')
+    data = {
+        "id": session.get("id"),
+        "codired": cod
+        }
     api_url = current_app.config.get("API_URL")
     requests.post(f"{api_url}/unifyFiles", data=data)
     flash(f'Unificando ficheros. Proceso experimental (pueden ocurrir fallos)', 'info')
