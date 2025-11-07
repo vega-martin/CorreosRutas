@@ -54,10 +54,14 @@ def unifyFiles():
                     files_paths[type] = os.path.join(root, file)
     
     current_app.logger.info(f"Se han encontrado {len(files_paths)} archivos en la carperta de la sesion {id}")
-    df_A, df_B, df_C = extractDataframes(files_paths['A'], files_paths['B'], files_paths['C'], cod)
+    df_A, df_B, df_C, read_info = extractDataframes(files_paths['A'], files_paths['B'], files_paths['C'], cod)
     if ((len(df_A) == 0) or (len(df_B) == 0) or (len(df_C) == 0)):
         return jsonify({"Registros totales: 0"})
     erased_info = unifyAllFiles(df_A, df_B, df_C)
-    print(erased_info)
     
-    return erased_info
+    return_information = {
+        "Registros_leidos": read_info,
+        "Registros_eliminados": erased_info
+    }
+
+    return return_information

@@ -53,7 +53,7 @@ def rename_file_columns(path, file_type):
                 "LONGITUD": "logitud",
                 "LATITUD": "latitud"
             }, inplace=True)
-    df.to_csv(path, index=False)
+    df.to_csv(path, sep=';', index=False)
     current_app.logger.info(f"Archivo {file_type} renombrado con éxito")
 
 
@@ -84,16 +84,29 @@ def split_date(df, column = 'fecha_hora'):
 def extractDataframes(pathA, pathB, pathC, cod):
     current_app.logger.info("+++++++++++++++ ABRIENDO FICHEROS +++++++++++++++++++")
     try:
-        df_A = pd.read_csv(pathA, delimiter=',', low_memory=False)
-        df_B = pd.read_csv(pathB, delimiter=',', low_memory=False)
-        df_C = pd.read_csv(pathC, delimiter=',', low_memory=False)
+        df_A = pd.read_csv(pathA, delimiter=';', low_memory=False)
+        df_B = pd.read_csv(pathB, delimiter=';', low_memory=False)
+        df_C = pd.read_csv(pathC, delimiter=';', low_memory=False)
     except Exception:
+        df_A = pd.DataFrame()
+        df_B = pd.DataFrame()
+        df_C = pd.DataFrame()
         current_app.logger.error(f"Error al leer archivo CSV")
-        return jsonify({'error' : 'Not able to ope files'})
+        return df_A, df_B, df_C, jsonify({'error' : 'Not able to ope files'})
     
     current_app.logger.info("+++++++++++++++ FILTRANDO CODIGO DE UNIDAD +++++++++++++++++++")
     df_A = df_A[df_A['codired'] == int(cod)]
     df_B = df_B[df_B['codired'] == int(cod)]
     df_C = df_C[df_C['codired'] == int(cod)]
+    df_A_length = len(df_A)
+    df_B_length = len(df_B)
+    df_C_length = len(df_C)
+    total_length = df_A_length + df_B_length + df_C_length
+    read_info = {
+        "Registros_totales": total_length,
+        "Registros_A": df_A_length,
+        "Registros_B": df_B_length,
+        "Registros_C": df_C_length
+    }
 
-    return df_A, df_B, df_C
+    return df_A, df_B, df_C, jsonify(read_info)
