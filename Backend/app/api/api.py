@@ -58,7 +58,7 @@ def unifyFiles():
     df_A, df_B, df_C, read_info = extractDataframes(files_paths['A'], files_paths['B'], files_paths['C'], cod)
     if ((len(df_A) == 0) or (len(df_B) == 0) or (len(df_C) == 0)):
         return jsonify({"Registros totales: 0"})
-    erased_info = unifyAllFiles(df_A, df_B, df_C)
+    erased_info = unifyAllFiles(df_A, df_B, df_C, id_path)
     
     if isinstance(read_info, Response):
         read_info = read_info.get_json()

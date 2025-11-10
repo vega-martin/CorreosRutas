@@ -1,6 +1,7 @@
 from flask import jsonify, current_app
 from collections import defaultdict
 import pandas as pd
+import os
 
 def count_and_drop_duplicates(df):
     df_length = len(df)
@@ -49,7 +50,59 @@ def remove_empty_entries(d):
     return {key: value for key, value in d.items() if len(value) > 0}
 
 
-def unifyAllFiles(df_A, df_B, df_C):
+def unify_stops_files(df_B_dict, df_C_dict, time_threshold):
+    unify_dict = {}
+    unify_info = {
+        "Registros_fusionados": 0,
+        "Registros_B_desechados": 0,
+        "Registros_C_desechados": 0
+    }
+    for pda, dates in df_B_dict.items():
+        for date, df_B in dates.items():
+            df_C = df_C_dict[pda][date]
+
+            df_B = df_B.copy()
+            df_C = df_C.copy()
+
+            df_B['solo_hora'] = pd.to_datetime(df_B['solo_hora'], format='%H:%M:%S')
+            df_C['solo_hora'] = pd.to_datetime(df_C['solo_hora'], format='%H:%M:%S')
+
+            # Cartesian join to compare every pair
+            merged = df_B.merge(df_C, how='cross')
+
+            # Compute absolute time difference in seconds
+            merged['diff_sec'] = (merged['solo_hora_x'] - merged['solo_hora_y']).abs().dt.total_seconds()
+
+            # Filter where difference < threshold seconds
+            df_D = merged[merged['diff_sec'] < time_threshold].copy()
+
+            # Compute mean time between the two solo_hora columns
+            df_D['solo_hora'] = df_D[['solo_hora_x', 'solo_hora_y']].mean(axis=1)
+            df_D['solo_hora'] = df_D['solo_hora'].dt.strftime('%H:%M:%S')
+
+            unify_info['Registros_fusionados'] += len(df_D)
+
+            # -------------------------------
+            # Find unmatched rows
+            # -------------------------------
+
+            matched_df_B_times = merged.loc[merged['diff_sec'] < time_threshold, 'solo_hora_x'].unique()
+            matched_df_C_times = merged.loc[merged['diff_sec'] < time_threshold, 'solo_hora_y'].unique()
+
+            unmatched_df_B = df_B[~df_B['solo_hora'].isin(matched_df_B_times)]
+            unmatched_df_C = df_C[~df_C['solo_hora'].isin(matched_df_C_times)]
+
+            unify_info['Registros_B_desechados'] += len(unmatched_df_B)
+            unify_info['Registros_C_desechados'] += len(unmatched_df_C)
+
+            if pda not in unify_dict:
+                unify_dict[pda] = {}
+            unify_dict[pda][date] = df_D
+    return unify_dict, unify_info
+
+
+
+def unifyAllFiles(df_A, df_B, df_C, save_path):
     """
         Calls necesary functions for creating new files from unifying the files
         Args:
@@ -162,8 +215,19 @@ def unifyAllFiles(df_A, df_B, df_C):
     #               ~ Si aumenta la dif. temp. se elimina el registro actual del Fichero_B (fichero referencia) y repetir g
     #               Agregar estos registros a un fichero a parte especificado que no se ha encotrado su registro correspondiente
     current_app.logger.info("+++++++++++++++ CREANDO FICHERO D: UNIFICANDO FICHEROS B Y C +++++++++++++++++++")
-    
+    time_threshold = 15
+    df_D_dict, unify_stops_info = unify_stops_files(df_B_dict, df_C_dict, time_threshold)
+    current_app.logger.info("+++++++++++++++ ESCRIBIENDO FICHERO D +++++++++++++++++++")
+    # Convertir de dict a df
+    frames = []
+    for pda, dates in df_D_dict.items():
+        for date, df in dates.items():
+            if not df.empty:
+                frames.append(df.assign(cod_pda=pda, solo_fecha=date))
 
+    df_D = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    path = os.path.join(save_path, 'Fichero_D.csv')
+    df_D.to_csv(path, sep=';', index=False)
 
 
 
@@ -176,7 +240,8 @@ def unifyAllFiles(df_A, df_B, df_C):
     return_info = {
         "Duplicados": duplicates_info,
         "PDAs_encontradas": found_pdas,
-        "PDAs_utilizables": shared_pdas
+        "PDAs_utilizables": shared_pdas,
+        "Union_ficheros_paradas": unify_stops_info
     }
 
     return jsonify(return_info)
