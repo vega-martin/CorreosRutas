@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, session, redirect, url_for, flash, current_app, request, jsonify
-from app.util.fileMgmt import ensure_folder, rename_file_columns, extractDataframes
+from flask import Blueprint, render_template, session, redirect, url_for, flash, current_app, request, jsonify, Response
+from app.util.fileMgmt import ensure_folder, rename_file_columns, extractDataframes, format_date
 from app.services.unifyFiles import unifyAllFiles
 from datetime import timedelta, datetime
 import uuid
@@ -26,6 +26,7 @@ def upload_file():
     f.save(save_path)
 
     rename_file_columns(save_path, type)
+    format_date(save_path, type)
 
     if not os.path.exists(save_path):
         current_app.logger.error(f"Error: el archivo no se guardó en {save_path}")
@@ -59,9 +60,15 @@ def unifyFiles():
         return jsonify({"Registros totales: 0"})
     erased_info = unifyAllFiles(df_A, df_B, df_C)
     
+    if isinstance(read_info, Response):
+        read_info = read_info.get_json()
+
+    if isinstance(erased_info, Response):
+        erased_info = erased_info.get_json()
+
     return_information = {
         "Registros_leidos": read_info,
         "Registros_eliminados": erased_info
     }
 
-    return return_information
+    return jsonify(return_information)

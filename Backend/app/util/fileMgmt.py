@@ -1,6 +1,6 @@
 from flask import current_app, request, jsonify
 import pandas as pd
-import os,pytz
+import os, datetime
 
 
 def valid_extension(name):
@@ -57,28 +57,42 @@ def rename_file_columns(path, file_type):
     current_app.logger.info(f"Archivo {file_type} renombrado con éxito")
 
 
-def standardize_df_date(df, column):
-    df[column] = standardize_date(df[column])
-    return df
-
-def standardize_date(series):
+def format_date(path, file_type):
     try:
-        date = pd.to_datetime(series, utc=True, errors='raise')
-        date = date.tz_convert('Europe/Paris')
+        df = pd.read_csv(path, delimiter=';', low_memory=False)
     except Exception:
-        try:
-            date = pd.to_datetime(series, format='%y-%m-%d %H:%M:%S', errors='coerce')
-            date = date.tz_localize('Europe/Paris')
-        except Exception:
-            return pd.NaT
+        return
+    
+    if file_type == "A":
+        date_format = '%Y-%m-%d %H:%M:%S.%f %z'
+        df['fecha_hora'] = pd.to_datetime(df['fecha_hora'], format=date_format, utc=True, errors='coerce')
+    elif file_type == "B":
+        date_format = '%d/%m/%Y %H:%M'
+        df['fecha_hora'] = pd.to_datetime(df['fecha_hora'], format=date_format, errors='coerce')
+    elif file_type == "C":
+        date_format = '%Y-%m-%d %H:%M:%S.%f %z'
+        df['fecha_hora'] = pd.to_datetime(df['fecha_hora'], format=date_format, utc=True, errors='coerce')
+    else:
+        df['fecha_hora'] = pd.to_datetime(df['fecha_hora'], errors='coerce')
+    
+    current_app.logger.info(f"El tipo de dato de la columna es {df['fecha_hora'].dtype}")
 
-    return date.dt.strftime('%Y-%m-%d %H:%M:%S')
+    if not pd.api.types.is_datetime64_any_dtype(df['fecha_hora']):
+        df['fecha_hora'] = pd.to_datetime(df['fecha_hora'], errors='coerce')
 
-def split_date(df, column = 'fecha_hora'):
-    df[column] = pd.to_datetime(df[column], errors='coerce')
-    df['solo_fecha'] = df[column].dt.date
-    df['solo_hora'] = df[column].dt.time
-    return df
+    if df['fecha_hora'].dt.tz is not None:
+        df['fecha_hora'] = df['fecha_hora'].dt.tz_convert('Europe/Paris')
+    else:
+        df['fecha_hora'] = df['fecha_hora'].dt.tz_localize('Europe/Paris')
+    
+
+    df['formatted_fecha_hora'] = df['fecha_hora'].dt.strftime('%Y/%m/%d_%H:%M:%S')
+    df['formatted_fecha_hora'] = pd.to_datetime(df['formatted_fecha_hora'], format='%Y/%m/%d_%H:%M:%S', errors='coerce')
+    df['solo_fecha'] = df['formatted_fecha_hora'].dt.date
+    df['solo_hora'] = df['formatted_fecha_hora'].dt.time
+
+    df.to_csv(path, sep=';', index=False)
+    current_app.logger.info(f"Se han convertido las fechas del archivo {file_type} correctamente.")
 
 
 def extractDataframes(pathA, pathB, pathC, cod):

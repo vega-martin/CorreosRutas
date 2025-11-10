@@ -1,5 +1,5 @@
 from flask import jsonify, current_app
-from app.util.fileMgmt import standardize_df_date, split_date
+from collections import defaultdict
 import pandas as pd
 
 def count_and_drop_duplicates(df):
@@ -8,7 +8,48 @@ def count_and_drop_duplicates(df):
     duplicates_count = df_length - len(df)
     return duplicates_count
 
-def unifyAllFiles(pathA, pathB, pathC):
+
+def create_dict(df):
+    df_dict = {}
+    for pda, group_pda in df.groupby('cod_pda'):
+        df_dict[pda] = {}
+        for fecha, group_fecha in group_pda.groupby('solo_fecha'):
+            #current_app.logger.info(f"Encontrado {pda}: {fecha}")
+            df_dict[pda][fecha] = group_fecha
+    return df_dict
+
+
+def sinconize_dicts(df_A_dict, df_B_dict, df_C_dict):
+    current_app.logger.info("+++++++++++++++ SINCORNIZANDO FICHEROS FUNCION +++++++++++++++++++")
+    # Sincronizar pdas
+    shared_pdas = df_A_dict.keys() & df_B_dict.keys() & df_C_dict.keys()
+    current_app.logger.info(f"Nº pdas comunes: {len(shared_pdas)}")
+
+    # Eliminar las pdas no comunes
+    for dict, name in zip([df_A_dict, df_B_dict, df_C_dict], ['Fichero_A', 'Fichero_B', 'Fichero_C']):
+        for pda in list(dict.keys()):
+            #current_app.logger.info(f"Analizando {pda} de {name} con {len(dict[pda].keys())} fechas")
+            if pda not in shared_pdas:
+                #current_app.logger.info(f"Eliminando {pda} de {name} ya que no se encuentra en otros ficheros")
+                del dict[pda]
+    
+    # Eliminar las fechas no comunes
+    for pda in shared_pdas:
+        shared_dates = df_A_dict[pda].keys() & df_B_dict[pda].keys() & df_C_dict[pda].keys()
+        for dict, name in zip([df_A_dict, df_B_dict, df_C_dict], ['Fichero_A', 'Fichero_B', 'Fichero_C']):
+            for date in list(dict[pda].keys()):
+                if date not in shared_dates:
+                    #current_app.logger.info(f"Eliminando {date} de {pda} de {name} ya que no se encuentra en otros ficheros")
+                    del dict[pda][date]
+    
+    return df_A_dict, df_B_dict, df_C_dict
+
+
+def remove_empty_entries(d):
+    return {key: value for key, value in d.items() if len(value) > 0}
+
+
+def unifyAllFiles(df_A, df_B, df_C):
     """
         Calls necesary functions for creating new files from unifying the files
         Args:
@@ -24,12 +65,15 @@ def unifyAllFiles(pathA, pathB, pathC):
     current_app.logger.info("--------------- Procesando Fichero A")
     duplicates_A = count_and_drop_duplicates(df_A)
     current_app.logger.info(f"Duplicados: {duplicates_A}")
+
     current_app.logger.info("--------------- Procesando Fichero B")
     duplicates_B = count_and_drop_duplicates(df_B)
     current_app.logger.info(f"Duplicados: {duplicates_B}")
+
     current_app.logger.info("--------------- Procesando Fichero C")
     duplicates_C = count_and_drop_duplicates(df_C)
     current_app.logger.info(f"Duplicados: {duplicates_C}")
+
     total_duplicates = duplicates_A + duplicates_B + duplicates_C
     current_app.logger.info(f"Duplicados totales: {total_duplicates}")
     duplicates_info = {
@@ -39,28 +83,73 @@ def unifyAllFiles(pathA, pathB, pathC):
         "Duplicados_B": duplicates_C
     }
 
-    # 2 - Poner fecha_hora en el mismo formato en los 3 ficheros
-    current_app.logger.info("+++++++++++++++ ESTABLECIENDO MISMO FORMATO DE FECHA +++++++++++++++++++")
-    current_app.logger.info("--------------- Procesando Fichero A")
-    df_A = standardize_df_date(df_A, 'fecha_hora')
-    current_app.logger.info("--------------- Procesando Fichero B")
-    df_B = standardize_df_date(df_B, 'fecha_hora')
-    current_app.logger.info("--------------- Procesando Fichero C")
-    df_C = standardize_df_date(df_C, 'fecha_hora')
 
-    # 3 - Crear 2 columnas a partir de fecha_hora (la original se puede dejar): fecha, hora
-    current_app.logger.info("+++++++++++++++ SEPARANDO FECHA +++++++++++++++++++")
+    # 2 - Ordenar y dividir por PDA -> Fichero_A_PDA01, Fichero_B_PDA01, Fichero_C_PDA01
+    # 3 - Ordenar y dividir por fecha -> Fichero_A_PDA01_2025-05-29 se junta con Fichero_B_PDA01_2025-05-29 y Fichero_C_PDA01_2025-05-29
+    current_app.logger.info("+++++++++++++++ SEPARANDO FICHEROS POR PDAS Y POR FECHAS +++++++++++++++++++")
     current_app.logger.info("--------------- Procesando Fichero A")
-    df_A = split_date(df_A)
-    current_app.logger.info("--------------- Procesando Fichero B")
-    df_B = split_date(df_B)
-    current_app.logger.info("--------------- Procesando Fichero C")
-    df_C = split_date(df_C)
+    df_A_dict = create_dict(df_A)
+    df_A_dict_length = len(df_A_dict)
 
-    # 4 - Ordenar y dividir por PDA -> Fichero_A_PDA01, Fichero_B_PDA01, Fichero_C_PDA01
-    # 5 - Ordenar y dividir por fecha -> Fichero_A_PDA01_2025-05-29 se junta con Fichero_B_PDA01_2025-05-29 y Fichero_C_PDA01_2025-05-29
-    # 6 - Ordenar por hora
-    # 7 - Crear Fichero_D = unificar ficheros B y C (PDA;fecha_hora;fecha;hora;longitud;latitud;segundosTranscurridos)
+    current_app.logger.info("--------------- Procesando Fichero B")
+    df_B_dict = create_dict(df_B)
+    df_B_dict_length = len(df_B_dict)
+
+    current_app.logger.info("--------------- Procesando Fichero C")
+    df_C_dict = create_dict(df_C)
+    df_C_dict_length = len(df_C_dict)
+
+    found_pdas = {
+        "PDAs_A": df_A_dict_length,
+        "PDAs_B": df_B_dict_length,
+        "PDAs_C": df_C_dict_length
+    }
+
+    # Obtener pdas y fechas comunes en los 3 ficheros y descartar el resto
+    current_app.logger.info("+++++++++++++++ SINCORNIZANDO FICHEROS +++++++++++++++++++")
+    df_A_dict, df_B_dict, df_C_dict = sinconize_dicts(df_A_dict, df_B_dict, df_C_dict)
+
+
+    current_app.logger.info("+++++++++++++++ ELIMINANDO ELEMENTOS RESIDUALES +++++++++++++++++++")
+    current_app.logger.info("--------------- Procesando Fichero A")
+    df_A_dict = remove_empty_entries(df_A_dict)
+    df_A_dict_length = len(df_A_dict)
+                                
+    current_app.logger.info("--------------- Procesando Fichero B")
+    df_B_dict = remove_empty_entries(df_B_dict)
+    df_B_dict_length = len(df_B_dict)
+
+    current_app.logger.info("--------------- Procesando Fichero C")
+    df_C_dict = remove_empty_entries(df_C_dict)
+    df_C_dict_length = len(df_C_dict)
+
+    shared_pdas = {
+        "PDAs_A": df_A_dict_length,
+        "PDAs_B": df_B_dict_length,
+        "PDAs_C": df_C_dict_length
+    }
+    
+
+    # 4 - Ordenar por hora
+    current_app.logger.info("+++++++++++++++ ORDENANDO POR HORA +++++++++++++++++++")
+    current_app.logger.info("--------------- Procesando Fichero A")
+    for pda, dates in df_A_dict.items():
+        for date, df in dates.items():
+            df_A_dict[pda][date] = df.sort_values('solo_hora').reset_index(drop=True)
+
+                                
+    current_app.logger.info("--------------- Procesando Fichero B")
+    for pda, dates in df_B_dict.items():
+        for date, df in dates.items():
+            df_B_dict[pda][date] = df.sort_values('solo_hora').reset_index(drop=True)
+
+    current_app.logger.info("--------------- Procesando Fichero C")
+    for pda, dates in df_C_dict.items():
+        for date, df in dates.items():
+            df_C_dict[pda][date] = df.sort_values('solo_hora').reset_index(drop=True)
+    
+
+    # 5 - Crear Fichero_D = unificar ficheros B y C (PDA;fecha_hora;fecha;hora;longitud;latitud;segundosTranscurridos)
     #   a - Fijar umbral de tiempo
     #   b - Tomar un fichero como referencia (va a ser el B por que lo digo yo)
     #   c - Establecer un "puntero" al principio de ambos ficheros (va a ser el indice de un for seguramente)
@@ -72,8 +161,22 @@ def unifyAllFiles(pathA, pathB, pathC):
     #               ~ Si disminuye la dif. temp. se elimina el registro actual del Fichero_C (fichero observado) y repetir g
     #               ~ Si aumenta la dif. temp. se elimina el registro actual del Fichero_B (fichero referencia) y repetir g
     #               Agregar estos registros a un fichero a parte especificado que no se ha encotrado su registro correspondiente
-    # 8 - Crear Fichero_F = unificar ficheros A y D (PDA;fecha_hora;fecha;hora;longitud;latitud;segundosTranscurridos;esParada)
+    current_app.logger.info("+++++++++++++++ CREANDO FICHERO D: UNIFICANDO FICHEROS B Y C +++++++++++++++++++")
+    
+
+
+
+
+    # TODO: la lista de abajo (en principio se ejecutará en orden)
+    # 6 - Crear Fichero_F = unificar ficheros A y D (PDA;fecha_hora;fecha;hora;longitud;latitud;segundosTranscurridos;esParada)
     #   a - Se crea una columna (booleana) para especificar si es parada (fichero D) o no (fichero A)
     #   b - Se intercalan los registros en función de la hora
     #       - Si las horas coinciden (que no debería) no quedamos con la parada (fichero D)
-    return jsonify({"Duplicados": duplicates_info})
+
+    return_info = {
+        "Duplicados": duplicates_info,
+        "PDAs_encontradas": found_pdas,
+        "PDAs_utilizables": shared_pdas
+    }
+
+    return jsonify(return_info)
