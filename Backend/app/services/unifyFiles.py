@@ -1,13 +1,14 @@
 from flask import jsonify, current_app
 from collections import defaultdict
 import pandas as pd
+import numpy as np
 import os
 
 def count_and_drop_duplicates(df):
     df_length = len(df)
     df = df.drop_duplicates(ignore_index=True)
     duplicates_count = df_length - len(df)
-    return duplicates_count
+    return df, duplicates_count
 
 
 def create_dict(df):
@@ -80,6 +81,8 @@ def unify_stops_files(df_B_dict, df_C_dict, time_threshold):
             df_D['solo_hora'] = df_D[['solo_hora_x', 'solo_hora_y']].mean(axis=1)
             df_D['solo_hora'] = df_D['solo_hora'].dt.strftime('%H:%M:%S')
 
+            df_D = df_D['cod_pda', 'codired', 'latitud', 'longitud', 'seg_transcurridos', 'solo_fecha', 'solo_hora', 'diff_sec']
+
             unify_info['Registros_fusionados'] += len(df_D)
 
             # -------------------------------
@@ -116,15 +119,15 @@ def unifyAllFiles(df_A, df_B, df_C, save_path):
     # 1 - Eliminar duplicados
     current_app.logger.info("+++++++++++++++ ELIMINANDO DUPLICADOS +++++++++++++++++++")
     current_app.logger.info("--------------- Procesando Fichero A")
-    duplicates_A = count_and_drop_duplicates(df_A)
+    df_A, duplicates_A = count_and_drop_duplicates(df_A)
     current_app.logger.info(f"Duplicados: {duplicates_A}")
 
     current_app.logger.info("--------------- Procesando Fichero B")
-    duplicates_B = count_and_drop_duplicates(df_B)
+    df_B, duplicates_B = count_and_drop_duplicates(df_B)
     current_app.logger.info(f"Duplicados: {duplicates_B}")
 
     current_app.logger.info("--------------- Procesando Fichero C")
-    duplicates_C = count_and_drop_duplicates(df_C)
+    df_C, duplicates_C = count_and_drop_duplicates(df_C)
     current_app.logger.info(f"Duplicados: {duplicates_C}")
 
     total_duplicates = duplicates_A + duplicates_B + duplicates_C
@@ -215,17 +218,39 @@ def unifyAllFiles(df_A, df_B, df_C, save_path):
     #               ~ Si aumenta la dif. temp. se elimina el registro actual del Fichero_B (fichero referencia) y repetir g
     #               Agregar estos registros a un fichero a parte especificado que no se ha encotrado su registro correspondiente
     current_app.logger.info("+++++++++++++++ CREANDO FICHERO D: UNIFICANDO FICHEROS B Y C +++++++++++++++++++")
-    time_threshold = 15
-    df_D_dict, unify_stops_info = unify_stops_files(df_B_dict, df_C_dict, time_threshold)
+    time_threshold = '15s'
+    #df_D_dict, unify_stops_info = unify_stops_files(df_B_dict, df_C_dict, time_threshold)
     current_app.logger.info("+++++++++++++++ ESCRIBIENDO FICHERO D +++++++++++++++++++")
     # Convertir de dict a df
-    frames = []
-    for pda, dates in df_D_dict.items():
-        for date, df in dates.items():
-            if not df.empty:
-                frames.append(df.assign(cod_pda=pda, solo_fecha=date))
+    #frames = []
+    #for pda, dates in df_D_dict.items():
+    #    for date, df in dates.items():
+    #        if not df.empty:
+    #            frames.append(df.assign(cod_pda=pda, solo_fecha=date))
 
-    df_D = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    #df_D = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    df_B_sorted = df_B.sort_values(['solo_hora'])
+    df_C_sorted = df_C.sort_values(['solo_hora'])
+
+    df_B_sorted['solo_hora'] = pd.to_datetime(df_B_sorted['solo_hora'])
+    df_C_sorted['solo_hora'] = pd.to_datetime(df_C_sorted['solo_hora'])
+
+    df_B_sorted['cod_pda'] = df_B_sorted['cod_pda'].astype(str)
+    df_C_sorted['cod_pda'] = df_C_sorted['cod_pda'].astype(str)
+
+    df_B_sorted['solo_fecha'] = pd.to_datetime(df_B_sorted['solo_fecha'])
+    df_C_sorted['solo_fecha'] = pd.to_datetime(df_C_sorted['solo_fecha'])
+
+    df_B_sorted['formatted_fecha_hora'] = pd.to_datetime(df_B_sorted['formatted_fecha_hora'])
+    df_C_sorted['formatted_fecha_hora'] = pd.to_datetime(df_C_sorted['formatted_fecha_hora'])
+
+    df_D = pd.merge_asof(df_B_sorted, df_C_sorted, on='solo_hora', by=['cod_pda', 'solo_fecha'], tolerance=pd.Timedelta(time_threshold), direction='nearest')
+    df_D = df_D.sort_values(['cod_pda', 'solo_fecha', 'solo_hora'])
+    df_D['longitud'] = df_D['longitud'].replace("", np.nan)
+    df_D = df_D.dropna(subset=['longitud'])
+    #df_D['dif_temp'] = (df_D['formatted_fecha_hora_x'] - df_D['formatted_fecha_hora_y']).abs()
+    #df_D['esParada'] = True
+    #df_D = df_D['cod_pda', 'codired_x', 'Cod Actividad']
     path = os.path.join(save_path, 'Fichero_D.csv')
     df_D.to_csv(path, sep=';', index=False)
 
@@ -241,7 +266,7 @@ def unifyAllFiles(df_A, df_B, df_C, save_path):
         "Duplicados": duplicates_info,
         "PDAs_encontradas": found_pdas,
         "PDAs_utilizables": shared_pdas,
-        "Union_ficheros_paradas": unify_stops_info
+        #"Union_ficheros_paradas": unify_stops_info
     }
 
     return jsonify(return_info)
