@@ -35,7 +35,7 @@ def rename_file_columns(path, file_type):
     if (file_type == "A"):
         df.rename(columns={
                 "fec_lectura_medicion": "fecha_hora",
-                "longitud_wgs84_gd": "logitud",
+                "longitud_wgs84_gd": "longitud",
                 "latitud_wgs84_gd": "latitud",
                 "cod_inv_pda": "cod_pda"
             }, inplace=True)
@@ -50,7 +50,7 @@ def rename_file_columns(path, file_type):
         df.rename(columns={
                 "COD_SECCION": "cod_pda",
                 "INSTANTE": "fecha_hora",
-                "LONGITUD": "logitud",
+                "LONGITUD": "longitud",
                 "LATITUD": "latitud"
             }, inplace=True)
     df.to_csv(path, sep=';', index=False)
