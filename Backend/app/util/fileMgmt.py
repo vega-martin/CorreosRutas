@@ -67,8 +67,12 @@ def format_date(path, file_type):
         date_format = '%Y-%m-%d %H:%M:%S.%f %z'
         df['fecha_hora'] = pd.to_datetime(df['fecha_hora'], format=date_format, utc=True, errors='coerce')
     elif file_type == "B":
-        date_format = '%d/%m/%Y %H:%M'
-        df['fecha_hora'] = pd.to_datetime(df['fecha_hora'], format=date_format, errors='coerce')
+        date_format1 = '%d/%m/%Y %H:%M'
+        date_format2 = '%d-%m-%y %H:%M:%S'
+        date1 = pd.to_datetime(df['fecha_hora'], format=date_format1, errors='coerce')
+        date2 = pd.to_datetime(df['fecha_hora'], format=date_format2, errors='coerce')
+        df['fecha_hora'] = date1.fillna(date2)
+
     elif file_type == "C":
         date_format = '%Y-%m-%d %H:%M:%S.%f %z'
         df['fecha_hora'] = pd.to_datetime(df['fecha_hora'], format=date_format, utc=True, errors='coerce')
