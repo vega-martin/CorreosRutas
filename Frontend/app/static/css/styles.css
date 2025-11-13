@@ -7,6 +7,64 @@ h1, h2 {
     color: #333;
 }
 
+/* --- File upload section: two columns --- */
+.file-section.two-columns {
+    display: flex;
+    gap: 20px; /* space between columns */
+}
+
+.file-section.two-columns .column {
+    flex: 1; /* equal width for both columns */
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* Adjust form elements inside the columns */
+.file-section textarea {
+    width: 95%;
+    height: 200px;
+    resize: vertical;
+    border: 1px solid #ccd3db;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 16px;
+    margin-top: 10px;
+    background-color: #f9fafc;
+    font-family: Arial, sans-serif;
+}
+
+.file-section input[type="submit"] {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s ease;
+}
+
+.file-section input[type="submit"]:hover {
+    background-color: #45a049;
+}
+
+/* Ensure file input labels display nicely */
+.file-section label {
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+/* Add responsive behavior */
+@media screen and (max-width: 900px) {
+    .file-section.two-columns {
+        flex-direction: column;
+    }
+}
+
 .section {
     display: flex;
     justify-content: center;

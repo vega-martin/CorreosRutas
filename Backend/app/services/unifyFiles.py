@@ -2,7 +2,7 @@ from flask import jsonify, current_app
 from collections import defaultdict
 import pandas as pd
 import numpy as np
-import os
+import os, json
 
 def count_and_drop_duplicates(df):
     df_length = len(df)
@@ -136,7 +136,7 @@ def unifyAllFiles(df_A, df_B, df_C, save_path):
         "Duplicados_totales": total_duplicates,
         "Duplicados_A": duplicates_A,
         "Duplicados_B": duplicates_B,
-        "Duplicados_B": duplicates_C
+        "Duplicados_C": duplicates_C
     }
 
 
@@ -246,8 +246,8 @@ def unifyAllFiles(df_A, df_B, df_C, save_path):
 
     df_D = pd.merge_asof(df_B_sorted, df_C_sorted, on='solo_hora', by=['cod_pda', 'solo_fecha'], tolerance=pd.Timedelta(time_threshold), direction='nearest')
     df_D = df_D.sort_values(['cod_pda', 'solo_fecha', 'solo_hora'])
-    df_D['longitud'] = df_D['longitud'].replace("", np.nan)
-    df_D = df_D.dropna(subset=['longitud'])
+    #df_D['longitud'] = df_D['longitud'].replace("", np.nan)
+    #df_D = df_D.dropna(subset=['longitud'])
     #df_D['dif_temp'] = (df_D['formatted_fecha_hora_x'] - df_D['formatted_fecha_hora_y']).abs()
     #df_D['esParada'] = True
     #df_D = df_D['cod_pda', 'codired_x', 'Cod Actividad']
@@ -270,3 +270,190 @@ def unifyAllFiles(df_A, df_B, df_C, save_path):
     }
 
     return jsonify(return_info)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def sinconize_BC_dicts(df_B_dict, df_C_dict):
+    current_app.logger.info("+++++++++++++++ SINCORNIZANDO FICHEROS FUNCION +++++++++++++++++++")
+    # Sincronizar pdas
+    shared_pdas = df_B_dict.keys() & df_C_dict.keys()
+    current_app.logger.info(f"Nº pdas comunes: {len(shared_pdas)}")
+
+    # Eliminar las pdas no comunes
+    for dict, name in zip([df_B_dict, df_C_dict], ['Fichero_A', 'Fichero_B', 'Fichero_C']):
+        for pda in list(dict.keys()):
+            #current_app.logger.info(f"Analizando {pda} de {name} con {len(dict[pda].keys())} fechas")
+            if pda not in shared_pdas:
+                #current_app.logger.info(f"Eliminando {pda} de {name} ya que no se encuentra en otros ficheros")
+                del dict[pda]
+    
+    # Eliminar las fechas no comunes
+    for pda in shared_pdas:
+        shared_dates = df_B_dict[pda].keys() & df_C_dict[pda].keys()
+        for dict, name in zip([df_B_dict, df_C_dict], ['Fichero_A', 'Fichero_B', 'Fichero_C']):
+            for date in list(dict[pda].keys()):
+                if date not in shared_dates:
+                    #current_app.logger.info(f"Eliminando {date} de {pda} de {name} ya que no se encuentra en otros ficheros")
+                    del dict[pda][date]
+    
+    return df_B_dict, df_C_dict
+
+
+def convert_numpy(obj):
+    if isinstance(obj, dict):
+        return {k: convert_numpy(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy(v) for v in obj]
+    elif isinstance(obj, (np.integer, np.int64, np.int32)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float64, np.float32)):
+        return float(obj)
+    else:
+        return obj
+
+
+
+def unifyBCFiles(df_B, df_C, save_path):
+    """
+        Calls necesary functions for creating new files from unifying the files
+        Args:
+            df_B : dataframe with data from file B
+            df_C : dataframe with data from file C
+        Returns:
+            JSON with all the erased data and its related information
+    """
+    
+    # 1 - Eliminar duplicados
+    current_app.logger.info("+++++++++++++++ ELIMINANDO DUPLICADOS +++++++++++++++++++")
+
+    current_app.logger.info("--------------- Procesando Fichero B")
+    df_B, duplicates_B = count_and_drop_duplicates(df_B)
+    current_app.logger.info(f"Duplicados: {duplicates_B}")
+
+    current_app.logger.info("--------------- Procesando Fichero C")
+    df_C, duplicates_C = count_and_drop_duplicates(df_C)
+    current_app.logger.info(f"Duplicados: {duplicates_C}")
+
+    total_duplicates = duplicates_B + duplicates_C
+    current_app.logger.info(f"Duplicados totales: {total_duplicates}")
+    duplicates_info = {
+        "Duplicados_totales": total_duplicates,
+        "Duplicados_B": duplicates_B,
+        "Duplicados_C": duplicates_C
+    }
+
+
+    # 2 - Ordenar y dividir por PDA -> Fichero_A_PDA01, Fichero_B_PDA01, Fichero_C_PDA01
+    # 3 - Ordenar y dividir por fecha -> Fichero_A_PDA01_2025-05-29 se junta con Fichero_B_PDA01_2025-05-29 y Fichero_C_PDA01_2025-05-29
+    current_app.logger.info("+++++++++++++++ SEPARANDO FICHEROS POR PDAS Y POR FECHAS +++++++++++++++++++")
+
+    current_app.logger.info("--------------- Procesando Fichero B")
+    df_B_dict = create_dict(df_B)
+    df_B_dict_length = len(df_B_dict)
+
+    current_app.logger.info("--------------- Procesando Fichero C")
+    df_C_dict = create_dict(df_C)
+    df_C_dict_length = len(df_C_dict)
+
+    found_pdas = {
+        "PDAs_B": df_B_dict_length,
+        "PDAs_C": df_C_dict_length
+    }
+
+    # Obtener pdas y fechas comunes en los 3 ficheros y descartar el resto
+    current_app.logger.info("+++++++++++++++ SINCORNIZANDO FICHEROS +++++++++++++++++++")
+    df_B_dict, df_C_dict = sinconize_BC_dicts(df_B_dict, df_C_dict)
+
+
+    current_app.logger.info("+++++++++++++++ ELIMINANDO ELEMENTOS RESIDUALES +++++++++++++++++++")
+                                
+    current_app.logger.info("--------------- Procesando Fichero B")
+    df_B_dict = remove_empty_entries(df_B_dict)
+    df_B_dict_length = len(df_B_dict)
+
+    current_app.logger.info("--------------- Procesando Fichero C")
+    df_C_dict = remove_empty_entries(df_C_dict)
+    df_C_dict_length = len(df_C_dict)
+
+    shared_pdas = {
+        "PDAs_B": df_B_dict_length,
+        "PDAs_C": df_C_dict_length
+    }
+    
+
+    # 4 - Ordenar por hora
+    current_app.logger.info("+++++++++++++++ ORDENANDO POR HORA +++++++++++++++++++")
+    current_app.logger.info("--------------- Procesando Fichero B")
+    for pda, dates in df_B_dict.items():
+        for date, df in dates.items():
+            df_B_dict[pda][date] = df.sort_values('solo_hora').reset_index(drop=True)
+
+    current_app.logger.info("--------------- Procesando Fichero C")
+    for pda, dates in df_C_dict.items():
+        for date, df in dates.items():
+            df_C_dict[pda][date] = df.sort_values('solo_hora').reset_index(drop=True)
+    
+
+    current_app.logger.info("+++++++++++++++ CREANDO FICHERO D: UNIFICANDO FICHEROS B Y C +++++++++++++++++++")
+    time_threshold = '15s'
+    
+    current_app.logger.info("+++++++++++++++ ESCRIBIENDO FICHERO D +++++++++++++++++++")
+
+    df_B_sorted = df_B.sort_values(['solo_hora'])
+    df_C_sorted = df_C.sort_values(['solo_hora'])
+
+    df_B_sorted['solo_hora'] = pd.to_datetime(df_B_sorted['solo_hora'])
+    df_C_sorted['solo_hora'] = pd.to_datetime(df_C_sorted['solo_hora'])
+
+    df_B_sorted['cod_pda'] = df_B_sorted['cod_pda'].astype(str)
+    df_C_sorted['cod_pda'] = df_C_sorted['cod_pda'].astype(str)
+
+    df_B_sorted['solo_fecha'] = pd.to_datetime(df_B_sorted['solo_fecha'])
+    df_C_sorted['solo_fecha'] = pd.to_datetime(df_C_sorted['solo_fecha'])
+
+    df_B_sorted['formatted_fecha_hora'] = pd.to_datetime(df_B_sorted['formatted_fecha_hora'])
+    df_C_sorted['formatted_fecha_hora'] = pd.to_datetime(df_C_sorted['formatted_fecha_hora'])
+
+    df_D = pd.merge_asof(df_B_sorted, df_C_sorted, on='solo_hora', by=['cod_pda', 'solo_fecha'], tolerance=pd.Timedelta(time_threshold), direction='nearest')
+    df_D = df_D.sort_values(['cod_pda', 'solo_fecha', 'solo_hora'])
+    df_D['longitud'] = df_D['longitud'].replace("", np.nan)
+
+    unmerged_rows = df_D['longitud'].isna().sum()
+
+    df_D = df_D.dropna(subset=['longitud'])
+    df_D['dif_temp'] = (df_D['formatted_fecha_hora_x'] - df_D['formatted_fecha_hora_y']).abs()
+    df_D['esParada'] = True
+    
+    path = os.path.join(save_path, 'Fichero_D.csv')
+    df_D.to_csv(path, sep=';', index=False)
+
+    # Registros usados de cada df
+    unused_info = {
+        "B_no_usados": unmerged_rows,
+        "C_no_usados": len(df_C)-unmerged_rows
+    }
+
+
+    return_info = {
+        "Duplicados": duplicates_info,
+        "PDAs_encontradas": found_pdas,
+        "PDAs_utilizables": shared_pdas,
+        "Registros_no_usados": unused_info,
+        #"Union_ficheros_paradas": unify_stops_info
+        "Registros_finales": len(df_D)
+    }
+
+    current_app.logger.info(f'Informacion devuelta por la union: {str(return_info)}')
+
+    return jsonify(convert_numpy(return_info))

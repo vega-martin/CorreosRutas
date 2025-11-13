@@ -99,6 +99,27 @@ def format_date(path, file_type):
     current_app.logger.info(f"Se han convertido las fechas del archivo {file_type} correctamente.")
 
 
+def get_statistics_A(path):
+    try:
+        df = pd.read_csv(path, delimiter=';', low_memory=False)
+    except Exception:
+        return jsonify({'info': 'No se pudo leer el fichero.'})
+
+    df_length = len(df)
+    info = f'Nº elementos iniciales: {df_length}.\n'
+
+    df = df.drop_duplicates(ignore_index=True)
+    duplicates_count = df_length - len(df)
+    info += f'Nº elementos duplicados: {duplicates_count}.\n'
+    info += f'Nº elementos finales: {len(df)}.\n'
+
+    final_response = {
+        'info': info
+    }
+    return jsonify(final_response)
+
+
+
 def extractDataframes(pathA, pathB, pathC, cod):
     current_app.logger.info("+++++++++++++++ ABRIENDO FICHEROS +++++++++++++++++++")
     try:
@@ -128,3 +149,26 @@ def extractDataframes(pathA, pathB, pathC, cod):
     }
 
     return df_A, df_B, df_C, jsonify(read_info)
+
+def extractBCDataframes(pathB, pathC):
+    current_app.logger.info("+++++++++++++++ ABRIENDO FICHEROS +++++++++++++++++++")
+    try:
+        df_B = pd.read_csv(pathB, delimiter=';', low_memory=False)
+        df_C = pd.read_csv(pathC, delimiter=';', low_memory=False)
+    except Exception:
+        df_B = pd.DataFrame()
+        df_C = pd.DataFrame()
+        current_app.logger.error(f"Error al leer archivo CSV")
+        return df_B, df_C, jsonify({'error' : 'Not able to ope files'})
+    
+    current_app.logger.info("+++++++++++++++ FILTRANDO CODIGO DE UNIDAD +++++++++++++++++++")
+    df_B_length = len(df_B)
+    df_C_length = len(df_C)
+    total_length =  + df_B_length + df_C_length
+    read_info = {
+        "Registros_totales": total_length,
+        "Registros_B": df_B_length,
+        "Registros_C": df_C_length
+    }
+
+    return df_B, df_C, jsonify(read_info)

@@ -7,28 +7,32 @@
     <div class="formulario">
         <h2>Subir ficheros CSV</h2>
 
-        <div class="file-section">
-            <form method="POST" action="{{ url_for('fileUpload.uploadFileToBackend') }}" enctype="multipart/form-data">
-                <label for="fileA">Fichero A:</label>
-                <input type="file" name="fileA" accept=".csv" required><br><br>
-                <label for="fileB">Fichero B:</label>
-                <input type="file" name="fileB" accept=".csv" required><br><br>
-                <label for="fileC">Fichero C:</label>
-                <input type="file" name="fileC" accept=".csv" required><br><br>
-                <input type="submit" value="Subir Ficheros" disabled title="Se deben seleccionar los tres ficheros">
-            </form>
+        <div class="file-section two-columns">
+            <div class="column">
+                <div class="file-A-section">
+                    <form method="POST" action="{{ url_for('fileUpload.uploadFileAToBackend') }}" enctype="multipart/form-data">
+                        <label for="fileA">Seleccione el fichero A</label>
+                        <input type="file" name="fileA" accept=".csv" id="fileA-input" required><br><br>
+                        <input type="submit" value="Cargar Fichero A" disabled title="Se debe seleccionar un fichero"><br><br><br><br>
+                        <textarea name="fileA-logs" id="fileA-logs" placeholder="Esperando un fichero A..." disabled></textarea>
+                    </form>
+                </div>
+            </div>
+            <div class="column">
+                <div class="file-BC-section">
+                    <form method="POST" action="{{ url_for('fileUpload.uploadFilesBCToBackend') }}" enctype="multipart/form-data">
+                        <label for="fileB">Seleccione el fichero B</label>
+                        <input type="file" name="fileB" accept=".csv" id="fileB-input" required><br><br>
+                        <label for="fileC">Seleccione el fichero C</label>
+                        <input type="file" name="fileC" accept=".csv" id="fileC-input" required><br><br>
+                        <input type="submit" value="Cargar Ficheros B y C" disabled title="Se deben seleccionar los dos ficheros"><br><br>
+                        <textarea name="fileBC-logs" id="fileBC-logs" placeholder="Esperando ficheros B y C..." disabled></textarea>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        <ul>
-            {% for category, message in messages %}
-            <li style="color: {{ 'red' if category == 'error' else 'green' }}">{{ message }}</li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-    {% endwith %}
+    <br>
 
     {% if session.get('uploaded_files') %}
     <div class="uploaded-files">
@@ -44,43 +48,86 @@
 
     <h2>Generar tabla y mapa</h2>
     <form action="{{ url_for('generateResults.generar_mapa') }}" method="get">
-        <button type="submit" class="generate-btn">Generar (Fichero A)</button>
+        <button type="submit" class="generate-btn">Ver mapa</button>
     </form><br>
     <form action="{{ url_for('generateResults.unifyFiles') }}" method="get">
         <h2>Unificar ficheros</h2>
         <input type="text" name="codiredMain" id="codiredMain" class="codiredMain" placeholder="Codired" minlength="7" maxlength="7" required>
-        <button type="submit" class="generate-btn">Mandar a unificar ficheros</button>
+        <button type="submit" class="generate-btn">Unificar todos los ficheros</button>
     </form>
 
 
     <h2>Sesión</h2>
     <form action="{{ url_for('main.logout') }}" method="get" onsubmit="return confirmLogout();">
-        <button type="submit" class="logout-btn">Cerrar sesión / Limpiar sesión</button>
+        <button type="submit" class="logout-btn">Limpiar sesión</button>
     </form>
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const fileInputs = [
-                document.querySelector('input[name="fileA"]'),
-                document.querySelector('input[name="fileB"]'),
-                document.querySelector('input[name="fileC"]')
-            ];
-            const submitBtn = document.querySelector('input[type="submit"]');
-
-            // Función para comprobar si todos los inputs tienen archivo seleccionado
-            function checkFilesSelected() {
-                const allSelected = fileInputs.every(input => input.files.length > 0);
-                submitBtn.disabled = !allSelected;
-            }
-
-            // Añadimos event listeners a cada input
-            fileInputs.forEach(input => {
-                input.addEventListener("change", checkFilesSelected);
+            // --- FORM A ---
+            const formA = document.querySelector('form[action*="uploadFileAToBackend"]');
+            const inputA = formA.querySelector('input[name="fileA"]');
+            const submitA = formA.querySelector('input[type="submit"]');
+            inputA.addEventListener('change', () => {
+                submitA.disabled = inputA.files.length === 0;
+                submitA.title = submitA.disabled ? "Se debe seleccionar un fichero" : "";
             });
+
+            // --- FORM B+C ---
+            const formBC = document.querySelector('form[action*="uploadFilesBCToBackend"]');
+            const inputB = formBC.querySelector('input[name="fileB"]');
+            const inputC = formBC.querySelector('input[name="fileC"]');
+            const submitBC = formBC.querySelector('input[type="submit"]');
+            function checkBC() {
+                const ready = inputB.files.length > 0 && inputC.files.length > 0;
+                submitBC.disabled = !ready;
+                submitBC.title = ready ? "" : "Se deben seleccionar los dos ficheros";
+            }
+            inputB.addEventListener('change', checkBC);
+            inputC.addEventListener('change', checkBC);
+
+            // --- FORM A+B+C ---
+            /*
+            const formABC = document.querySelector('form[action*="uploadFileToBackend"]');
+            const inputsABC = formABC.querySelectorAll('input[type="file"]');
+            const submitABC = formABC.querySelector('input[type="submit"]');
+            function checkABC() {
+                const ready = Array.from(inputsABC).every(input => input.files.length > 0);
+                submitABC.disabled = !ready;
+                submitABC.title = ready ? "" : "Se deben seleccionar los tres ficheros";
+            }
+            inputsABC.forEach(input => input.addEventListener('change', checkABC));
+            */
         });
 
+        // Confirm logout
         function confirmLogout() {
             return confirm("¿Seguro que deseas cerrar la sesión y eliminar los ficheros subidos?");
         }
+
+        // Ajax for file A upload
+        document
+            .querySelector('form[action*="uploadFileAToBackend"]')
+            .addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const res = await fetch(e.target.action, { method: 'POST', body: formData });
+                const data = await res.json();
+                document.getElementById('fileA-logs').value = data.logs;
+        });
+        // Ajax for files B and C upload
+        document
+            .querySelector('form[action*="uploadFilesBCToBackend"]')
+            .addEventListener('submit', async (e) => {
+                e.preventDefault(); // stop normal form submission
+
+                const formData = new FormData(e.target);
+                const res = await fetch(e.target.action, { method: 'POST', body: formData });
+                const data = await res.json();
+
+                // Display logs in the textarea
+                document.getElementById('fileBC-logs').value = data.logs;
+        });
+
     </script>
 {% endblock %}
