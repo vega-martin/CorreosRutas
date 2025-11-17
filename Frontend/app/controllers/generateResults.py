@@ -160,8 +160,14 @@ def calcular_metricas(df_filtrado):
                 lat2 = float(lat_float)
                 punto1 = (lat2, lon2)
             punto2 = (lat, lon)
-            distancia_km = geodesic(punto1, punto2).kilometers
-            distancia_m = geodesic(punto1, punto2).meters
+
+                        
+            try:
+                distancia_km = geodesic(punto1, punto2).kilometers
+                distancia_m = geodesic(punto1, punto2).meters
+            except Exception:
+                flash("Error: El punto no es válido", 'warning')
+            
 
             # Calcular tiempo en horas
             delta_t = (fila['fec_lectura_medicion'] - fila_prev['fec_lectura_medicion']).total_seconds()
