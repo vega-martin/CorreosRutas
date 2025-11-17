@@ -334,6 +334,67 @@ def unifyBCFiles(df_B, df_C, save_path):
             JSON with all the erased data and its related information
     """
     
+    # Obtener Estadísticas iniciales
+
+    # Estadisticas de codigos de unidad
+    codireds_B = df_B['codired'].sort_values().unique()
+    codireds_B_length = len(codireds_B)
+    codireds_C = df_C['codired'].sort_values().unique()
+    codireds_C_length = len(codireds_C)
+
+    shared_codireds = set(codireds_B.tolist()) & set(codireds_C.tolist())
+    shared_codireds = sorted(shared_codireds)
+    shared_codireds_length = len(shared_codireds)
+
+    codired_statistics = {
+        "Num codireds encontrados en fichero B": codireds_B_length,
+        "Codireds en fichero B": codireds_B,
+        "Num codireds encontrados en fichero C": codireds_C_length,
+        "Codireds en fichero C": codireds_C,
+        "Num codireds compartidos": shared_codireds_length,
+        "Codireds compartidos": shared_codireds
+    }
+
+    # Estadisticas de PDAs
+    pdas_B = df_B['cod_pda'].sort_values().unique()
+    pdas_C = df_C['cod_pda'].sort_values().unique()
+
+    shared_pdas = set(pdas_B.tolist()) & set(pdas_C.tolist())
+    shared_pdas = sorted(shared_pdas)
+
+    pda_statistics = {
+        "Num PDAs encontradas en el fichero B": len(pdas_B),
+        "PDAs en fichero B": pdas_B,
+        "Num PDAs encontradas en el fichero C": len(pdas_C),
+        "PDAs en fichero C": pdas_C,
+        "Num PDAs compartida": len(shared_pdas),
+        "PDAs compartidas": shared_pdas
+    }
+
+    # Estadisticas de Fechas
+    dates_B = df_B['solo_fecha'].sort_values().unique()
+    dates_B_length = len(dates_B)
+    dates_C = df_C['solo_fecha'].sort_values().unique()
+    dates_C_length = len(dates_C)
+
+    shared_dates = set(dates_B.tolist()) & set(dates_C.tolist())
+    shared_dates = sorted(shared_dates)
+
+    dates_statistics = {
+        "Num fechas en fichero B": dates_B_length,
+        "Primera fecha en fichero B": dates_B[0],
+        "Ultima fecha en fichero B": dates_B[-1],
+        "Num fechas en fichero C": dates_C_length,
+        "Primera fecha en fichero C": dates_C[0],
+        "Ultima fecha en fichero C": dates_C[-1],
+        "Num fechas compartidas": len(shared_dates),
+        "Primera fecha compartida": list(shared_dates)[0],
+        "Ultima fecha compartida": list(shared_dates)[-1]
+    }
+
+    current_app.logger.info(f'Estadisticas iniciales:\n\n {str(codired_statistics)}\n\n{str(pda_statistics)}\n\n{str(dates_statistics)}\n\n')
+
+    
     # 1 - Eliminar duplicados
     current_app.logger.info("+++++++++++++++ ELIMINANDO DUPLICADOS +++++++++++++++++++")
 
@@ -348,9 +409,9 @@ def unifyBCFiles(df_B, df_C, save_path):
     total_duplicates = duplicates_B + duplicates_C
     current_app.logger.info(f"Duplicados totales: {total_duplicates}")
     duplicates_info = {
-        "Duplicados_totales": total_duplicates,
-        "Duplicados_B": duplicates_B,
-        "Duplicados_C": duplicates_C
+        "Duplicados totales": total_duplicates,
+        "Duplicados B": duplicates_B,
+        "Duplicados C": duplicates_C
     }
 
 
@@ -366,10 +427,10 @@ def unifyBCFiles(df_B, df_C, save_path):
     df_C_dict = create_dict(df_C)
     df_C_dict_length = len(df_C_dict)
 
-    found_pdas = {
-        "PDAs_B": df_B_dict_length,
-        "PDAs_C": df_C_dict_length
-    }
+    #found_pdas = {
+    #    "PDAs_B": df_B_dict_length,
+    #    "PDAs_C": df_C_dict_length
+    #}
 
     # Obtener pdas y fechas comunes en los 3 ficheros y descartar el resto
     current_app.logger.info("+++++++++++++++ SINCORNIZANDO FICHEROS +++++++++++++++++++")
