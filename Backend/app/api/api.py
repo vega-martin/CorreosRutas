@@ -104,20 +104,22 @@ def unifyFilesBC():
     if isinstance(erased_info, Response):
         erased_info = erased_info.get_json()
 
-    unify_info = {
-        "Duplicados": f'Duplicados totales: {erased_info["Duplicados"]["Duplicados_totales"]}.\nDuplicados fichero B: {erased_info["Duplicados"]["Duplicados_B"]}.\nDuplicados fichero C: {erased_info["Duplicados"]["Duplicados_C"]}.\n',
-        "PDAs_encontradas": f'Num PDAs encontradas:\n\tFichero B: {erased_info["PDAs_encontradas"]["PDAs_B"]}.\n\tFichero C: {erased_info["PDAs_encontradas"]["PDAs_C"]}.\n',
-        "PDAs_utilizables": f'Num PDAs en ambos ficheros: {erased_info["PDAs_utilizables"]["PDAs_B"]}.\n',
-        "Registros_no_usados": f'Registros no correspondidos:\n\tFichero B: {erased_info["Registros_no_usados"]["B_no_usados"]}.\n\tFichero C: {erased_info["Registros_no_usados"]["C_no_usados"]}.\n',
-        "Registros_finales": f'Registros finales: {erased_info["Registros_finales"]}.\n'
-    }
+    #unify_info = {
+    #    "Duplicados": f'Duplicados totales: {erased_info["Duplicados"]["Duplicados totales"]}.\nDuplicados fichero B: {erased_info["Duplicados"]["Duplicados B"]}.\nDuplicados fichero C: {erased_info["Duplicados"]["Duplicados C"]}.\n',
+    #    "PDAs_encontradas": f'Num PDAs encontradas:\n\tFichero B: {erased_info["PDAs_encontradas"]["PDAs_B"]}.\n\tFichero C: {erased_info["PDAs_encontradas"]["PDAs_C"]}.\n',
+    #    "PDAs_utilizables": f'Num PDAs en ambos ficheros: {erased_info["PDAs_utilizables"]["PDAs_B"]}.\n',
+    #    "Registros_no_usados": f'Registros no correspondidos:\n\tFichero B: {erased_info["Registros_no_usados"]["B_no_usados"]}.\n\tFichero C: {erased_info["Registros_no_usados"]["C_no_usados"]}.\n',
+    #    "Registros_finales": f'Registros finales: {erased_info["Registros_finales"]}.\n'
+    #}
 
-    return_information = {
-        "Registros_leidos": f'Registros totales: {read_info['Registros_totales']}.\nRegistros fichero B: {read_info['Registros_B']}.\nRegistros fichero C: {read_info['Registros_C']}.\n',
-        "Registros_eliminados": f'Informacion de la union de los ficheros:\n{unify_info["Duplicados"]}{unify_info["PDAs_encontradas"]}{unify_info["PDAs_utilizables"]}{unify_info["Registros_no_usados"]}{unify_info["Registros_finales"]}'
-    }
+    #return_information = {
+    #    "Registros_leidos": f'Registros totales: {read_info['Registros_totales']}.\nRegistros fichero B: {read_info['Registros_B']}.\nRegistros fichero C: {read_info['Registros_C']}.\n',
+    #    "Registros_eliminados": f'Informacion de la union de los ficheros:\n{unify_info["Duplicados"]}{unify_info["PDAs_encontradas"]}{unify_info["PDAs_utilizables"]}{unify_info["Registros_no_usados"]}{unify_info["Registros_finales"]}'
+    #}
 
-    final_response = {"logs": f'{return_information["Registros_leidos"]}\n\n{return_information["Registros_eliminados"]}'}
+
+
+    final_response = {"logs": f'{erased_info}'}
 
     return jsonify(final_response)
 

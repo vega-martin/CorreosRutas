@@ -206,7 +206,7 @@ def uploadFilesBCToBackend():
 
     flash(f'Ficheros subidos correctamente.', 'success')
     final_response = {
-        "logs": f'Fichero subido correctamente.\n\n{unify_response}\n'
+        "logs": f'Ficheros subidos correctamente.\n\n{unify_response}\n'
     }
 
     return jsonify(final_response)
