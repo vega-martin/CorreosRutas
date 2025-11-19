@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, session, redirect, url_for, flash, current_app, request, jsonify, Response
 from app.util.fileMgmt import ensure_folder, rename_file_columns, extractDataframes, format_date, get_statistics_A, extractBCDataframes
-from app.services.unifyFiles import unifyAllFiles, unifyBCFiles
+from app.services.unifyFiles import unifyAllFiles, unifyBCFiles, unifyADFiles
 from datetime import timedelta, datetime
 import uuid
 import os
@@ -160,3 +160,35 @@ def unifyFiles():
     }
 
     return jsonify(return_information)
+
+@api_bp.route('/unifyAllFiles', methods=['POST'])
+def unifyFiles():
+    id = request.form.get('id')
+    files_paths = {}
+    base_upload = current_app.config.get("UPLOAD_FOLDER")
+    id_path = os.path.join(base_upload, str(id))
+
+    for root, _, files in os.walk(id_path):
+        for file in files:
+            if file.endswith('.csv') and 'Fichero_' in file:
+                wout_extension = os.path.splitext(file)[0]
+                parts = wout_extension.split('_')
+                if len(parts) == 2:
+                    type = parts[1]
+                    files_paths[type] = os.path.join(root, file)
+    
+    current_app.logger.info(f"Se han encontrado {len(files_paths)} archivos en la carperta de la sesion {id}")
+    df_A, df_D, read_info = extractBCDataframes(files_paths['A'], files_paths['D'])
+    if ((len(df_A) == 0) or (len(df_D) == 0)):
+        return jsonify({"Registros totales: 0"})
+    erased_info = unifyADFiles(df_A, df_D, id_path)
+    
+    if isinstance(read_info, Response):
+        read_info = read_info.get_json()
+
+    if isinstance(erased_info, Response):
+        erased_info = erased_info.get_json()
+
+    final_response = {"logs": f'{erased_info}'}
+
+    return jsonify(final_response)

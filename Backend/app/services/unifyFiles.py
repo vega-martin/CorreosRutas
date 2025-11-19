@@ -51,59 +51,6 @@ def remove_empty_entries(d):
     return {key: value for key, value in d.items() if len(value) > 0}
 
 
-def unify_stops_files(df_B_dict, df_C_dict, time_threshold):
-    unify_dict = {}
-    unify_info = {
-        "Registros_fusionados": 0,
-        "Registros_B_desechados": 0,
-        "Registros_C_desechados": 0
-    }
-    for pda, dates in df_B_dict.items():
-        for date, df_B in dates.items():
-            df_C = df_C_dict[pda][date]
-
-            df_B = df_B.copy()
-            df_C = df_C.copy()
-
-            df_B['solo_hora'] = pd.to_datetime(df_B['solo_hora'], format='%H:%M:%S')
-            df_C['solo_hora'] = pd.to_datetime(df_C['solo_hora'], format='%H:%M:%S')
-
-            # Cartesian join to compare every pair
-            merged = df_B.merge(df_C, how='cross')
-
-            # Compute absolute time difference in seconds
-            merged['diff_sec'] = (merged['solo_hora_x'] - merged['solo_hora_y']).abs().dt.total_seconds()
-
-            # Filter where difference < threshold seconds
-            df_D = merged[merged['diff_sec'] < time_threshold].copy()
-
-            # Compute mean time between the two solo_hora columns
-            df_D['solo_hora'] = df_D[['solo_hora_x', 'solo_hora_y']].mean(axis=1)
-            df_D['solo_hora'] = df_D['solo_hora'].dt.strftime('%H:%M:%S')
-
-            df_D = df_D['cod_pda', 'codired', 'latitud', 'longitud', 'seg_transcurridos', 'solo_fecha', 'solo_hora', 'diff_sec']
-
-            unify_info['Registros_fusionados'] += len(df_D)
-
-            # -------------------------------
-            # Find unmatched rows
-            # -------------------------------
-
-            matched_df_B_times = merged.loc[merged['diff_sec'] < time_threshold, 'solo_hora_x'].unique()
-            matched_df_C_times = merged.loc[merged['diff_sec'] < time_threshold, 'solo_hora_y'].unique()
-
-            unmatched_df_B = df_B[~df_B['solo_hora'].isin(matched_df_B_times)]
-            unmatched_df_C = df_C[~df_C['solo_hora'].isin(matched_df_C_times)]
-
-            unify_info['Registros_B_desechados'] += len(unmatched_df_B)
-            unify_info['Registros_C_desechados'] += len(unmatched_df_C)
-
-            if pda not in unify_dict:
-                unify_dict[pda] = {}
-            unify_dict[pda][date] = df_D
-    return unify_dict, unify_info
-
-
 
 def unifyAllFiles(df_A, df_B, df_C, save_path):
     """
@@ -565,6 +512,137 @@ def unifyBCFiles(df_B, df_C, save_path):
         "Información de sincronizacion": clean_df_info,
         "Registros_no_usados": unused_info,
         "Registros_finales": len(df_D)
+    }
+    current_app.logger.info(f'Informacion devuelta por la union: {str(return_info)}')
+
+    return jsonify(convert_numpy(return_info))
+
+
+def unifyADFiles(df_A, df_D, save_path):
+    """
+        Calls necesary functions for creating new files from unifying the files
+        Args:
+            df_A : dataframe with data from file A
+            df_D : dataframe with data from file D (files B and C)
+        Returns:
+            JSON with all the erased data and its related information
+    """
+
+    # Obtener Estadísticas iniciales
+    current_app.logger.info(f'======================== CALCULANDO ESTADISTICAS INICIALES')
+    first_info = calculate_base_statistics(df_A, df_D)
+
+
+    # Eliminar PDAs defectuosas
+    current_app.logger.info(f'======================== ELIMINANDO PDAS DEFECTUOSAS')
+    current_app.logger.info("--------------- Procesando Fichero B")
+    df_A = df_A[df_A['cod_pda'].str.startswith('PDA')]
+    current_app.logger.info("--------------- Procesando Fichero C")
+    df_D = df_D[df_D['cod_pda'].str.startswith('PDA')]
+    current_app.logger.info("--------------- Calculando estadisticas")
+    pda_erase_info = calculate_base_statistics(df_A, df_D)
+
+
+    # Eliminar duplicados
+    current_app.logger.info(f'SEPARANDO FICHEROS POR PDAS Y POR FECHASELIMINANDO DUPLICADOS')
+    current_app.logger.info("--------------- Procesando Fichero B")
+    df_A, duplicates_B = count_and_drop_duplicates(df_A)
+    current_app.logger.info(f"Duplicados: {duplicates_B}")
+    current_app.logger.info("--------------- Procesando Fichero C")
+    df_D, duplicates_C = count_and_drop_duplicates(df_D)
+    current_app.logger.info(f"Duplicados: {duplicates_C}")
+    current_app.logger.info("--------------- Calculando estadisticas")
+    total_duplicates = duplicates_B + duplicates_C
+    current_app.logger.info(f"Duplicados totales: {total_duplicates}")
+
+    df_A_clean = len(df_A)
+    df_D_clean = len(df_D)
+    total_clean = df_A_clean + df_D_clean
+
+    duplicates_info = {
+        "Duplicados totales": total_duplicates,
+        "Duplicados B": duplicates_B,
+        "Duplicados C": duplicates_C,
+        "Registros totales no duplicados": total_clean,
+        "Registros B no duplicatos": df_A_clean,
+        "Registros C no duplicados": df_D_clean
+    }
+
+
+    # Dividir por PDA -> "PDA01": {}, "PDA02": {}, ...
+    # Dividir por fecha -> "PDA01": { "2025-05-29": {}, ...}, ...
+    current_app.logger.info(f'======================== SEPARANDO FICHEROS POR PDAS Y POR FECHAS')
+    current_app.logger.info("--------------- Procesando Fichero B")
+    df_A_dict = create_dict(df_A)
+    current_app.logger.info("--------------- Procesando Fichero C")
+    df_D_dict = create_dict(df_D)
+
+
+    # Obtener pdas y fechas comunes y descartar el resto
+    current_app.logger.info(f'======================== SINCORNIZANDO FICHEROS')
+    df_A_dict, df_D_dict = sinconize_BC_dicts(df_A_dict, df_D_dict)
+    
+
+    # Rehacer dataframes
+    current_app.logger.info(f'======================== REHACIENDO DATAFRAMES')
+    current_app.logger.info("--------------- Procesando Fichero B")
+    B_frames = []
+    for pda, dates in df_A_dict.items():
+        for date, df in dates.items():
+            B_frames.append(df)
+
+    df_A = pd.concat(B_frames, ignore_index=True)
+
+    current_app.logger.info("--------------- Procesando Fichero C")
+    C_frames = []
+    for pda, dates in df_D_dict.items():
+        for date, df in dates.items():
+            C_frames.append(df)
+    df_D = pd.concat(C_frames, ignore_index=True)
+
+    current_app.logger.info("--------------- Calculando estadisticas")
+    clean_df_info = calculate_base_statistics(df_A, df_D)
+    
+
+    # Union por la izquierda (Fichero B) con un umbral de tiempo
+    current_app.logger.info(f'======================== CREANDO FICHERO E: UNIFICANDO FICHEROS A Y D')
+    time_threshold = '15s'
+    
+    # Ordenar por hora
+    df_A_sorted = df_A.sort_values(['solo_hora'])
+    df_D_sorted = df_D.sort_values(['solo_hora'])
+
+    # Convertir hora a datatime
+    df_A_sorted['solo_hora'] = pd.to_datetime(df_A_sorted['solo_hora'])
+    df_D_sorted['solo_hora'] = pd.to_datetime(df_D_sorted['solo_hora'])
+
+    # Convertir codigo pda a string
+    df_A_sorted['cod_pda'] = df_A_sorted['cod_pda'].astype(str)
+    df_D_sorted['cod_pda'] = df_D_sorted['cod_pda'].astype(str)
+
+    # Convertir fecha a datetime
+    df_A_sorted['solo_fecha'] = pd.to_datetime(df_A_sorted['solo_fecha'])
+    df_D_sorted['solo_fecha'] = pd.to_datetime(df_D_sorted['solo_fecha'])
+
+    # Convertir fecha formateada a datetime
+    df_A_sorted['formatted_fecha_hora'] = pd.to_datetime(df_A_sorted['formatted_fecha_hora'])
+    df_D_sorted['formatted_fecha_hora'] = pd.to_datetime(df_D_sorted['formatted_fecha_hora'])
+
+    # Realizar la union
+    df_E = pd.merge_asof(df_A_sorted, df_D_sorted, on='solo_hora', by=['cod_pda', 'solo_fecha'], tolerance=pd.Timedelta(time_threshold), direction='nearest')
+
+    # Ordenar por PDA, fecha y hora
+    df_E = df_E.sort_values(['cod_pda', 'solo_fecha', 'solo_hora'])
+
+
+
+    # Estructurar informacion final
+    return_info = {
+        "Informacion inicial": first_info,
+        "Duplicados": duplicates_info,
+        "Información de sincronizacion": clean_df_info,
+        #"Registros_no_usados": unused_info,
+        "Registros_finales": len(df_E)
     }
     current_app.logger.info(f'Informacion devuelta por la union: {str(return_info)}')
 
