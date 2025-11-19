@@ -1,4 +1,6 @@
 **/__pycache__
 **/uploads/*
 **/tests/*
-**/maps/*.html
+**/maps/*
+.python-version
+*.csv

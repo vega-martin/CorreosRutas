@@ -12,6 +12,14 @@ main_bp = Blueprint('main', __name__, template_folder='templates')
 @main_bp.before_request
 def make_session_permanent():
     """Set the session as permanent and define its duration."""
+
+    # --- INICIO DE LA CORRECCIÓN ---
+    # Si la petición ya va dirigida a la ruta 'logout', no hagas
+    # nada. Deja que la propia función logout() maneje la lógica.
+    if request.endpoint == 'main.logout':
+        return
+    # --- FIN DE LA CORRECCIÓN ---
+
     session.permanent = True
     current_app.permanent_session_lifetime = timedelta(minutes=55)
 
@@ -22,6 +30,8 @@ def make_session_permanent():
         elapsed = now - datetime.fromisoformat(last_activity)
         if elapsed > current_app.permanent_session_lifetime:
             sid = session.get("id")
+            # Esto ahora funcionará, porque la siguiente petición
+            # a 'main.logout' será ignorada por este 'hook'.
             return redirect(url_for("main.logout", sid=sid))
 
     # Actualiza la marca de tiempo
