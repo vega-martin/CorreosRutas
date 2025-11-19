@@ -210,3 +210,21 @@ def uploadFilesBCToBackend():
     }
 
     return jsonify(final_response)
+
+
+
+@fileUpload_bp.route("/check_files_status", methods=["POST"])
+def check_files_status():
+    """
+    Comprueba si todos los ficheros requeridos ya están subidos.
+    """
+    # Comprobar si estan o no todos los ficheros
+    uploaded_files = session.get("uploaded_files", {})
+    ready = all(f in uploaded_files and uploaded_files[f] != '' for f in ('A', 'B', 'C'))
+    # Mandar a unificar los 3 ficheros
+    #data = {
+    #    "id": session.get("id")
+    #    }
+    #api_url = current_app.config.get("API_URL")
+    #requests.post(f"{api_url}/unifyFiles", data=data)
+    return jsonify({"ready": ready})

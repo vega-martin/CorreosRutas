@@ -31,6 +31,7 @@
                 </div>
             </div>
         </div>
+        <button class="accept-btn" id="estadisticasBtn" disabled hidden>Descargar estadísticas</button>
     </div>
     <br>
 
@@ -48,12 +49,12 @@
 
     <h2>Generar tabla y mapa</h2>
     <form action="{{ url_for('generateResults.generar_mapa') }}" method="get">
-        <button type="submit" class="generate-btn">Ver mapa</button>
+        <button type="submit" class="generate-btn" id="mapaBtn">Ver mapa</button>
     </form><br>
     <form action="{{ url_for('generateResults.unifyFiles') }}" method="get">
         <h2>Unificar ficheros</h2>
         <input type="text" name="codiredMain" id="codiredMain" class="codiredMain" placeholder="Codired" minlength="7" maxlength="7" required>
-        <button type="submit" class="generate-btn">Unificar todos los ficheros</button>
+        <button type="submit" class="generate-btn" id="unifyBtn" disabled>Unificar todos los ficheros</button>
     </form>
 
 
@@ -64,6 +65,11 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
+            // comprobar si los ficheros estan o no
+            checkFiles().then(areFiles => {
+                enableBtns(areFiles);
+            });
+
             // --- FORM A ---
             const formA = document.querySelector('form[action*="uploadFileAToBackend"]');
             const inputA = formA.querySelector('input[name="fileA"]');
@@ -98,11 +104,50 @@
             }
             inputsABC.forEach(input => input.addEventListener('change', checkABC));
             */
+
+
+           /*
+           // Descargar el fichero con estadísticas
+            document.getElementById("estadisticasBtn").addEventListener("click", async () => {
+                const link = document.createElement("a");
+                link.href = "ruta";
+                link.download = "EstadísticasUniónFicheros.pdf";
+                link.click();
+            });
+            */
         });
 
         // Confirm logout
         function confirmLogout() {
             return confirm("¿Seguro que deseas cerrar la sesión y eliminar los ficheros subidos?");
+        }
+
+        // Comprobar si se han subido todos los archivos
+        function checkFiles() {
+            return fetch("/check_files_status", {
+                method: "POST"
+            })
+            .then(response => response.json())
+            .then(data => data.ready)
+            .catch(err => {
+                console.error("Error comprobando archivos:", err);
+                return false; // fallback
+            });
+        }
+
+        function enableBtns(areFiles) {
+            const estadisticasBtn = document.getElementById("estadisticasBtn");
+            const mapaBtn = document.getElementById("mapaBtn");
+            const unifyBtn = document.getElementById("unifyBtn");
+            if (areFiles === true) {
+                estadisticasBtn.disabled = false;
+                //mapaBtn.disabled = false;
+                unifyBtn.disabled = false;
+            } else {
+                estadisticasBtn.disabled = true;
+                //mapaBtn.disabled = true;
+                unifyBtn.disabled = true;
+            }
         }
 
         // Ajax for file A upload
@@ -114,6 +159,9 @@
                 const res = await fetch(e.target.action, { method: 'POST', body: formData });
                 const data = await res.json();
                 document.getElementById('fileA-logs').value = data.logs;
+                checkFiles().then(areFiles => {
+                    enableBtns(areFiles);
+                });
         });
         // Ajax for files B and C upload
         document
@@ -127,6 +175,9 @@
 
                 // Display logs in the textarea
                 document.getElementById('fileBC-logs').value = data.logs;
+                checkFiles().then(areFiles => {
+                    enableBtns(areFiles);
+                });
         });
 
     </script>
