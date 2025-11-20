@@ -480,6 +480,15 @@ def unifyBCFiles(df_B, df_C, save_path):
 
     # Definir un nuevo campo para definir que son paradas
     df_D['esParada'] = True
+
+    # Elinimar y renombrar columnas repetidas
+    repeated_columns = ['codired_y', 'formatted_fecha_hora_y', 'fecha_hora_y']
+    df_D.drop(repeated_columns, axis=1, inplace=True)
+    df_D.rename(columns={
+                "codired_x": "codired",
+                "formatted_fecha_hora_x": "formatted_fecha_hora",
+                "fecha_hora_x": "fecha_hora"
+            }, inplace=True)
     
 
     current_app.logger.info(f'======================== ESCRIBIENDO FICHERO D')
@@ -535,9 +544,9 @@ def unifyADFiles(df_A, df_D, save_path):
 
     # Eliminar PDAs defectuosas
     current_app.logger.info(f'======================== ELIMINANDO PDAS DEFECTUOSAS')
-    current_app.logger.info("--------------- Procesando Fichero B")
+    current_app.logger.info("--------------- Procesando Fichero A")
     df_A = df_A[df_A['cod_pda'].str.startswith('PDA')]
-    current_app.logger.info("--------------- Procesando Fichero C")
+    current_app.logger.info("--------------- Procesando Fichero D")
     df_D = df_D[df_D['cod_pda'].str.startswith('PDA')]
     current_app.logger.info("--------------- Calculando estadisticas")
     pda_erase_info = calculate_base_statistics(df_A, df_D)
@@ -545,14 +554,14 @@ def unifyADFiles(df_A, df_D, save_path):
 
     # Eliminar duplicados
     current_app.logger.info(f'SEPARANDO FICHEROS POR PDAS Y POR FECHASELIMINANDO DUPLICADOS')
-    current_app.logger.info("--------------- Procesando Fichero B")
-    df_A, duplicates_B = count_and_drop_duplicates(df_A)
-    current_app.logger.info(f"Duplicados: {duplicates_B}")
-    current_app.logger.info("--------------- Procesando Fichero C")
-    df_D, duplicates_C = count_and_drop_duplicates(df_D)
-    current_app.logger.info(f"Duplicados: {duplicates_C}")
+    current_app.logger.info("--------------- Procesando Fichero A")
+    df_A, duplicates_A = count_and_drop_duplicates(df_A)
+    current_app.logger.info(f"Duplicados: {duplicates_A}")
+    current_app.logger.info("--------------- Procesando Fichero D")
+    df_D, duplicates_D = count_and_drop_duplicates(df_D)
+    current_app.logger.info(f"Duplicados: {duplicates_D}")
     current_app.logger.info("--------------- Calculando estadisticas")
-    total_duplicates = duplicates_B + duplicates_C
+    total_duplicates = duplicates_A + duplicates_D
     current_app.logger.info(f"Duplicados totales: {total_duplicates}")
 
     df_A_clean = len(df_A)
@@ -561,20 +570,20 @@ def unifyADFiles(df_A, df_D, save_path):
 
     duplicates_info = {
         "Duplicados totales": total_duplicates,
-        "Duplicados B": duplicates_B,
-        "Duplicados C": duplicates_C,
+        "Duplicados A": duplicates_A,
+        "Duplicados D": duplicates_D,
         "Registros totales no duplicados": total_clean,
-        "Registros B no duplicatos": df_A_clean,
-        "Registros C no duplicados": df_D_clean
+        "Registros A no duplicatos": df_A_clean,
+        "Registros D no duplicados": df_D_clean
     }
 
 
     # Dividir por PDA -> "PDA01": {}, "PDA02": {}, ...
     # Dividir por fecha -> "PDA01": { "2025-05-29": {}, ...}, ...
     current_app.logger.info(f'======================== SEPARANDO FICHEROS POR PDAS Y POR FECHAS')
-    current_app.logger.info("--------------- Procesando Fichero B")
+    current_app.logger.info("--------------- Procesando Fichero A")
     df_A_dict = create_dict(df_A)
-    current_app.logger.info("--------------- Procesando Fichero C")
+    current_app.logger.info("--------------- Procesando Fichero D")
     df_D_dict = create_dict(df_D)
 
 
@@ -585,20 +594,20 @@ def unifyADFiles(df_A, df_D, save_path):
 
     # Rehacer dataframes
     current_app.logger.info(f'======================== REHACIENDO DATAFRAMES')
-    current_app.logger.info("--------------- Procesando Fichero B")
-    B_frames = []
+    current_app.logger.info("--------------- Procesando Fichero A")
+    A_frames = []
     for pda, dates in df_A_dict.items():
         for date, df in dates.items():
-            B_frames.append(df)
+            A_frames.append(df)
 
-    df_A = pd.concat(B_frames, ignore_index=True)
+    df_A = pd.concat(A_frames, ignore_index=True)
 
-    current_app.logger.info("--------------- Procesando Fichero C")
-    C_frames = []
+    current_app.logger.info("--------------- Procesando Fichero D")
+    D_frames = []
     for pda, dates in df_D_dict.items():
         for date, df in dates.items():
-            C_frames.append(df)
-    df_D = pd.concat(C_frames, ignore_index=True)
+            D_frames.append(df)
+    df_D = pd.concat(D_frames, ignore_index=True)
 
     current_app.logger.info("--------------- Calculando estadisticas")
     clean_df_info = calculate_base_statistics(df_A, df_D)
@@ -629,10 +638,14 @@ def unifyADFiles(df_A, df_D, save_path):
     df_D_sorted['formatted_fecha_hora'] = pd.to_datetime(df_D_sorted['formatted_fecha_hora'])
 
     # Realizar la union
-    df_E = pd.merge_asof(df_A_sorted, df_D_sorted, on='solo_hora', by=['cod_pda', 'solo_fecha'], tolerance=pd.Timedelta(time_threshold), direction='nearest')
+    df_E = df_A_sorted.merge(df_D_sorted, how='outer')
 
     # Ordenar por PDA, fecha y hora
     df_E = df_E.sort_values(['cod_pda', 'solo_fecha', 'solo_hora'])
+
+    current_app.logger.info(f'======================== ESCRIBIENDO FICHERO E')
+    path = os.path.join(save_path, 'Fichero_E.csv')
+    df_E.to_csv(path, sep=';', index=False)
 
 
 

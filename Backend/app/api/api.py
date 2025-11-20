@@ -162,7 +162,7 @@ def unifyFiles():
     return jsonify(return_information)
 
 @api_bp.route('/unifyAllFiles', methods=['POST'])
-def unifyFiles():
+def unifyAllFiles():
     id = request.form.get('id')
     files_paths = {}
     base_upload = current_app.config.get("UPLOAD_FOLDER")

@@ -222,9 +222,21 @@ def check_files_status():
     uploaded_files = session.get("uploaded_files", {})
     ready = all(f in uploaded_files and uploaded_files[f] != '' for f in ('A', 'B', 'C'))
     # Mandar a unificar los 3 ficheros
-    #data = {
-    #    "id": session.get("id")
-    #    }
-    #api_url = current_app.config.get("API_URL")
+    data = {
+        "id": session.get("id")
+        }
+    api_url = current_app.config.get("API_URL")
+    try:
+        backend_unify_response = requests.post(f"{api_url}/unifyAllFiles", data=data)
+        backend_unify_response.raise_for_status()  # Raises HTTPError if status != 2xx
+
+        # Check if the response has content
+        if backend_unify_response.content:
+            unify_data = backend_unify_response.json()  # parse JSON
+        else:
+            unify_data = {"logs": "No se recibió respuesta del backend."}
+
+    except requests.exceptions.RequestException as e:
+        unify_data = {"logs": f"Error al llamar al backend: {e}"}
     #requests.post(f"{api_url}/unifyFiles", data=data)
     return jsonify({"ready": ready})
