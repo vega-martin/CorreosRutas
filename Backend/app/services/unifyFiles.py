@@ -624,6 +624,8 @@ def unifyADFiles(df_A, df_D, save_path):
     # Convertir hora a datatime
     df_A_sorted['solo_hora'] = pd.to_datetime(df_A_sorted['solo_hora'])
     df_D_sorted['solo_hora'] = pd.to_datetime(df_D_sorted['solo_hora'])
+    df_A_sorted['solo_hora'] = df_A_sorted['solo_hora'].dt.strftime('%H:%M:%S')
+    df_D_sorted['solo_hora'] = df_D_sorted['solo_hora'].dt.strftime('%H:%M:%S')
 
     # Convertir codigo pda a string
     df_A_sorted['cod_pda'] = df_A_sorted['cod_pda'].astype(str)
@@ -642,6 +644,15 @@ def unifyADFiles(df_A, df_D, save_path):
 
     # Ordenar por PDA, fecha y hora
     df_E = df_E.sort_values(['cod_pda', 'solo_fecha', 'solo_hora'])
+
+    # Eliminar y renombrar columnas necesarias
+    df_E.drop('fecha_hora', axis=1, inplace=True)
+    df_E.rename(columns={
+                "formatted_fecha_hora": "fecha_hora"
+            }, inplace=True)
+    
+    # Rellenar datos necesarios
+    df_E['esParada'] = df_E['esParada'].fillna(False)
 
     current_app.logger.info(f'======================== ESCRIBIENDO FICHERO E')
     path = os.path.join(save_path, 'Fichero_E.csv')
