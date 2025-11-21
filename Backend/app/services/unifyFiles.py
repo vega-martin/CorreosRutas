@@ -1,8 +1,7 @@
 from flask import jsonify, current_app
-from collections import defaultdict
 import pandas as pd
 import numpy as np
-import os, json
+import os
 
 def count_and_drop_duplicates(df):
     df_length = len(df)
@@ -476,7 +475,7 @@ def unifyBCFiles(df_B, df_C, save_path):
     df_D = df_D.dropna(subset=['longitud'])
 
     # Calcular diferencia temporal entre registros correspondientes
-    df_D['dif_temp'] = (df_D['formatted_fecha_hora_x'] - df_D['formatted_fecha_hora_y']).abs()
+    df_D['dif_temp'] = (df_D['formatted_fecha_hora_x'] - df_D['formatted_fecha_hora_y']).abs().dt.total_seconds()
 
     # Definir un nuevo campo para definir que son paradas
     df_D['esParada'] = True

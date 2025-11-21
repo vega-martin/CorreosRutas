@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, session, redirect, url_for, flash, current_app, request, jsonify, Response
 from app.util.fileMgmt import ensure_folder, rename_file_columns, extractDataframes, format_date, get_statistics_A, extractBCDataframes
 from app.services.unifyFiles import unifyAllFiles, unifyBCFiles, unifyADFiles
+from app.services.dataCleaning import removeOutliers
 from datetime import timedelta, datetime
 import uuid
 import os
@@ -182,6 +183,9 @@ def unifyAllFiles():
     if ((len(df_A) == 0) or (len(df_D) == 0)):
         return jsonify({"Registros totales: 0"})
     erased_info = unifyADFiles(df_A, df_D, id_path)
+
+    
+    outliers_info = removeOutliers(id_path)
     
     if isinstance(read_info, Response):
         read_info = read_info.get_json()
