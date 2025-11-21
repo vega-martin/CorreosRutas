@@ -328,6 +328,10 @@ button[disabled]:hover {
     margin-top: 4px;
 }
 
+.options.show {
+    display: block; /* Se muestra con la clase JS */
+}
+
 .options div {
     padding: 10px 15px;
     cursor: pointer;

@@ -1,14 +1,20 @@
 document.addEventListener("DOMContentLoaded", () => {
     // --------- VARIABLES GLOBALES --------- //
     // Formulario completo
-    const codired = document.getElementById('codired');
-    const selectBtn = document.getElementById('pdaBtn');
-    const options = document.getElementById('pdaOptions');
+    const codiredBtn = document.getElementById('codiredBtn');
+    const codiredOptions = document.getElementById('codiredOptions');
+    const codiredInput = document.getElementById('codiredInput');
+
+    const pdaBtn = document.getElementById('pdaBtn');
+    const pdaOptions = document.getElementById('pdaOptions');
     const pdaInput = document.getElementById('pdaInput');
+
     const waitMessage = document.getElementById('waitMessage');
+
     const fechaInicio = document.getElementById('fechaInicio');
     const fechaFin = document.getElementById('fechaFin');
     const aviso = document.getElementById('fechaAviso');
+    
     const form = document.getElementById('forms');
     // Botones lista
     const btnPrev = document.getElementById('btn-prev');
@@ -91,119 +97,195 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // --------- EVENTOS --------- //
-    if (codired) {
-        selectBtn.addEventListener('click', () => {
-            options.style.display = options.style.display === 'block' ? 'none' : 'block';
-        });
+    document.addEventListener('click', (e) => {
+        
+        // Función de ayuda para ver si el clic fue dentro de un elemento
+        const isClickInside = (button, options) => {
+            // Si el elemento clickeado (e.target) está contenido en el botón O en las opciones, devuelve true.
+            return button.contains(e.target) || options.contains(e.target);
+        };
 
-        // Escucha el evento
-        codired.addEventListener("change", () => {
-            const cod = codired.value.trim();
-
-            if (cod === "") {
-                options.innerHTML = "";
-                selectBtn.disabled = true;
-                pdaInput.value = "";
-                selectBtn.textContent = "Selecciona una PDA";
-                return;
-            }
-
-            // Mensaje de cargando
-            selectBtn.textContent = "Cargando...";
-
-            // Obtener pdas disponibles desde el backend
-            fetch(`/pda_por_codired?cod=${encodeURIComponent(codired.value)}`)
-                .then(response => response.json())
-                .then(data => {
-                    const pdas = data.pdas;
-                    options.innerHTML = "";
-
-                    if (pdas.length === 0) {
-                        options.innerHTML = "<div>No hay PDAs disponibles</div>";
-                    } else {
-                        // Crear los divs de las opciones
-                        pdas.forEach(pda => {
-                            const div = document.createElement("div");
-                            div.dataset.value = pda;
-                            div.textContent = pda;
-
-                            // Añadir funcionalidad al div
-                            div.addEventListener('click', () => {
-                                selectBtn.textContent = pda;
-                                pdaInput.value = pda;
-                                options.style.display = 'none';
-
-                                // Mostrar mensaje de espera al usuario
-                                waitMessage.textContent = 'Procesando fechas válidas.';
-                                waitMessage.style.display = 'block';
-                                
-                                // Bloquear campos y limpiar valores
-                                fechaInicio.disabled = true;
-                                fechaFin.disabled = true;
-                                fechaInicio.value = "";
-                                fechaFin.value = "";
-                                aviso.style.display = "none";
-                                fechasDisponibles.clear();
-
-                                // Obtener fechas disponibles desde el backend
-                                fetch(`/fechas_por_pda?pda=${encodeURIComponent(pdaInput.value)}`)
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.fechas && data.fechas.length > 0) {
-                                            fechaInicio.disabled = false;
-                                            fechaFin.disabled = true;
-
-                                            // Guardamos fechas válidas
-                                            fechasDisponibles = new Set(data.fechas);
-
-                                            // Ajustar límites del calendario
-                                            fechaInicio.setAttribute("min", data.fechas[0]);
-                                            fechaInicio.setAttribute("max", data.fechas[data.fechas.length - 1]);
-                                            fechaFin.setAttribute("min", data.fechas[0]);
-                                            fechaFin.setAttribute("max", data.fechas[data.fechas.length - 1]);
-                                        }
-                                    })
-                                    .catch(error => {
-                                        // Mostrar mensaje de error al usuario
-                                        waitMessage.textContent = 'Error al cargar las fechas.'
-                                    })
-                                    .finally(() => {
-                                        // Ocultar mensaje de espera al usuario
-                                        waitMessage.style.display = 'none';
-                                    });
-                            });
-
-                            options.appendChild(div);
-                        });
-                    }
-                    // Activar el dropdown
-                    selectBtn.textContent = "Selecciona una PDA";
-                    selectBtn.disabled = false;
-                })
-                .catch(err => {
-                    selectBtn.disabled = false;
-                    pdaInput.value = "";
-                    selectBtn.textContent = "PDAs no encontradas";
-                });
-
-                
-        });
-
-        // Validar fechas seleccionadas
-        function validarFecha(campo) {
-            const fecha = campo.value;
-            if (fecha === "") return;
-
-            if (!fechasDisponibles.has(fecha)) {
-                aviso.style.display = "inline";
-                campo.style.borderColor = "red";
-                campo.style.backgroundColor = "#ffecec";
-            } else {
-                aviso.style.display = "none";
-                campo.style.borderColor = "#ccc";
-                campo.style.backgroundColor = "";
+        // --- Lógica para Códigos de Unidad (codired) ---
+        // Solo si los elementos existen
+        if (codiredBtn && codiredOptions) {
+            if (!isClickInside(codiredBtn, codiredOptions)) {
+                codiredOptions.classList.remove('show');
             }
         }
+
+        // --- Lógica para PDAs ---
+        if (pdaBtn && pdaOptions) {
+            if (!isClickInside(pdaBtn, pdaOptions)) {
+                pdaOptions.classList.remove('show');
+            }
+        }
+        
+    });
+
+    const cargarCodiredsInicial = () => {
+        pdaOptions.innerHTML = '';
+        pdaBtn.textContent = 'Selecciona una PDA';
+        pdaBtn.disabled = true; 
+        
+        codiredBtn.textContent = 'Cargando códigos...';
+        
+        fetch('/codireds')
+        .then(response => {
+            if (!response.ok) throw new Error('Error al cargar códigos de unidad.');
+            return response.json();
+        })
+        .then(data => {
+            const cods = data.codireds;
+            
+            codiredOptions.innerHTML = "";
+
+            if (cods.length === 0) {
+                codiredOptions.innerHTML = "<div class='option-item'>No hay códigos de oficina disponibles</div>";
+            } else {
+                cods.forEach(cod => {
+                    const div = document.createElement("div");
+                    div.dataset.value = cod;
+                    div.textContent = cod;
+
+                    div.addEventListener('click', () => {
+                        console.log("Dentro de la funcion");
+                        handleCodiredSelection(cod); 
+                    });
+
+                    codiredOptions.appendChild(div);
+                });
+            }
+            codiredBtn.textContent = "Selecciona un código de unidad";
+        })
+        .catch(err => {
+            codiredBtn.textContent = "Error de carga inicial";
+        });
+    };
+
+    const handleCodiredSelection = (cod) => {
+        codiredBtn.textContent = cod;
+        codiredInput.value = cod;
+        
+        codiredOptions.classList.remove('show');
+        
+        pdaOptions.innerHTML = '';
+        pdaBtn.disabled = true;
+        
+        fechaInicio.disabled = true;
+        fechaFin.disabled = true;
+        fechaInicio.value = "";
+        fechaFin.value = "";
+        
+        cargarPdas(cod); 
+    };
+
+    const cargarPdas = (cod) => {
+        fetch(`/pda_por_codired?cod=${encodeURIComponent(cod)}`)
+        .then(response => response.json())
+        .then(data => {
+            const pdas = data.pdas;
+            pdaOptions.innerHTML = "";
+
+            if (pdas.length === 0) {
+                pdaOptions.innerHTML = "<div>No hay PDAs disponibles</div>";
+            } else {
+                // Crear los divs de las opciones
+                pdas.forEach(pda => {
+                    const div = document.createElement("div");
+                    div.dataset.value = pda;
+                    div.textContent = pda;
+
+                    // Añadir funcionalidad al div
+                    div.addEventListener('click', () => {
+                        pdaBtn.textContent = pda;
+                        pdaInput.value = pda;
+                        pdaOptions.classList.remove('show');
+
+                        // Mostrar mensaje de espera al usuario
+                        waitMessage.textContent = 'Procesando fechas válidas.';
+                        waitMessage.style.display = 'block';
+                        
+                        // Bloquear campos y limpiar valores
+                        fechaInicio.disabled = true;
+                        fechaFin.disabled = true;
+                        fechaInicio.value = "";
+                        fechaFin.value = "";
+                        aviso.style.display = "none";
+                        fechasDisponibles.clear();
+
+                        // Obtener fechas disponibles desde el backend
+                        fetch(`/fechas_por_pda?pda=${encodeURIComponent(pdaInput.value)}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.fechas && data.fechas.length > 0) {
+                                    fechaInicio.disabled = false;
+                                    fechaFin.disabled = true;
+
+                                    // Guardamos fechas válidas
+                                    fechasDisponibles = new Set(data.fechas);
+
+                                    // Ajustar límites del calendario
+                                    fechaInicio.setAttribute("min", data.fechas[0]);
+                                    fechaInicio.setAttribute("max", data.fechas[data.fechas.length - 1]);
+                                    fechaFin.setAttribute("min", data.fechas[0]);
+                                    fechaFin.setAttribute("max", data.fechas[data.fechas.length - 1]);
+                                }
+                            })
+                            .catch(error => {
+                                // Mostrar mensaje de error al usuario
+                                waitMessage.textContent = 'Error al cargar las fechas.'
+                            })
+                            .finally(() => {
+                                // Ocultar mensaje de espera al usuario
+                                waitMessage.style.display = 'none';
+                            });
+                    });
+
+                    pdaOptions.appendChild(div);
+                });
+            }
+            // Activar el dropdown
+            pdaBtn.textContent = "Selecciona una PDA";
+            pdaBtn.disabled = false;
+        })
+        .catch(err => {
+            pdaBtn.disabled = false;
+            pdaInput.value = "";
+            pdaBtn.textContent = "PDAs no encontradas";
+        });
+    };
+
+    // Validar fechas seleccionadas
+    function validarFecha(campo) {
+        const fecha = campo.value;
+        if (fecha === "") return;
+
+        if (!fechasDisponibles.has(fecha)) {
+            aviso.style.display = "inline";
+            campo.style.borderColor = "red";
+            campo.style.backgroundColor = "#ffecec";
+        } else {
+            aviso.style.display = "none";
+            campo.style.borderColor = "#ccc";
+            campo.style.backgroundColor = "";
+        }
+    }
+
+    if (codiredBtn) {
+        
+        codiredBtn.addEventListener('click', () => {
+            codiredOptions.classList.toggle('show');
+            pdaOptions.classList.remove('show');
+        });
+
+        pdaBtn.addEventListener('click', () => {
+            if (!pdaBtn.disabled) {
+                pdaOptions.classList.toggle('show');
+                codiredOptions.classList.remove('show'); // Cierra Codired
+            }
+        });
+
+        cargarCodiredsInicial();
 
         // Escuchar cambios en los campos de fecha
         fechaInicio.addEventListener("change", () => validarFecha(fechaInicio));
@@ -213,7 +295,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (form) {
         // Validar formulario
         function validarFormulario() {
-            const cod = codired.value;
+            const cod = codiredInput.value;
             const pda = pdaInput.value;
             const ini = fechaInicio.value;
             const fin = fechaFin.value;
