@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     // --------- VARIABLES GLOBALES --------- //
+    // Formulario completo
     const codired = document.getElementById('codired');
     const selectBtn = document.getElementById('pdaBtn');
     const options = document.getElementById('pdaOptions');
@@ -8,22 +9,48 @@ document.addEventListener("DOMContentLoaded", () => {
     const fechaInicio = document.getElementById('fechaInicio');
     const fechaFin = document.getElementById('fechaFin');
     const aviso = document.getElementById('fechaAviso');
-    const form = document.getElementById("forms");
+    const form = document.getElementById('forms');
+    // Botones lista
     const btnPrev = document.getElementById('btn-prev');
     const btnNext = document.getElementById('btn-next');
+    // Filtrado
+    const btnFilter = document.getElementById('btn-filtrar');
+    const btnLimpiar = document.getElementById('btn-limpiar-filtros');
+    const inputDistancia = document.getElementById('filtroDistancia');
+    const inputTiempo = document.getElementById('filtroTiempo');
+    const inputVelocidad = document.getElementById('filtroVelocidad');
+    
+
     // PAGINACIÓN Y RENDERIZADO
     let tablaDatos = [];
     let tablaFiltrada = [];
     let paginaActual = 1;
     const filasPorPagina = 50;
     let fechasDisponibles = new Set();
+    let filtradoActivo = false;
 
     // --------- FUNCIONES --------- //
     function renderPagina(pagina) {
         const tbody = document.querySelector('#tablaDatos tbody');
         tbody.innerHTML = "";
 
-        const datos = tablaFiltrada.length ? tablaFiltrada : tablaDatos;
+        const datos = filtradoActivo ? tablaFiltrada : tablaDatos;
+
+        // --- CÓDIGO DE MANEJO DE CERO RESULTADOS  ---
+        if (datos.length === 0 && filtradoActivo) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td colspan="7" style="text-align: center; color: #cc3333; padding: 15px;">
+                    ⚠️ No se encontraron registros que coincidan con los filtros aplicados.
+                </td>
+            `;
+            tbody.appendChild(tr);
+            
+            // También deshabilita el paginador si es necesario
+            document.getElementById('paginador').style.display = 'none'; 
+            document.getElementById('pagina-info').textContent = 'Página 0 de 0';
+            return; // Salimos de la función
+        }
 
         const inicio = (pagina - 1) * filasPorPagina;
         const fin = inicio + filasPorPagina;
@@ -54,10 +81,13 @@ document.addEventListener("DOMContentLoaded", () => {
         // Actualizar el texto del paginador
         document.getElementById('pagina-info').textContent =
             `Página ${pagina} de ${Math.ceil(datos.length / filasPorPagina)}`;
-
-        // Desactivar botones si es necesario
+        
+            
+            // Desactivar botones si es necesario
         document.getElementById('btn-prev').style.visibility = (pagina === 1) ? 'hidden' : 'visible';
         document.getElementById('btn-next').style.visibility = pagina >= Math.ceil(datos.length / filasPorPagina) ? 'hidden' : 'visible';
+        
+        document.getElementById('paginador').style.display = 'flex';
     }
 
     // --------- EVENTOS --------- //
@@ -274,55 +304,98 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
-    
-    // --------- FILTROS --------- //
-    function extraerNum(text) {
-        const num = text.match(/[\d\.]+/);
-        return num ? parseFloat(num[0]) : null;
-    }
 
-    function cumpleCondicion(val, comp, ref) {
-        if(comp == "menor") return val < ref;
-        if(comp == "menor-igual") return val <= ref;
-        if(comp == "igual") return val === ref;
-        if(comp == "no-igual") return val != ref;
-        if(comp == "mayor") return val > ref;
-        if(comp == "mayor-igual") return val >= ref;
-        return false;
-    }
+    if (btnFilter) {
+        btnFilter.addEventListener('click', (e) => {
+            e.preventDefault();
 
-    function filtrarTabla() {
-        const filtros = [
-            {
-                comparador: document.getElementById("distancia-signo").value,
-                valor: parseFloat(document.getElementById("filtroDistancia").value),
-                campo: "distancia"
-            },
-            {
-                comparador: document.getElementById("tiempo-signo").value,
-                valor: parseFloat(document.getElementById("filtroTiempo").value),
-                campo: "tiempo"
-            },
-            {
-                comparador: document.getElementById("velocidad-signo").value,
-                valor: parseFloat(document.getElementById("filtroVelocidad").value),
-                campo: "velocidad"
+            console.log("--> 1. EVENTO DISPARADO Y e.preventDefault() ejecutado.");
+
+            const valueDistancia = document.getElementById('filtroDistancia').value;
+            const valueTiempo = document.getElementById('filtroTiempo').value;
+            const valueVelocidad = document.getElementById('filtroVelocidad').value;
+            
+            
+            if (!valueDistancia && !valueTiempo && !valueVelocidad){
+                alert("Debes seleccionar algún filtro.");
+                return false;
             }
-        ];
 
-        tablaFiltrada = tablaDatos.filter(row => {
-            return filtros.every(filtro => {
-                if (!isNaN(filtro.valor)) {
-                    const text = String(row[filtro.campo]).trim();
-                    const valorFila = extraerNum(text);
-                    return cumpleCondicion(valorFila, filtro.comparador, filtro.valor);
-                }
-                return true;
+            console.log(`Valores: Distancia='${valueDistancia}', Tiempo='${valueTiempo}', Velocidad='${valueVelocidad}'`);
+            
+            const inputSignoDistancia = document.getElementById('distancia-signo').value;
+            const inputSignoTiempo = document.getElementById('tiempo-signo').value;
+            const inputSignoVelocidad = document.getElementById('velocidad-signo').value;
+
+            fetch('/filtrar_registros', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    distancia : valueDistancia,
+                    signoDistancia : inputSignoDistancia,
+                    tiempo : valueTiempo,
+                    signoTiempo : inputSignoTiempo,
+                    velocidad : valueVelocidad,
+                    signoVelocidad : inputSignoVelocidad,
+                })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error("Error al obtener los datos del servidor");
+                return response.json();
+            })
+
+            .then(data => {
+                // === Actualizar los resultados del resumen ===
+                
+                // if (resumen){
+                //     document.getElementById('res-puntos').textContent = resumen.puntos_totales;
+                //     document.getElementById('res-distancia').textContent = resumen.distancia_total;
+                //     document.getElementById('res-tiempo').textContent = resumen.tiempo_total;
+                //     document.getElementById('res-velocidad').textContent = resumen.velocidad_media;
+                // }
+        
+                // === Guardar los datos globalmente y renderizar ===
+                tablaFiltrada = data.tabla;
+                filtradoActivo = true;
+                
+                paginaActual = 1;
+                renderPagina(paginaActual);
+        
+                // === Mostrar la tabla y los controles de paginación ===
+                document.getElementById('tabla-resultados').style.display = 'block';
+                document.getElementById('paginador').style.display = 'flex';
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Ocurrió un error al procesar la solicitud.");
             });
         });
-        
-        paginaActual = 1;
-        renderPagina(paginaActual)
+
+
+    }
+
+    if (btnLimpiar) {
+
+        function limpiarFiltros() {
+            inputDistancia.value = '';
+            inputTiempo.value = '';
+            inputVelocidad.value = '';
+            
+            // Establecer signos por defecto
+            document.getElementById('distancia-signo').value = 'menor'; 
+            document.getElementById('tiempo-signo').value = 'menor';
+            document.getElementById('velocidad-signo').value = 'menor';
+
+            // Reiniciar el estado de filtrado
+            filtradoActivo = false;
+            
+            // Volver a la primera página y renderizar la lista ORIGINAL
+            paginaActual = 1;
+
+            renderPagina(paginaActual); 
+        }
+
+        btnLimpiar.addEventListener('click', limpiarFiltros);
     }
 
 });

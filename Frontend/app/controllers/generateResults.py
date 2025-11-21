@@ -5,7 +5,9 @@ import numpy as np
 import folium
 import os
 import pytz
+import json
 import requests
+from app.controllers.fileUpload import ensure_session_folder
 
 generateResults_bp = Blueprint('generateResults', __name__, template_folder='templates')
 
@@ -111,8 +113,9 @@ def calcular_metricas(df_filtrado):
                      ['fec_lectura_medicion', 'longitud_wgs84_gd', 'latitud_wgs84_gd']
 
     Retorna:
-        Lista de diccionarios con los campos:
-        n, hora, longitud, latitud, distancia, tiempo, velocidad
+        Diccionario con los campos:
+        tabla: {[{n, hora, longitud, latitud, distancia, tiempo, velocidad},...]},
+        resumen: {puntos_totales, distancia_total, tiempo_total, velocidad_media}
     """
 
     # Asegurar que el DataFrame esté ordenado por fecha/hora
@@ -201,6 +204,9 @@ def calcular_metricas(df_filtrado):
 
 
 def get_datos(cod, pda, fecha):
+    """
+    Devuelve un diccionario con los cambios tabla y resumen
+    """
     # Obtener fichero
     uploaded = session.get('uploaded_files', {})
     path = uploaded.get('A')
@@ -405,14 +411,9 @@ def create_map(cod, pda, fecha):
     current_app.logger.info(f"Mapa creado")
     return save_map(cod, pda, fecha, mapa)
 
-
-
-
-
 # ------------------------------------------------------------
 # ENDPOINTS
 # ------------------------------------------------------------
-
 
 @generateResults_bp.route('/generar_mapa')
 def generar_mapa():
@@ -428,8 +429,6 @@ def generar_mapa():
 
     return render_template('options.html', pdas=pdas)
 
-
-
 @generateResults_bp.route('/generar_mapa/datos_tabla', methods=['GET', 'POST'])
 def datos_tabla():
     data = request.get_json()
@@ -444,6 +443,30 @@ def datos_tabla():
     # ini = "2025-10-18"
     resultados = get_datos(cod, pda, ini)
 
+    # Almacenar datos tabla en carpeta del usuario
+    if not isinstance(resultados, dict) or 'tabla' not in resultados:
+        current_app.logger.error("get_datos no devolvió el diccionario esperado con la clave 'tabla'.")
+        return jsonify({"error": "Error al obtener los datos procesados."}), 500
+    
+    try:
+        # Obtener la ruta de la carpeta única del usuario
+        user_folder = ensure_session_folder() 
+        
+        # Definir la ruta del archivo JSON donde guardaremos los datos
+        processed_filename = 'table_data.json'
+        save_path = os.path.join(user_folder, processed_filename)
+        
+        # Guardar la lista de diccionarios (el valor de 'tabla') en el disco
+        with open(save_path, 'w', encoding='utf-8') as f:
+            json.dump(resultados['tabla'], f, ensure_ascii=False)
+            
+        session['table_path'] = save_path
+        current_app.logger.info(f"Tabla procesada guardada en disco en: {save_path}")
+
+    except Exception as e:
+        current_app.logger.error(f"Error al guardar datos procesados en disco: {e}")
+        return jsonify({"error": f"Error interno del servidor al guardar datos: {str(e)}"}), 500
+
     return jsonify(resultados)
 
 @generateResults_bp.route('/generar_mapa/get_mapa', methods=['GET', 'POST'])
@@ -452,7 +475,9 @@ def get_mapa():
     cod = data.get('cod')
     pda = data.get('pda')
     ini = data.get('ini')
+
     # TODO: cambiar para que llame a la API del backend y no lo haga aqui
+
     created_maps = session.get('created_maps', [])
     map = pda + "_" + ini
     if map in created_maps:
