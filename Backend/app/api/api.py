@@ -1,7 +1,10 @@
-from flask import Blueprint, render_template, session, redirect, url_for, flash, current_app, request, jsonify, Response
+from flask import Blueprint, render_template, session, redirect, url_for, flash, current_app, request, jsonify, Response, send_file
 from app.util.fileMgmt import ensure_folder, rename_file_columns, extractDataframes, format_date, get_statistics_A, extractBCDataframes
 from app.services.unifyFiles import unifyAllFiles, unifyBCFiles, unifyADFiles
 from app.services.dataCleaning import removeOutliers
+from app.util.createPDFs import crear_pdf
+import json
+from io import BytesIO
 from datetime import timedelta, datetime
 import uuid
 import os
@@ -121,6 +124,9 @@ def unifyFilesBC():
 
 
     final_response = {"logs": f'{erased_info}'}
+    json_path = os.path.join(id_path, "D_statistics.json")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(erased_info, f, ensure_ascii=False, indent=4)
 
     return jsonify(final_response)
 
@@ -194,5 +200,34 @@ def unifyAllFiles():
         erased_info = erased_info.get_json()
 
     final_response = {"logs": f'{erased_info}'}
+    json_path = os.path.join(id_path, "E_statistics.json")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(erased_info, f, ensure_ascii=False, indent=4)
+
+    current_app.logger.info("EMPEZANDO CREACION DE PDF CON ESTADISTICAS")
+    file_path = os.path.join(id_path, 'estadisticas_union.pdf')
+    crear_pdf(file_path, id_path)
 
     return jsonify(final_response)
+
+
+
+@api_bp.route("/descargar_estadisticas", methods=['POST'])
+def descargar_estadisticas():
+    # Ruta absoluta o relativa al PDF
+    id = request.form.get('id')
+    base_upload = current_app.config.get("UPLOAD_FOLDER")
+    id_path = os.path.join(base_upload, str(id))
+    pdf_path = os.path.join(id_path, 'estadisticas_union.pdf')
+
+    # Comprobar si existe
+    if not os.path.exists(pdf_path):
+        return "El archivo no existe", 404
+
+    # Devolver el PDF como descarga
+    return send_file(
+        pdf_path,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="estadisticas.pdf"
+    )

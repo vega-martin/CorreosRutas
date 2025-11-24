@@ -395,7 +395,7 @@ def unifyBCFiles(df_B, df_C, save_path):
         "Duplicados B": duplicates_B,
         "Duplicados C": duplicates_C,
         "Registros totales no duplicados": total_clean,
-        "Registros B no duplicatos": df_B_clean,
+        "Registros B no duplicados": df_B_clean,
         "Registros C no duplicados": df_C_clean
     }
 
@@ -572,7 +572,7 @@ def unifyADFiles(df_A, df_D, save_path):
         "Duplicados A": duplicates_A,
         "Duplicados D": duplicates_D,
         "Registros totales no duplicados": total_clean,
-        "Registros A no duplicatos": df_A_clean,
+        "Registros A no duplicados": df_A_clean,
         "Registros D no duplicados": df_D_clean
     }
 

@@ -31,7 +31,7 @@
                 </div>
             </div>
         </div>
-        <button class="accept-btn" id="estadisticasBtn" disabled hidden>Descargar estadísticas</button>
+        <button class="accept-btn" id="estadisticasBtn" disabled>Descargar estadísticas</button>
     </div>
     <br>
 
@@ -179,6 +179,41 @@
                     enableBtns(areFiles);
                 });
         });
+
+        document.getElementById("estadisticasBtn").addEventListener("click", async () => {
+            try {
+                // Llamada al endpoint de tu API que a su vez llama a descargar_estadisticas
+                const response = await fetch("/getStadistics", {
+                    method: "GET",
+                });
+
+                if (!response.ok) {
+                    throw new Error("Error al descargar el PDF");
+                }
+
+                // Convertir la respuesta a Blob (tipo archivo)
+                const blob = await response.blob();
+
+                // Crear URL temporal
+                const url = window.URL.createObjectURL(blob);
+
+                // Crear enlace temporal para forzar la descarga
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "estadisticas.pdf";  // Nombre del archivo que verá el usuario
+                document.body.appendChild(a);
+                a.click();
+
+                // Limpiar
+                a.remove();
+                window.URL.revokeObjectURL(url);
+
+            } catch (error) {
+                console.error(error);
+                alert("No se pudo descargar el PDF");
+            }
+        });
+
 
     </script>
 {% endblock %}
