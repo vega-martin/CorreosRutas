@@ -19,9 +19,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const inputC = formBC.querySelector('input[name="fileC"]');
     const submitBC = formBC.querySelector('input[type="submit"]');
     function checkBC() {
-        const ready = inputB.files.length > 0 && inputC.files.length > 0;
-        submitBC.disabled = !ready;
-        submitBC.title = ready ? "" : "Se deben seleccionar los dos ficheros";
+        submitBC.disabled = !((inputB.files.length > 0) && (inputC.files.length > 0));
+        submitBC.title = submitBC.disabled ? "Se deben seleccionar los dos ficheros" : "";
     }
     inputB.addEventListener('change', checkBC);
     inputC.addEventListener('change', checkBC);
@@ -29,14 +28,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // Ajax for file A upload
     formA.addEventListener('submit', async (e) => {
         e.preventDefault();
+        document.getElementById('fileA-logs').value = "Subiendo fichero, aguarde unos momentos";
         const formData = new FormData(e.target);
         submitA.disabled = true;
         inputA.value = "";
         const res = await fetch(e.target.action, { method: 'POST', body: formData });
         const data = await res.json();
         document.getElementById('fileA-logs').value = data.logs;
-        const newInputA = inputA.cloneNode(true);
-        inputA.parentNode.replaceChild(newInputA, inputA);
         checkFiles().then(areFiles => {
             enableBtns(areFiles);
         });
@@ -44,18 +42,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Ajax for files B and C upload
     formBC.addEventListener('submit', async (e) => {
-        e.preventDefault(); // stop normal form submission
+        e.preventDefault();
+        document.getElementById('fileBC-logs').value = "Subiendo ficheros, aguarde unos momentos";
         const formData = new FormData(e.target);
         submitBC.disabled = true;
         inputB.value = "";
+        inputB.files.length = 0;
         inputC.value = "";
+        inputC.files.length = 0;
         const res = await fetch(e.target.action, { method: 'POST', body: formData });
         const data = await res.json();
         document.getElementById('fileBC-logs').value = data.logs;
-        const newInputB = inputB.cloneNode(true);
-        inputB.parentNode.replaceChild(newInputB, inputB);
-        const newInputC = inputC.cloneNode(true);
-        inputC.parentNode.replaceChild(newInputC, inputC);
         checkFiles().then(areFiles => {
             enableBtns(areFiles);
         });

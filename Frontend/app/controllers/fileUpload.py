@@ -43,7 +43,7 @@ def valid_file(path, file_type):
     try:
         df = pd.read_csv(path, delimiter=';', low_memory=False)
     except Exception as e:
-        return jsonify({'error': f'Error al leer el archivo: {str(e)}'}), 500
+        return jsonify({'error': f'Error al leer el archivo: Asegurese de que el archivo es de tipo CSV.'}), 500
 
     required_columns_map = {
         "A": {'fec_lectura_medicion', 'longitud_wgs84_gd', 'latitud_wgs84_gd', 'cod_inv_pda', 'codired'},
@@ -52,10 +52,6 @@ def valid_file(path, file_type):
     }
 
     required_columns = required_columns_map.get(file_type)
-
-    if not required_columns:
-        current_app.logger.error('Error: el fichero no cumple con los criterios')
-        return jsonify({'error': f'El archivo no cumple con los criterios'}), 400
     
     if not required_columns.issubset(df.columns):
         return jsonify({'error': f'El fichero CSV \"{file_type}\" debe contener las columnas: {", ".join(required_columns)}'}), 400
@@ -185,9 +181,6 @@ def uploadFilesBCToBackend():
         "id": session.get("id")
         }
     api_url = current_app.config.get("API_URL")
-    #backend_unify_response = requests.post(f"{api_url}/unifyFilesBC", data=data)
-    #flash(f'Unificando ficheros. Proceso experimental (pueden ocurrir fallos)', 'info')
-    #unify_response = f'Unificando ficheros.\n{backend_unify_response.json().get('logs', '')}\n'
 
     try:
         backend_unify_response = requests.post(f"{api_url}/unifyFilesBC", data=data)
