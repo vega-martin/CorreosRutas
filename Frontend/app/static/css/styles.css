@@ -250,6 +250,21 @@ button[disabled]:hover {
     background-color: #cccccc;
 }
 
+input:disabled,
+input[disabled] {
+    background-color: #cccccc;   /* gris claro */
+    color: #666666;              /* texto gris oscuro */
+    cursor: not-allowed;         /* cursor con prohibido */
+    opacity: 0.5;                /* apariencia apagada */
+    border: 1px solid #b3b3b3;   /* borde gris */
+}
+
+/* Opcional: Evitar efectos hover cuando está desactivado */
+input:disabled:hover,
+input[disabled]:hover {
+    background-color: #cccccc;
+}
+
 .contenedor {
     display: flex;
     gap: 10px;
