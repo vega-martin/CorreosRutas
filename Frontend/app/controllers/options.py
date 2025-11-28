@@ -1,5 +1,6 @@
 from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template
 from werkzeug.utils import secure_filename
+from .geoAnalysis import asociar_direcciones_a_puntos
 import pandas as pd
 import numpy as np
 import re
@@ -261,4 +262,43 @@ def filtrar_registros():
         # "resumen": {"puntos_totales": len(resultados_filtrados), "distancia_total": "...", "tiempo_total": "...", "velocidad_media": "..."}, # Devuelve algo útil o vacío
         "warnings": []
     })
+
+
+# ----------- Llamada geoAnalysis ---------------- #
+@options_bp.route('/clusterizar_portales', methods=['GET'])
+def clusterizar_portales():
     
+    # Por el momento, solo se pasa los datos de la sesión.
+    # Los datos de geojson los proporcionarán ellos.
+
+    # Obtener la ruta del archivo de la sesión
+    file_path = session.get('table_path')
+    datos_completos = []
+
+    # Comprobar si la ruta existe y si el archivo realmente está allí
+    if not file_path:
+        current_app.logger.error(f"Ruta de archivo no encontrada en sesión o archivo no existe: {file_path}")
+        # Retorna una lista vacía si no hay datos disponibles
+        return jsonify({"tabla": [], "resumen": {}, "warnings": ["No hay datos cargados para filtrar."]})
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            datos_completos = json.load(f)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al leer o decodificar datos de usuario: {e}")
+        return jsonify({"tabla": [], "resumen": {}, "warnings": ["Error al cargar datos de usuario."]})
+    
+    base_dir = current_app.config.get("BASE_DIR")
+    file_geojson = os.path.join(base_dir, "Addresses.geojson")
+    current_app.logger.error(f"Ruta del archivo geojson {file_geojson}")
+
+    puntos_asociados = asociar_direcciones_a_puntos(datos_completos,file_geojson)
+
+    # Manejo de errores devuelto por la función de servicio (e.g., error al cargar GeoJSON)
+    if isinstance(puntos_asociados, dict) and 'error' in puntos_asociados:
+        current_app.logger.error(f"Error en servicio geoAnalysis: {puntos_asociados['error']}")
+        return jsonify({"tabla": [], "resumen": {}, "warnings": [puntos_asociados['error']]}), 500
+    
+    # Retorno Final: Devolvemos la lista de puntos de usuario enriquecidos
+    return jsonify({"tabla": puntos_asociados, "resumen": {}, "warnings": []}), 200
