@@ -91,8 +91,9 @@ def uploadFileAToBackend():
         backend_response = requests.post(f"{api_url}/upload_A_file", data=data, files=files)
 
     uploaded = session.get("uploaded_files", {})
-    uploaded[file_type] = save_path
-    session["uploaded_files"] = data_filename
+    uploaded[file_type] = data_filename
+    session["uploaded_files"] = uploaded
+    current_app.logger.info(f"the session dict is {dict(session)}")
 
     if not os.path.exists(save_path):
         current_app.logger.error(f"Error: el archivo no se guardó en {save_path}")
@@ -130,8 +131,8 @@ def uploadFilesBCToBackend():
             requests.post(f"{api_url}/upload_file", data=data, files=files)
 
         uploaded = session.get("uploaded_files", {})
-        uploaded[file_type] = save_path
-        session["uploaded_files"] = data_filename
+        uploaded[file_type] = data_filename
+        session["uploaded_files"] = uploaded
 
         if not os.path.exists(save_path):
             current_app.logger.error(f"Error: el archivo no se guardó en {save_path}")
@@ -169,20 +170,20 @@ def uploadFilesBCToBackend():
 @fileUpload_bp.route("/check_files_status", methods=["POST"])
 def check_files_status():
     """
-    Comprueba si todos los ficheros requeridos ya están subidos.
+    Comprueba si todos los ficheros requeridos ya están listos (3 ficheros y PDF).
     """
     # Comprobar si estan o no todos los ficheros
     uploaded_files = session.get("uploaded_files", {})
-    ready = all(f in uploaded_files and uploaded_files[f] != '' for f in ('A', 'B', 'C'))
-    # TODO: llamada a api para comprobar si ya se han modificado, asi no se modifican todo el tiempo
+    files = all(f in uploaded_files and uploaded_files[f] != '' for f in ('A', 'B', 'C'))
 
-    # Mandar a unificar los 3 ficheros
+    # Comprobar si existe el pdf
     data = {
         "id": session.get("id")
         }
     api_url = current_app.config.get("API_URL")
+
     try:
-        backend_unify_response = requests.post(f"{api_url}/unifyAllFiles", data=data)
+        backend_unify_response = requests.post(f"{api_url}/estan_unificados", data=data)
         backend_unify_response.raise_for_status()
 
         # Check if the response has content
@@ -193,5 +194,40 @@ def check_files_status():
 
     except requests.exceptions.RequestException as e:
         unify_data = {"logs": f"Error al llamar al backend: {e}"}
-    #requests.post(f"{api_url}/unifyFiles", data=data)
+    ready = files & unify_data.get('logs', '')
+    return jsonify({"ready": ready})
+
+
+
+@fileUpload_bp.route("/try_unify_all_files", methods = ['POST'])
+def try_unify_all_files():
+    """
+    Coprueba que se hayan cargado los 3 ficheros. Si se han cargado los unifica
+    """
+    # Comprobar si estan o no todos los ficheros
+    uploaded_files = session.get("uploaded_files", {})
+    ready = all(f in uploaded_files and uploaded_files[f] != '' for f in ('A', 'B', 'C'))
+
+    if ready:
+        # Mandar a unificar los 3 ficheros
+        data = {
+            "id": session.get("id")
+            }
+        api_url = current_app.config.get("API_URL")
+
+        # Comprobar si ya estan unificados
+
+        try:
+            backend_unify_response = requests.post(f"{api_url}/unifyAllFiles", data=data)
+            backend_unify_response.raise_for_status()
+
+            # Check if the response has content
+            if backend_unify_response.content:
+                unify_data = backend_unify_response.json()
+            else:
+                unify_data = {"logs": "No se recibió respuesta del backend."}
+
+        except requests.exceptions.RequestException as e:
+            unify_data = {"logs": f"Error al llamar al backend: {e}"}
+
     return jsonify({"ready": ready})

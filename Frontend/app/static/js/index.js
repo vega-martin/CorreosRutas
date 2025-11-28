@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const res = await fetch(e.target.action, { method: 'POST', body: formData });
         const data = await res.json();
         document.getElementById('fileA-logs').value = data.logs;
-        checkFiles().then(areFiles => {
+        unifyFiles().then(areFiles => {
             enableBtns(areFiles);
         });
     });
@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const res = await fetch(e.target.action, { method: 'POST', body: formData });
         const data = await res.json();
         document.getElementById('fileBC-logs').value = data.logs;
-        checkFiles().then(areFiles => {
+        unifyFiles().then(areFiles => {
             enableBtns(areFiles);
         });
     });
@@ -92,6 +92,19 @@ function confirmLogout() {
 // Comprobar si se han subido todos los archivos
 function checkFiles() {
     return fetch("/check_files_status", {
+        method: "POST"
+    })
+    .then(response => response.json())
+    .then(data => data.ready)
+    .catch(err => {
+        console.error("Error comprobando archivos:", err);
+        return false; // fallback
+    });
+}
+
+// Comprobar si se han subido todos los archivos
+function unifyFiles() {
+    return fetch("/try_unify_all_files", {
         method: "POST"
     })
     .then(response => response.json())

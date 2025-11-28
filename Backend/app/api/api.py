@@ -237,6 +237,16 @@ def unifyAllFiles():
     return jsonify(final_response)
 
 
+@api_bp.route("/estan_unificados", methods = ['POST'])
+def estan_unificados():
+    id = request.form.get('id')
+    base_upload = current_app.config.get("UPLOAD_FOLDER")
+    id_path = os.path.join(base_upload, str(id))
+    final_file = os.path.join(id_path, 'estadisticas_union.pdf')
+    response = {'logs': os.path.exists(final_file)}
+    return jsonify(response)
+
+
 
 @api_bp.route("/descargar_estadisticas", methods=['POST'])
 def descargar_estadisticas():
