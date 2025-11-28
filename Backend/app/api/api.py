@@ -1,6 +1,10 @@
-from flask import Blueprint, render_template, session, redirect, url_for, flash, current_app, request, jsonify, Response
+from flask import Blueprint, render_template, session, redirect, url_for, flash, current_app, request, jsonify, Response, send_file
 from app.util.fileMgmt import ensure_folder, rename_file_columns, extractDataframes, format_date, get_statistics_A, extractBCDataframes
-from app.services.unifyFiles import unifyAllFiles, unifyBCFiles, unifyADFiles
+from app.services.unifyFiles import unifyBCFiles, unifyADFiles
+from app.services.dataCleaning import removeOutliers
+from app.util.createPDFs import crear_pdf
+import json
+from io import BytesIO
 from datetime import timedelta, datetime
 import uuid
 import os
@@ -104,62 +108,91 @@ def unifyFilesBC():
     if isinstance(erased_info, Response):
         erased_info = erased_info.get_json()
 
-    #unify_info = {
-    #    "Duplicados": f'Duplicados totales: {erased_info["Duplicados"]["Duplicados totales"]}.\nDuplicados fichero B: {erased_info["Duplicados"]["Duplicados B"]}.\nDuplicados fichero C: {erased_info["Duplicados"]["Duplicados C"]}.\n',
-    #    "PDAs_encontradas": f'Num PDAs encontradas:\n\tFichero B: {erased_info["PDAs_encontradas"]["PDAs_B"]}.\n\tFichero C: {erased_info["PDAs_encontradas"]["PDAs_C"]}.\n',
-    #    "PDAs_utilizables": f'Num PDAs en ambos ficheros: {erased_info["PDAs_utilizables"]["PDAs_B"]}.\n',
-    #    "Registros_no_usados": f'Registros no correspondidos:\n\tFichero B: {erased_info["Registros_no_usados"]["B_no_usados"]}.\n\tFichero C: {erased_info["Registros_no_usados"]["C_no_usados"]}.\n',
-    #    "Registros_finales": f'Registros finales: {erased_info["Registros_finales"]}.\n'
-    #}
 
-    #return_information = {
-    #    "Registros_leidos": f'Registros totales: {read_info['Registros_totales']}.\nRegistros fichero B: {read_info['Registros_B']}.\nRegistros fichero C: {read_info['Registros_C']}.\n',
-    #    "Registros_eliminados": f'Informacion de la union de los ficheros:\n{unify_info["Duplicados"]}{unify_info["PDAs_encontradas"]}{unify_info["PDAs_utilizables"]}{unify_info["Registros_no_usados"]}{unify_info["Registros_finales"]}'
-    #}
+    final_info = f"""
+    Información de lectura de los datos:
+    - Registros totales: {erased_info["Informacion inicial"]["Conteo de registros"]["Registros totales"]}.
+    \t - Pertenecientes al fichero B: {erased_info["Informacion inicial"]["Conteo de registros"]["Registros B"]}.
+    \t - Pertenecientes al fichero C: {erased_info["Informacion inicial"]["Conteo de registros"]["Registros C"]}.
+    - Códigos de unidad:
+    \t - Pertenecientes al fichero B: {erased_info["Informacion inicial"]["Conteo codireds"]["Num codireds encontrados en fichero B"]}.
+    \t - Lista: {erased_info["Informacion inicial"]["Conteo codireds"]["Codireds en fichero B"]}.
+    \t - Pertenecientes al fichero C: {erased_info["Informacion inicial"]["Conteo codireds"]["Num codireds encontrados en fichero C"]}.
+    \t - Lista: {erased_info["Informacion inicial"]["Conteo codireds"]["Codireds en fichero C"]}.
+    \t - Compartidos: {erased_info["Informacion inicial"]["Conteo codireds"]["Num codireds compartidos"]}.
+    \t - Lista: {erased_info["Informacion inicial"]["Conteo codireds"]["Codireds compartidos"]}.
+    - PDAs:
+    \t - Pertenecientes al fichero B: {erased_info["Informacion inicial"]["Conteo PDAs"]["Num PDAs encontradas en el fichero B"]}.
+    \t - Lista: {erased_info["Informacion inicial"]["Conteo PDAs"]["PDAs en fichero B"]}.
+    \t - Pertenecientes al fichero C: {erased_info["Informacion inicial"]["Conteo PDAs"]["Num PDAs encontradas en el fichero C"]}.
+    \t - Lista: {erased_info["Informacion inicial"]["Conteo PDAs"]["PDAs en fichero C"]}.
+    \t - Compartidos: {erased_info["Informacion inicial"]["Conteo PDAs"]["Num PDAs compartida"]}.
+    \t - Lista: {erased_info["Informacion inicial"]["Conteo PDAs"]["PDAs compartidas"]}.
+    - Fechas:
+    \t - Pertenecientes al fichero B: {erased_info["Informacion inicial"]["Conteo fechas"]["Num fechas en fichero B"]}.
+    \t - Primera fecha: {erased_info["Informacion inicial"]["Conteo fechas"]["Primera fecha en fichero B"]}.
+    \t - Última fecha: {erased_info["Informacion inicial"]["Conteo fechas"]["Ultima fecha en fichero B"]}.
+    \t - Pertenecientes al fichero C: {erased_info["Informacion inicial"]["Conteo fechas"]["Num fechas en fichero C"]}.
+    \t - Primera fecha: {erased_info["Informacion inicial"]["Conteo fechas"]["Primera fecha en fichero C"]}.
+    \t - Última fecha: {erased_info["Informacion inicial"]["Conteo fechas"]["Ultima fecha en fichero C"]}.
+    \t - Compartidas: {erased_info["Informacion inicial"]["Conteo fechas"]["Num fechas compartidas"]}.
+    \t - Primera fecha: {erased_info["Informacion inicial"]["Conteo fechas"]["Primera fecha compartida"]}.
+    \t - Última fecha: {erased_info["Informacion inicial"]["Conteo fechas"]["Ultima fecha compartida"]}.
+    
+    
+    Información de la unión de los datos:
+    - Información duplicada:
+    \t - Duplicados totales: {erased_info["Duplicados"]["Duplicados totales"]}.
+    \t\t - Pertenecientes al conjunto B: {erased_info["Duplicados"]["Duplicados B"]}.
+    \t\t - Pertenecientes al conjunto C: {erased_info["Duplicados"]["Duplicados C"]}.
+    \t\t - Datos totales no duplicados: {erased_info["Duplicados"]["Registros totales no duplicados"]}.
+    \t\t - Datos no duplicados del conjunto B: {erased_info["Duplicados"]["Registros B no duplicados"]}.
+    \t\t - Datos no duplicados del conjunto C: {erased_info["Duplicados"]["Registros C no duplicados"]}.
+    \t - Informacion de sincronización (eliminar PDAs y fechas no compartidas):
+    \t\t - Registros totales: {erased_info["Información de sincronizacion"]["Conteo de registros"]["Registros totales"]}.
+    \t\t\t - Pertenecientes al fichero B: {erased_info["Información de sincronizacion"]["Conteo de registros"]["Registros B"]}.
+    \t\t\t - Pertenecientes al fichero C: {erased_info["Información de sincronizacion"]["Conteo de registros"]["Registros C"]}.
+    \t\t - Códigos de unidad:
+    \t\t\t - Pertenecientes al fichero B: {erased_info["Información de sincronizacion"]["Conteo codireds"]["Num codireds encontrados en fichero B"]}.
+    \t\t\t - Lista: {erased_info["Información de sincronizacion"]["Conteo codireds"]["Codireds en fichero B"]}.
+    \t\t\t - Pertenecientes al fichero C: {erased_info["Información de sincronizacion"]["Conteo codireds"]["Num codireds encontrados en fichero C"]}.
+    \t\t\t - Lista: {erased_info["Información de sincronizacion"]["Conteo codireds"]["Codireds en fichero C"]}.
+    \t\t\t - Compartidos: {erased_info["Información de sincronizacion"]["Conteo codireds"]["Num codireds compartidos"]}.
+    \t\t\t - Lista: {erased_info["Información de sincronizacion"]["Conteo codireds"]["Codireds compartidos"]}.
+    \t\t- PDAs:
+    \t\t\t - Pertenecientes al fichero B: {erased_info["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs encontradas en el fichero B"]}.
+    \t\t\t - Lista: {erased_info["Información de sincronizacion"]["Conteo PDAs"]["PDAs en fichero B"]}.
+    \t\t\t - Pertenecientes al fichero C: {erased_info["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs encontradas en el fichero C"]}.
+    \t\t\t - Lista: {erased_info["Información de sincronizacion"]["Conteo PDAs"]["PDAs en fichero C"]}.
+    \t\t\t - Compartidos: {erased_info["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs compartida"]}.
+    \t\t\t - Lista: {erased_info["Información de sincronizacion"]["Conteo PDAs"]["PDAs compartidas"]}.
+    \t\t - Fechas:
+    \t\t\t - Pertenecientes al fichero B: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Num fechas en fichero B"]}.
+    \t\t\t - Primera fecha: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Primera fecha en fichero B"]}.
+    \t\t\t - Última fecha: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Ultima fecha en fichero B"]}.
+    \t\t\t - Pertenecientes al fichero C: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Num fechas en fichero C"]}.
+    \t\t\t - Primera fecha: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Primera fecha en fichero C"]}.
+    \t\t\t - Última fecha: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Ultima fecha en fichero C"]}.
+    \t\t\t - Compartidas: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Num fechas compartidas"]}.
+    \t\t\t - Primera fecha: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Primera fecha compartida"]}.
+    \t\t\t - Última fecha: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Ultima fecha compartida"]}.
+    \t - Informacion de correspondencia de registros en la unión:
+    \t\t - Registros totales no usados en la union: {erased_info["Registros_no_usados"]["Totales no usados en la union"]}.
+    \t\t - Registros del conjunto B no usados en la union: {erased_info["Registros_no_usados"]["B_no_usados en la union"]}.
+    \t\t - Registros del conjunto C no usados en la union: {erased_info["Registros_no_usados"]["C_no_usados en la union"]}.
+    
+    
+    - Registros finales: {erased_info["Registros_finales"]}.
+    """
 
 
-
-    final_response = {"logs": f'{erased_info}'}
+    final_response = {"logs": final_info}
+    json_path = os.path.join(id_path, "D_statistics.json")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(erased_info, f, ensure_ascii=False, indent=4)
 
     return jsonify(final_response)
 
-
-
-@api_bp.route('/unifyFiles', methods=['POST'])
-def unifyFiles():
-    cod = request.form.get('codired')
-    id = request.form.get('id')
-    files_paths = {}
-    base_upload = current_app.config.get("UPLOAD_FOLDER")
-    id_path = os.path.join(base_upload, str(id))
-
-    for root, _, files in os.walk(id_path):
-        for file in files:
-            if file.endswith('.csv') and 'Fichero_' in file:
-                wout_extension = os.path.splitext(file)[0]
-                parts = wout_extension.split('_')
-                if len(parts) == 2:
-                    type = parts[1]
-                    files_paths[type] = os.path.join(root, file)
-    
-    current_app.logger.info(f"Se han encontrado {len(files_paths)} archivos en la carperta de la sesion {id}")
-    df_A, df_B, df_C, read_info = extractDataframes(files_paths['A'], files_paths['B'], files_paths['C'], cod)
-    if ((len(df_A) == 0) or (len(df_B) == 0) or (len(df_C) == 0)):
-        return jsonify({"Registros totales: 0"})
-    erased_info = unifyAllFiles(df_A, df_B, df_C, id_path)
-    
-    if isinstance(read_info, Response):
-        read_info = read_info.get_json()
-
-    if isinstance(erased_info, Response):
-        erased_info = erased_info.get_json()
-
-    return_information = {
-        "Registros_leidos": read_info,
-        "Registros_eliminados": erased_info
-    }
-
-    return jsonify(return_information)
 
 @api_bp.route('/unifyAllFiles', methods=['POST'])
 def unifyAllFiles():
@@ -182,6 +215,9 @@ def unifyAllFiles():
     if ((len(df_A) == 0) or (len(df_D) == 0)):
         return jsonify({"Registros totales: 0"})
     erased_info = unifyADFiles(df_A, df_D, id_path)
+
+    
+    outliers_info = removeOutliers(id_path)
     
     if isinstance(read_info, Response):
         read_info = read_info.get_json()
@@ -190,5 +226,34 @@ def unifyAllFiles():
         erased_info = erased_info.get_json()
 
     final_response = {"logs": f'{erased_info}'}
+    json_path = os.path.join(id_path, "E_statistics.json")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(erased_info, f, ensure_ascii=False, indent=4)
+
+    current_app.logger.info("EMPEZANDO CREACION DE PDF CON ESTADISTICAS")
+    file_path = os.path.join(id_path, 'estadisticas_union.pdf')
+    crear_pdf(file_path, id_path)
 
     return jsonify(final_response)
+
+
+
+@api_bp.route("/descargar_estadisticas", methods=['POST'])
+def descargar_estadisticas():
+    # Ruta absoluta o relativa al PDF
+    id = request.form.get('id')
+    base_upload = current_app.config.get("UPLOAD_FOLDER")
+    id_path = os.path.join(base_upload, str(id))
+    pdf_path = os.path.join(id_path, 'estadisticas_union.pdf')
+
+    # Comprobar si existe
+    if not os.path.exists(pdf_path):
+        return "El archivo no existe", 404
+
+    # Devolver el PDF como descarga
+    return send_file(
+        pdf_path,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="estadisticas.pdf"
+    )

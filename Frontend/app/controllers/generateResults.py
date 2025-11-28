@@ -1,4 +1,4 @@
-from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template
+from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template, Response
 from geopy.distance import geodesic
 import pandas as pd
 import numpy as np
@@ -508,3 +508,27 @@ def unifyFiles():
     requests.post(f"{api_url}/unifyFiles", data=data)
     flash(f'Unificando ficheros. Proceso experimental (pueden ocurrir fallos)', 'info')
     return redirect(url_for('main.root'))
+
+
+@generateResults_bp.route('/getStadistics')
+def getStadistics():
+    # Preparar datos
+    data = {
+        "id": session.get("id"),
+    }
+
+    api_url = current_app.config.get("API_URL")
+    
+    # Llamar a la API
+    api_response = requests.post(f"{api_url}/descargar_estadisticas", data=data)
+
+    # Verificar éxito
+    if api_response.status_code != 200:
+        return f"Error en la API: {api_response.status_code}", 500
+
+    # Reenviar el contenido del PDF al cliente
+    return Response(
+        api_response.content,           # contenido binario
+        mimetype="application/pdf",     # tipo MIME correcto
+        headers={"Content-Disposition": "attachment; filename=estadisticas.pdf"}
+    )

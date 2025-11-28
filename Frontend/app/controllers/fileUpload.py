@@ -1,7 +1,8 @@
-from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template
+from flask import Blueprint, request, current_app, session, jsonify
 from werkzeug.utils import secure_filename
 import pandas as pd
-import os, uuid, tempfile, requests
+import os, requests
+
 
 fileUpload_bp = Blueprint('fileUpload', __name__, template_folder='templates')
 
@@ -43,7 +44,7 @@ def valid_file(path, file_type):
     try:
         df = pd.read_csv(path, delimiter=';', low_memory=False)
     except Exception as e:
-        return jsonify({'error': f'Error al leer el archivo: {str(e)}'}), 500
+        return jsonify({'error': f'Error al leer el archivo: Asegurese de que el archivo es de tipo CSV.'}), 500
 
     required_columns_map = {
         "A": {'fec_lectura_medicion', 'longitud_wgs84_gd', 'latitud_wgs84_gd', 'cod_inv_pda', 'codired'},
@@ -52,10 +53,6 @@ def valid_file(path, file_type):
     }
 
     required_columns = required_columns_map.get(file_type)
-
-    if not required_columns:
-        current_app.logger.error('Error: el fichero no cumple con los criterios')
-        return jsonify({'error': f'El archivo no cumple con los criterios'}), 400
     
     if not required_columns.issubset(df.columns):
         return jsonify({'error': f'El fichero CSV \"{file_type}\" debe contener las columnas: {", ".join(required_columns)}'}), 400
@@ -68,43 +65,6 @@ def valid_file(path, file_type):
 # ------------------------------------------------------------
 # LECTURA Y DESCARGA DE FICHEROS EN LOCAL
 # ------------------------------------------------------------
-
-@fileUpload_bp.route('/uploadFileToBackend', methods=['POST'])
-def uploadFileToBackend():
-    for file_type in ('A', 'B', 'C'):
-        file_key = f'file{file_type}'
-        f = request.files.get(file_key)
-        data_filename = secure_filename(f.filename)
-        user_folder = ensure_session_folder()
-        save_path = os.path.join(user_folder, data_filename)
-        f.save(save_path)
-
-        response = valid_file(save_path, file_type)
-        if response[1] != 200:
-            os.remove(save_path)
-            flash(response[0].json['error'], 'error')
-            return redirect(url_for('main.root'))
-        
-        with open(save_path, 'rb') as y:
-            data = {
-                "id": session.get("id"),
-                "type": file_type
-                }
-            files = {'file': y}
-            api_url = current_app.config.get("API_URL")
-            requests.post(f"{api_url}/upload_file", data=data, files=files)
-
-        uploaded = session.get("uploaded_files", {})
-        uploaded[file_type] = save_path
-        session["uploaded_files"] = uploaded
-
-        if not os.path.exists(save_path):
-            current_app.logger.error(f"Error: el archivo no se guardó en {save_path}")
-        else:
-            current_app.logger.info(f"Archivo guardado correctamente en {save_path}")
-        
-    flash(f'Ficheros subidos correctamente.', 'success')
-    return redirect(url_for('main.root'))
 
 @fileUpload_bp.route('/uploadFileAToBackend', methods=['POST'])
 def uploadFileAToBackend():
@@ -119,7 +79,6 @@ def uploadFileAToBackend():
     response = valid_file(save_path, file_type)
     if response[1] != 200:
         os.remove(save_path)
-        flash(response[0].json['error'], 'error')
         return jsonify({"logs": response[0].json['error']})
     
     with open(save_path, 'rb') as y:
@@ -140,7 +99,6 @@ def uploadFileAToBackend():
     else:
         current_app.logger.info(f"Archivo guardado correctamente en {save_path}")
     
-    flash(f'Fichero subido correctamente.', 'success')
     final_response = {
         "logs": f'Fichero subido correctamente.\n{backend_response.json().get('logs', '')}' 
     }
@@ -160,7 +118,6 @@ def uploadFilesBCToBackend():
         response = valid_file(save_path, file_type)
         if response[1] != 200:
             os.remove(save_path)
-            flash(response[0].json['error'], 'error')
             return jsonify({"logs": response[0].json['error']})
         
         with open(save_path, 'rb') as y:
@@ -185,9 +142,6 @@ def uploadFilesBCToBackend():
         "id": session.get("id")
         }
     api_url = current_app.config.get("API_URL")
-    #backend_unify_response = requests.post(f"{api_url}/unifyFilesBC", data=data)
-    #flash(f'Unificando ficheros. Proceso experimental (pueden ocurrir fallos)', 'info')
-    #unify_response = f'Unificando ficheros.\n{backend_unify_response.json().get('logs', '')}\n'
 
     try:
         backend_unify_response = requests.post(f"{api_url}/unifyFilesBC", data=data)
@@ -204,7 +158,6 @@ def uploadFilesBCToBackend():
 
     unify_response = f"Unificando ficheros.\n{unify_data.get('logs', '')}\n"
 
-    flash(f'Ficheros subidos correctamente.', 'success')
     final_response = {
         "logs": f'Ficheros subidos correctamente.\n\n{unify_response}\n'
     }
@@ -221,10 +174,24 @@ def check_files_status():
     # Comprobar si estan o no todos los ficheros
     uploaded_files = session.get("uploaded_files", {})
     ready = all(f in uploaded_files and uploaded_files[f] != '' for f in ('A', 'B', 'C'))
+    # TODO: llamada a api para comprobar si ya se han modificado, asi no se modifican todo el tiempo
+
     # Mandar a unificar los 3 ficheros
-    #data = {
-    #    "id": session.get("id")
-    #    }
-    #api_url = current_app.config.get("API_URL")
+    data = {
+        "id": session.get("id")
+        }
+    api_url = current_app.config.get("API_URL")
+    try:
+        backend_unify_response = requests.post(f"{api_url}/unifyAllFiles", data=data)
+        backend_unify_response.raise_for_status()
+
+        # Check if the response has content
+        if backend_unify_response.content:
+            unify_data = backend_unify_response.json()
+        else:
+            unify_data = {"logs": "No se recibió respuesta del backend."}
+
+    except requests.exceptions.RequestException as e:
+        unify_data = {"logs": f"Error al llamar al backend: {e}"}
     #requests.post(f"{api_url}/unifyFiles", data=data)
     return jsonify({"ready": ready})
