@@ -25,6 +25,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const inputDistancia = document.getElementById('filtroDistancia');
     const inputTiempo = document.getElementById('filtroTiempo');
     const inputVelocidad = document.getElementById('filtroVelocidad');
+
+    const asociarPortalesBtn = document.getElementById('asociar-portales-btn');
     
 
     // PAGINACIÓN Y RENDERIZADO
@@ -37,65 +39,79 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --------- FUNCIONES --------- //
     function renderPagina(pagina) {
-        const tbody = document.querySelector('#tablaDatos tbody');
-        tbody.innerHTML = "";
+    const tbody = document.querySelector('#tablaDatos tbody');
+    tbody.innerHTML = "";
 
-        const datos = filtradoActivo ? tablaFiltrada : tablaDatos;
+    const datos = filtradoActivo ? tablaFiltrada : tablaDatos;
 
-        // --- CÓDIGO DE MANEJO DE CERO RESULTADOS  ---
-        if (datos.length === 0 && filtradoActivo) {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td colspan="7" style="text-align: center; color: #cc3333; padding: 15px;">
-                    ⚠️ No se encontraron registros que coincidan con los filtros aplicados.
-                </td>
-            `;
-            tbody.appendChild(tr);
-            
-            // También deshabilita el paginador si es necesario
-            document.getElementById('paginador').style.display = 'none'; 
-            document.getElementById('pagina-info').textContent = 'Página 0 de 0';
-            return; // Salimos de la función
+    // --- CÓDIGO DE MANEJO DE CERO RESULTADOS ---
+    if (datos.length === 0 && filtradoActivo) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td colspan="11" style="text-align: center; color: #cc3333; padding: 15px;">
+                ⚠️ No se encontraron registros que coincidan con los filtros aplicados.
+            </td>
+        `; 
+        // Nota: Ajusté el colspan a 11 para que cubra todas tus columnas
+        tbody.appendChild(tr);
+        
+        document.getElementById('paginador').style.display = 'none'; 
+        document.getElementById('pagina-info').textContent = 'Página 0 de 0';
+        return; 
+    }
+
+    const inicio = (pagina - 1) * filasPorPagina;
+    const fin = inicio + filasPorPagina;
+    const fragment = document.createDocumentFragment();
+
+    const filas = datos.slice(inicio, fin);
+    filas.forEach(fila => {
+        const tr = document.createElement('tr');
+        
+        let distanceFormateada = fila.distance;
+        
+        if (typeof fila.distance === 'number') {
+            distanceFormateada = fila.distance.toFixed(3); 
         }
 
-        const inicio = (pagina - 1) * filasPorPagina;
-        const fin = inicio + filasPorPagina;
-        const fragment = document.createDocumentFragment();
-
-        const filas = datos.slice(inicio, fin);
-        filas.forEach(fila => {
-            const tr = document.createElement('tr');
-            const celdas = [
-                fila.n,
-                fila.hora,
-                fila.longitud,
-                fila.latitud,
-                fila.distancia,
-                fila.tiempo,
-                fila.velocidad
-            ];
-            celdas.forEach(valor => {
-                const td = document.createElement('td');
-                td.textContent = valor ?? '';
-                tr.appendChild(td);
-            });
-            fragment.appendChild(tr);
+        const celdas = [
+            fila.n,
+            fila.hora,
+            fila.longitud,
+            fila.latitud,
+            fila.distancia, // Esta es la otra distancia (sin redondear)
+            fila.tiempo,
+            fila.velocidad,
+            fila.street,    
+            fila.number,    
+            fila.post_code, 
+            distanceFormateada // Usamos la variable ya redondeada
+        ];
+        
+        celdas.forEach(valor => {
+            const td = document.createElement('td');
+            
+            if (valor === undefined || valor === null) {
+                td.textContent = '';
+            } else {
+                td.textContent = valor;
+            }
+            tr.appendChild(td);
         });
+        fragment.appendChild(tr);
+    });
 
         tbody.appendChild(fragment);
 
-        // Actualizar el texto del paginador
         document.getElementById('pagina-info').textContent =
             `Página ${pagina} de ${Math.ceil(datos.length / filasPorPagina)}`;
         
-            
-            // Desactivar botones si es necesario
         document.getElementById('btn-prev').style.visibility = (pagina === 1) ? 'hidden' : 'visible';
         document.getElementById('btn-next').style.visibility = pagina >= Math.ceil(datos.length / filasPorPagina) ? 'hidden' : 'visible';
         
         document.getElementById('paginador').style.display = 'flex';
+    
     }
-
     // --------- EVENTOS --------- //
     document.addEventListener('click', (e) => {
         
@@ -344,6 +360,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 // === Mostrar la tabla y los controles de paginación ===
                 document.getElementById('tabla-resultados').style.display = 'block';
                 document.getElementById('paginador').style.display = 'flex';
+
+                asociarPortalesBtn.disabled = false;
             })
             .catch(err => {
                 console.error(err);
@@ -480,5 +498,56 @@ document.addEventListener("DOMContentLoaded", () => {
         btnLimpiar.addEventListener('click', limpiarFiltros);
     }
 
+    // --------- LÓGICA BOTÓN ASOCIAR PORTALES --------- //
+    if (asociarPortalesBtn) {
+        asociarPortalesBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            // Feedback visual de carga
+            const textoOriginal = asociarPortalesBtn.textContent;
+            asociarPortalesBtn.textContent = "Asociando...";
+            asociarPortalesBtn.disabled = true;
+            asociarPortalesBtn.style.cursor = "wait";
+
+            fetch('/clusterizar_portales', {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Intentar obtener mensaje de error del backend
+                    return response.json().then(errData => {
+                        const msg = (errData && errData.warnings && errData.warnings.length > 0) 
+                                    ? errData.warnings[0] 
+                                    : "Error desconocido al asociar portales.";
+                        throw new Error(msg);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Actualizar la tabla con los datos enriquecidos (con calle, número, etc.)
+                tablaDatos = data.tabla;
+                
+                // Reiniciar paginación para mostrar desde el principio
+                paginaActual = 1;
+                filtradoActivo = false; // Resetear filtros para ver todo
+                renderPagina(paginaActual);
+
+                alert("Portales asociados correctamente.");
+            })
+            .catch(err => {
+                console.error("Error:", err);
+                alert("Error: " + err.message);
+            })
+            .finally(() => {
+                // Restaurar estado del botón
+                asociarPortalesBtn.textContent = textoOriginal;
+                asociarPortalesBtn.disabled = false;
+                asociarPortalesBtn.style.cursor = "pointer";
+            });
+
+        });
+    }
 });
 
