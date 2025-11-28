@@ -312,24 +312,6 @@ input[disabled]:hover {
     background-color: #fff;
 }
 
-.codiredMain {
-    border: 1px solid #ccd3db;
-    border-radius: 8px;
-    padding-top: 8px;
-    padding-bottom: 8px;
-    width: 10%;
-    font-size: 15px;
-    margin-top: 6px;
-    margin-bottom: 6px;
-    background-color: #f9fafc;
-}
-
-.codiredMain:focus {
-    outline: none;
-    border-color: #3a7bd5;
-    background-color: #fff;
-}
-
 .options {
     display: none;
     position: absolute;

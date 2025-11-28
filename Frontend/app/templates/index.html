@@ -52,12 +52,7 @@
     <h2>Generar tabla y mapa</h2>
     <form action="{{ url_for('generateResults.generar_mapa') }}" method="get">
         <button type="submit" class="generate-btn" id="mapaBtn">Ver mapa</button>
-    </form><br>
-    <form action="{{ url_for('generateResults.unifyFiles') }}" method="get">
-        <h2>Unificar ficheros</h2>
-        <input type="text" name="codiredMain" id="codiredMain" class="codiredMain" placeholder="Codired" minlength="7" maxlength="7" required>
-        <button type="submit" class="generate-btn" id="unifyBtn" disabled>Unificar todos los ficheros</button>
-    </form>
+    </form><br><br>
 
 
     <h2>Sesión</h2>
