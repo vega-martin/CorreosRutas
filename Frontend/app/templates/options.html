@@ -17,8 +17,16 @@
         <div class="column">
             <div class="contenedor">
                 <form id="forms" class="formulario" method="POST">
+
                     <h2>Introducir código de unidad</h2>
-                    <input type="text" name="codired" id="codired" class="codired" placeholder="Codired" minlength="7" maxlength="7">
+                    <div class="custom-select">
+                        <button type="button" class="select-btn" id="codiredBtn">Selecciona un código de unidad</button>
+                        <div class="options" id="codiredOptions">
+                            <!-- Las opciones se llenan dinámicamente con JavaScript -->
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="codired" id="codiredInput">
 
                     <h2>Seleccionar PDA</h2>
                     <div class="custom-select">
@@ -48,7 +56,7 @@
                     
                     <br><br>
                     
-                    <button type="submit" class="generate-btn">
+                    <button type="submit" class="generate-btn" id="generate-btn">
                         Generar tabla
                     </button>
                 </form>

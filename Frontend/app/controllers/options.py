@@ -84,6 +84,41 @@ def cumple_condicion(val, comp, ref):
 # ------------------------------------------------------------
 # ENDPOINTS
 # ------------------------------------------------------------
+@options_bp.route('/codireds', methods=['GET'])
+def codireds():
+    """
+    JSON: Devuelve un JSON con la lista de códigos de las oficinas de los ficheros
+    Error: En caso de error, devuelve la razón
+    {'codireds': [], 'error': ...}
+    """
+
+    uploaded = session.get('uploaded_files', {})
+    path = uploaded.get('A')
+    current_app.logger.info("Abriendo fichero A")
+
+    if not path or not os.path.exists(path):
+        current_app.logger.warning("Ruta de Fichero A no disponible o archivo no encontrado en disco.")
+        return jsonify({'codireds': [], 'error': 'Ruta de Fichero A no disponible o no válido.'})
+
+    try:
+        current_app.logger.info(f"Abriendo fichero A desde: {path}")
+        df = pd.read_csv(path, delimiter=';', low_memory=False)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al leer el archivo CSV: {e}")
+        return jsonify({'codireds': [], 'error': f'Error de procesamiento en Pandas: {str(e)}'})
+    
+    # PROCESAMIENTO
+    try:
+        cods = np.sort(df['codired'].dropna().unique()).tolist()
+        current_app.logger.info(f"Se han encontrado {len(cods)} códigos de oficinas")
+
+        return jsonify({'codireds' : cods})
+
+    except KeyError:
+        # Si la columna 'codired' no existe en el CSV
+        current_app.logger.error("La columna 'codired' no fue encontrada en el CSV.")
+        return jsonify({'codireds': [], 'error': "La columna 'codired' no fue encontrada."})
 
 @options_bp.route('/pda_por_codired')
 def pda_por_codired():
@@ -157,7 +192,7 @@ def filtrar_registros():
     datos_completos = []
 
     # Comprobar si la ruta existe y si el archivo realmente está allí
-    if not file_path or not os.path.exists(file_path):
+    if not file_path:
         current_app.logger.error(f"Ruta de archivo no encontrada en sesión o archivo no existe: {file_path}")
         # Retorna una lista vacía si no hay datos disponibles
         return jsonify({"tabla": [], "resumen": {}, "warnings": ["No hay datos cargados para filtrar."]})
@@ -213,14 +248,6 @@ def filtrar_registros():
                     extraer_num(fila.get(filtro['campo'])),
                     filtro['comp'],
                     valor_ref
-                )
-            ]
-
-            resultados_filtrados = [
-                fila for fila in resultados_filtrados
-                if cumple_condicion(
-                    extraer_num(fila.get(filtro['campo'])),
-                    filtro
                 )
             ]
 
