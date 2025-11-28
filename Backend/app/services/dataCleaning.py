@@ -1,10 +1,19 @@
 from flask import jsonify, current_app
-from app.services.unifyFiles import create_dict, convert_numpy
+from app.services.unifyFiles import convert_numpy
 from pyproj import Geod
 import pandas as pd
 import numpy as np
 import os
 
+
+def create_dict(df):
+    df_dict = {}
+    for pda, group_pda in df.groupby('cod_pda'):
+        df_dict[pda] = {}
+        for fecha, group_fecha in group_pda.groupby('solo_fecha'):
+            #current_app.logger.info(f"Encontrado {pda}: {fecha}")
+            df_dict[pda][fecha] = group_fecha
+    return df_dict
 
 
 def calculateDistance(df):

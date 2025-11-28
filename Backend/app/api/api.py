@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, session, redirect, url_for, flash, current_app, request, jsonify, Response, send_file
 from app.util.fileMgmt import ensure_folder, rename_file_columns, extractDataframes, format_date, get_statistics_A, extractBCDataframes
-from app.services.unifyFiles import unifyAllFiles, unifyBCFiles, unifyADFiles
+from app.services.unifyFiles import unifyBCFiles, unifyADFiles
 from app.services.dataCleaning import removeOutliers
 from app.util.createPDFs import crear_pdf
 import json
@@ -130,43 +130,6 @@ def unifyFilesBC():
 
     return jsonify(final_response)
 
-
-
-@api_bp.route('/unifyFiles', methods=['POST'])
-def unifyFiles():
-    cod = request.form.get('codired')
-    id = request.form.get('id')
-    files_paths = {}
-    base_upload = current_app.config.get("UPLOAD_FOLDER")
-    id_path = os.path.join(base_upload, str(id))
-
-    for root, _, files in os.walk(id_path):
-        for file in files:
-            if file.endswith('.csv') and 'Fichero_' in file:
-                wout_extension = os.path.splitext(file)[0]
-                parts = wout_extension.split('_')
-                if len(parts) == 2:
-                    type = parts[1]
-                    files_paths[type] = os.path.join(root, file)
-    
-    current_app.logger.info(f"Se han encontrado {len(files_paths)} archivos en la carperta de la sesion {id}")
-    df_A, df_B, df_C, read_info = extractDataframes(files_paths['A'], files_paths['B'], files_paths['C'], cod)
-    if ((len(df_A) == 0) or (len(df_B) == 0) or (len(df_C) == 0)):
-        return jsonify({"Registros totales: 0"})
-    erased_info = unifyAllFiles(df_A, df_B, df_C, id_path)
-    
-    if isinstance(read_info, Response):
-        read_info = read_info.get_json()
-
-    if isinstance(erased_info, Response):
-        erased_info = erased_info.get_json()
-
-    return_information = {
-        "Registros_leidos": read_info,
-        "Registros_eliminados": erased_info
-    }
-
-    return jsonify(return_information)
 
 @api_bp.route('/unifyAllFiles', methods=['POST'])
 def unifyAllFiles():
