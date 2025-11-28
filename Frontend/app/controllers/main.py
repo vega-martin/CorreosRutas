@@ -68,5 +68,4 @@ def logout():
 
     current_app.logger.info(f"Sesion cerrada: {sid}")
     session.clear()
-    flash("Sesión cerrada correctamente.", "success")
     return redirect(url_for("main.root"))

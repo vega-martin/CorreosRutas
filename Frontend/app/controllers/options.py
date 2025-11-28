@@ -1,5 +1,5 @@
 from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template
-from werkzeug.utils import secure_filename
+from pathlib import Path
 from .geoAnalysis import asociar_direcciones_a_puntos
 import pandas as pd
 import numpy as np
@@ -189,11 +189,11 @@ def filtrar_registros():
     data = request.get_json()
 
     # Obtener la ruta del archivo de la sesión
-    file_path = session.get('table_path')
+    file_path = Path(os.path.join(current_app.config['UPLOAD_FOLDER'], session['id'], 'table_data.json'))
     datos_completos = []
 
     # Comprobar si la ruta existe y si el archivo realmente está allí
-    if not file_path:
+    if not file_path.exists():
         current_app.logger.error(f"Ruta de archivo no encontrada en sesión o archivo no existe: {file_path}")
         # Retorna una lista vacía si no hay datos disponibles
         return jsonify({"tabla": [], "resumen": {}, "warnings": ["No hay datos cargados para filtrar."]})
@@ -272,14 +272,16 @@ def clusterizar_portales():
     # Los datos de geojson los proporcionarán ellos.
 
     # Obtener la ruta del archivo de la sesión
-    file_path = session.get('table_path')
+    file_path = Path(os.path.join(current_app.config['UPLOAD_FOLDER'], session['id'], 'table_data.json'))
+    current_app.logger.info(f"La ruta donde se encuentran los datos es {file_path}")
+
     datos_completos = []
 
     # Comprobar si la ruta existe y si el archivo realmente está allí
-    if not file_path:
+    if not file_path.exists():
         current_app.logger.error(f"Ruta de archivo no encontrada en sesión o archivo no existe: {file_path}")
         # Retorna una lista vacía si no hay datos disponibles
-        return jsonify({"tabla": [], "resumen": {}, "warnings": ["No hay datos cargados para filtrar."]})
+        return jsonify({"tabla": [], "resumen": {}, "warnings": ["No hay datos cargados para filtrar mostrar."]})
 
     try:
         with open(file_path, 'r', encoding='utf-8') as f:

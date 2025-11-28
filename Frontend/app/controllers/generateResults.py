@@ -458,10 +458,10 @@ def datos_tabla():
         
         # Guardar la lista de diccionarios (el valor de 'tabla') en el disco
         with open(save_path, 'w', encoding='utf-8') as f:
-            json.dump(resultados['tabla'], f, ensure_ascii=False)
-            
-        session['table_path'] = save_path
-        current_app.logger.info(f"Tabla procesada guardada en disco en: {save_path}")
+            json.dump(resultados['tabla'], f, ensure_ascii=False, indent=4)
+        
+        current_app.logger.info(f"Tabla procesada guardada en disco en: {str(save_path)}")
+
 
     except Exception as e:
         current_app.logger.error(f"Error al guardar datos procesados en disco: {e}")

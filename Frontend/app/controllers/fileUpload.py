@@ -92,7 +92,7 @@ def uploadFileAToBackend():
 
     uploaded = session.get("uploaded_files", {})
     uploaded[file_type] = save_path
-    session["uploaded_files"] = uploaded
+    session["uploaded_files"] = data_filename
 
     if not os.path.exists(save_path):
         current_app.logger.error(f"Error: el archivo no se guardó en {save_path}")
@@ -131,7 +131,7 @@ def uploadFilesBCToBackend():
 
         uploaded = session.get("uploaded_files", {})
         uploaded[file_type] = save_path
-        session["uploaded_files"] = uploaded
+        session["uploaded_files"] = data_filename
 
         if not os.path.exists(save_path):
             current_app.logger.error(f"Error: el archivo no se guardó en {save_path}")

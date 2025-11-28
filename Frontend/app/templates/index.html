@@ -42,7 +42,7 @@
         <h2>📂 Ficheros cargados en sesión</h2>
         <ul>
             {% for key, path in session['uploaded_files'].items() %}
-                <li><strong>{{ key }}:</strong> {{ path.replace('\\', '/').split('/')[-1] }}</li>
+                <li><strong>{{ key }}:</strong> {{ path }}</li>
             {% endfor %}
         </ul>
     </div>
