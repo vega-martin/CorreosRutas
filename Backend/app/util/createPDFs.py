@@ -24,6 +24,8 @@ def crear_pdf(ruta_pdf, info_path):
     normal = styles["Normal"]
     title = styles["Heading1"]
     subtitle = styles["Heading2"]
+    subsubtitle = styles["Heading3"]
+
 
     # Configurar el documento
     doc = BaseDocTemplate(
@@ -106,37 +108,54 @@ def crear_pdf(ruta_pdf, info_path):
 
     story.append(Paragraph("Estadísticas del preprocesado de los ficheros", title))
     story.append(Spacer(1, 6))
-    story.append(Paragraph("Unión datos de B y C", subtitle))
+
+    intro = """
+    Entrada:<br/>
+    - Fichero A: identifica la ruta de reparto de una PDA de correspondencia no registrada (código de unidad, PDA, fecha, latitud y longitud).<br/>
+    - Fichero B: identifica los instantes de entrega de correspondencia registrada (código de unidad, PDA, fecha y tiempo transcurrido).<br/>
+    - Fichero C: identifica las coordenadas de entrega de correspondencia registrada (código de unidad, PDA, fecha, latitud y lontiud).<br/>
+    <br/>
+    Salida:<br/>
+    - Fichero D: resultado de la unión de B y C.<br/>
+    - Fichero E: resultado de la unión de A y D.<br/>
+    """
+
+    story.append(Paragraph(intro, normal))
+
+    story.append(Paragraph("Preproceso de B y C", subtitle))
     story.append(Spacer(1, 4))
 
-    # Introduccion para contexto
-    intro_text_BC = """
-    El primer paso del preprocesado consiste en realizar la unión de los ficheros B y C. 
-    En el fichero B se cuenta con los siguientes campos importantes para el proceso: código de unidad, PDA, fecha y tiempo transcurrido. 
-    Por otro lado, en el fichero C se cuenta con los siguientes campos importantes para el proceso: código de unidad, PDA, fecha, latitud y lontiud.<br/>
-    Como resultado de esta unión surge un conjunto de datos que a partir de ahora se denominará conjunto D. 
-    """
-    story.append(Paragraph(intro_text_BC, normal))
+    story.append(Paragraph("Proceso de carga de datos de los ficheros B y C.", normal))
     # Estadisticas
-    info_D = getInfo(info_path, 'D')
-    story.append(Paragraph(info_D, normal))
+    story.append(Paragraph("Información de lectura de los datos", subsubtitle))
+    info_D_intro, info_D_union = getInfo(info_path, 'D')
+    story.append(Paragraph(info_D_intro, normal))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("Unión de datos de B y C >> Fichero D", subsubtitle))
+    story.append(Paragraph(info_D_union, normal))
+
 
     story.append(Spacer(1, 6))
-    story.append(Paragraph("Unión datos de A y D", subtitle))
+    story.append(Paragraph("Preproceso de A y D", subtitle))
     story.append(Spacer(1, 4))
 
     # Introduccion para contexto
     intro_text_AD = """
-    El segundo paso del preprocesado consiste en realizar la unión de los datos del fichero A con los datos del conjunto D. 
+    El segundo paso del preprocesado consiste en realizar la unión de los datos del fichero A con los datos del fichero D. 
     En el fichero A se cuenta con los siguientes campos importantes para el proceso: código de unidad, PDA, fecha, latitud y longitud. 
     Por otro lado, en el fichero D se cuenta con los siguientes campos importantes para el proceso: código de unidad, PDA, fecha, latitud, lontiud y tiempo transcurrido.<br/>
-    Como resultado de esta unión surge un conjunto de datos que a partir de ahora se denominará conjunto final. 
+    Como resultado de esta unión surge un fichero de datos que a partir de ahora se denominará fichero final. 
     """
     story.append(Paragraph(intro_text_AD, normal))
     # Estadisticas
-    info_E = getInfo(info_path, 'E')
-    story.append(Paragraph(info_E, normal))
-    current_app.logger.info("escribiendo")
+    info_E_intro, info_E_union = getInfo(info_path, 'E')
+    story.append(Paragraph("Información de lectura de los datos y preprocesado del fichero A", subsubtitle))
+    story.append(Paragraph(info_E_intro, normal))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("Unión de datos de A y D >> Fichero E", subsubtitle))
+    story.append(Paragraph(info_E_union, normal))
+
+
     doc.build(story)
 
 
@@ -147,157 +166,156 @@ def getInfo(path, type):
     with open(full_path, "r", encoding="utf-8") as f:
         my_dict = json.load(f)
 
-    info=""""""
+    intro="""Información no generada correctamente"""
+    union="""Información no generada correctamente"""
 
     if type == 'D':
-        info = f"""
+        intro = f"""
+        Registros totales: {my_dict["Informacion inicial"]["Conteo de registros"]["Registros totales"]}.<br/>
+            - Pertenecientes al fichero B: {my_dict["Informacion inicial"]["Conteo de registros"]["Registros B"]}.<br/>
+            - Pertenecientes al fichero C: {my_dict["Informacion inicial"]["Conteo de registros"]["Registros C"]}.<br/>
         <br/>
-        Información de lectura de los datos:<br/>
-        - Registros totales: {my_dict["Informacion inicial"]["Conteo de registros"]["Registros totales"]}.<br/>
-        \t - Pertenecientes al fichero B: {my_dict["Informacion inicial"]["Conteo de registros"]["Registros B"]}.<br/>
-        \t - Pertenecientes al fichero C: {my_dict["Informacion inicial"]["Conteo de registros"]["Registros C"]}.<br/>
-        - Códigos de unidad:<br/>
-        \t - Pertenecientes al fichero B: {my_dict["Informacion inicial"]["Conteo codireds"]["Num codireds encontrados en fichero B"]}.<br/>
-        \t - Lista: {my_dict["Informacion inicial"]["Conteo codireds"]["Codireds en fichero B"]}.<br/>
-        \t - Pertenecientes al fichero C: {my_dict["Informacion inicial"]["Conteo codireds"]["Num codireds encontrados en fichero C"]}.<br/>
-        \t - Lista: {my_dict["Informacion inicial"]["Conteo codireds"]["Codireds en fichero C"]}.<br/>
-        \t - Compartidos: {my_dict["Informacion inicial"]["Conteo codireds"]["Num codireds compartidos"]}.<br/>
-        \t - Lista: {my_dict["Informacion inicial"]["Conteo codireds"]["Codireds compartidos"]}.<br/>
-        - PDAs:<br/>
-        \t - Pertenecientes al fichero B: {my_dict["Informacion inicial"]["Conteo PDAs"]["Num PDAs encontradas en el fichero B"]}.<br/>
-        \t - Lista: {my_dict["Informacion inicial"]["Conteo PDAs"]["PDAs en fichero B"]}.<br/>
-        \t - Pertenecientes al fichero C: {my_dict["Informacion inicial"]["Conteo PDAs"]["Num PDAs encontradas en el fichero C"]}.<br/>
-        \t - Lista: {my_dict["Informacion inicial"]["Conteo PDAs"]["PDAs en fichero C"]}.<br/>
-        \t - Compartidos: {my_dict["Informacion inicial"]["Conteo PDAs"]["Num PDAs compartida"]}.<br/>
-        \t - Lista: {my_dict["Informacion inicial"]["Conteo PDAs"]["PDAs compartidas"]}.<br/>
-        - Fechas:<br/>
-        \t - Pertenecientes al fichero B: {my_dict["Informacion inicial"]["Conteo fechas"]["Num fechas en fichero B"]}.<br/>
-        \t - Primera fecha: {my_dict["Informacion inicial"]["Conteo fechas"]["Primera fecha en fichero B"]}.<br/>
-        \t - Última fecha: {my_dict["Informacion inicial"]["Conteo fechas"]["Ultima fecha en fichero B"]}.<br/>
-        \t - Pertenecientes al fichero C: {my_dict["Informacion inicial"]["Conteo fechas"]["Num fechas en fichero C"]}.<br/>
-        \t - Primera fecha: {my_dict["Informacion inicial"]["Conteo fechas"]["Primera fecha en fichero C"]}.<br/>
-        \t - Última fecha: {my_dict["Informacion inicial"]["Conteo fechas"]["Ultima fecha en fichero C"]}.<br/>
-        \t - Compartidas: {my_dict["Informacion inicial"]["Conteo fechas"]["Num fechas compartidas"]}.<br/>
-        \t - Primera fecha: {my_dict["Informacion inicial"]["Conteo fechas"]["Primera fecha compartida"]}.<br/>
-        \t - Última fecha: {my_dict["Informacion inicial"]["Conteo fechas"]["Ultima fecha compartida"]}.<br/>
+        Códigos de unidad:<br/>
+            - Códigos de unidad de B: {my_dict["Informacion inicial"]["Conteo codireds"]["Codireds en fichero B"]}.<br/>
+            - Códigos de unidad de C: {my_dict["Informacion inicial"]["Conteo codireds"]["Codireds en fichero C"]}.<br/>
+            - Códigos compartidos: {my_dict["Informacion inicial"]["Conteo codireds"]["Codireds compartidos"]}.<br/>
         <br/>
+        PDAs:<br/>
+           - Pertenecientes al fichero B ({my_dict["Informacion inicial"]["Conteo PDAs"]["Num PDAs encontradas en el fichero B"]}):
+        {my_dict["Informacion inicial"]["Conteo PDAs"]["PDAs en fichero B"]}.<br/>
+           - Pertenecientes al fichero C ({my_dict["Informacion inicial"]["Conteo PDAs"]["Num PDAs encontradas en el fichero C"]}):
+        {my_dict["Informacion inicial"]["Conteo PDAs"]["PDAs en fichero C"]}.<br/>
+           - Compartidos ({my_dict["Informacion inicial"]["Conteo PDAs"]["Num PDAs compartida"]}):
+        {my_dict["Informacion inicial"]["Conteo PDAs"]["PDAs compartidas"]}.<br/>
         <br/>
-        Información de la unión de los datos:<br/>
-        - Información duplicada:<br/>
-        \t - Duplicados totales: {my_dict["Duplicados"]["Duplicados totales"]}.<br/>
-        \t\t - Pertenecientes al conjunto B: {my_dict["Duplicados"]["Duplicados B"]}.<br/>
-        \t\t - Pertenecientes al conjunto C: {my_dict["Duplicados"]["Duplicados C"]}.<br/>
-        \t\t - Datos totales no duplicados: {my_dict["Duplicados"]["Registros totales no duplicados"]}.<br/>
-        \t\t - Datos no duplicados del conjunto B: {my_dict["Duplicados"]["Registros B no duplicados"]}.<br/>
-        \t\t - Datos no duplicados del conjunto C: {my_dict["Duplicados"]["Registros C no duplicados"]}.<br/>
-        \t - Informacion de sincronización (eliminar PDAs y fechas no compartidas):<br/>
-        \t\t - Registros totales: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros totales"]}.<br/>
-        \t\t\t - Pertenecientes al fichero B: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros B"]}.<br/>
-        \t\t\t - Pertenecientes al fichero C: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros C"]}.<br/>
-        \t\t - Códigos de unidad:<br/>
-        \t\t\t - Pertenecientes al fichero B: {my_dict["Información de sincronizacion"]["Conteo codireds"]["Num codireds encontrados en fichero B"]}.<br/>
-        \t\t\t - Lista: {my_dict["Información de sincronizacion"]["Conteo codireds"]["Codireds en fichero B"]}.<br/>
-        \t\t\t - Pertenecientes al fichero C: {my_dict["Información de sincronizacion"]["Conteo codireds"]["Num codireds encontrados en fichero C"]}.<br/>
-        \t\t\t - Lista: {my_dict["Información de sincronizacion"]["Conteo codireds"]["Codireds en fichero C"]}.<br/>
-        \t\t\t - Compartidos: {my_dict["Información de sincronizacion"]["Conteo codireds"]["Num codireds compartidos"]}.<br/>
-        \t\t\t - Lista: {my_dict["Información de sincronizacion"]["Conteo codireds"]["Codireds compartidos"]}.<br/>
-        \t\t- PDAs:<br/>
-        \t\t\t - Pertenecientes al fichero B: {my_dict["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs encontradas en el fichero B"]}.<br/>
-        \t\t\t - Lista: {my_dict["Información de sincronizacion"]["Conteo PDAs"]["PDAs en fichero B"]}.<br/>
-        \t\t\t - Pertenecientes al fichero C: {my_dict["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs encontradas en el fichero C"]}.<br/>
-        \t\t\t - Lista: {my_dict["Información de sincronizacion"]["Conteo PDAs"]["PDAs en fichero C"]}.<br/>
-        \t\t\t - Compartidos: {my_dict["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs compartida"]}.<br/>
-        \t\t\t - Lista: {my_dict["Información de sincronizacion"]["Conteo PDAs"]["PDAs compartidas"]}.<br/>
-        \t\t - Fechas:<br/>
-        \t\t\t - Pertenecientes al fichero B: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Num fechas en fichero B"]}.<br/>
-        \t\t\t - Primera fecha: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Primera fecha en fichero B"]}.<br/>
-        \t\t\t - Última fecha: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Ultima fecha en fichero B"]}.<br/>
-        \t\t\t - Pertenecientes al fichero C: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Num fechas en fichero C"]}.<br/>
-        \t\t\t - Primera fecha: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Primera fecha en fichero C"]}.<br/>
-        \t\t\t - Última fecha: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Ultima fecha en fichero C"]}.<br/>
-        \t\t\t - Compartidas: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Num fechas compartidas"]}.<br/>
-        \t\t\t - Primera fecha: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Primera fecha compartida"]}.<br/>
-        \t\t\t - Última fecha: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Ultima fecha compartida"]}.<br/>
-        \t - Informacion de correspondencia de registros en la unión:<br/>
-        \t\t - Registros totales no usados en la union: {my_dict["Registros_no_usados"]["Totales no usados en la union"]}.<br/>
-        \t\t - Registros del conjunto B no usados en la union: {my_dict["Registros_no_usados"]["B_no_usados en la union"]}.<br/>
-        \t\t - Registros del conjunto C no usados en la union: {my_dict["Registros_no_usados"]["C_no_usados en la union"]}.<br/>
+        Fechas:<br/>
+           - Pertenecientes al fichero B ({my_dict["Informacion inicial"]["Conteo fechas"]["Num fechas en fichero B"]}):
+        {my_dict["Informacion inicial"]["Conteo fechas"]["Lista fecha en fichero B"]}.<br/>
+           - Pertenecientes al fichero C ({my_dict["Informacion inicial"]["Conteo fechas"]["Num fechas en fichero C"]}):
+        {my_dict["Informacion inicial"]["Conteo fechas"]["Lista fecha en fichero C"]}.<br/>
+           - Compartidas ({my_dict["Informacion inicial"]["Conteo fechas"]["Num fechas compartidas"]}):
+        {my_dict["Informacion inicial"]["Conteo fechas"]["Lista fecha compartida"]}.<br/>
+        <br/>
+        """
+        union = f"""
+        Eliminación de duplicados:<br/><br/>
+           + Duplicados totales: {my_dict["Duplicados"]["Duplicados totales"]}.<br/>
+           - Pertenecientes al fichero B: {my_dict["Duplicados"]["Duplicados B"]}.<br/>
+           - Pertenecientes al fichero C: {my_dict["Duplicados"]["Duplicados C"]}.<br/><br/>
+           + Datos totales no duplicados: {my_dict["Duplicados"]["Registros totales no duplicados"]}.<br/>
+           - Pertenecientes al fichero B: {my_dict["Duplicados"]["Registros B no duplicados"]}.<br/>
+           - Pertenecientes al fichero C: {my_dict["Duplicados"]["Registros C no duplicados"]}.<br/>
+        <br/>
+        Información de sincronización (eliminar PDAs y fechas no compartidas):<br/><br/>
+           + Registros totales: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros totales"]}.<br/>
+           - Pertenecientes al fichero B: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros B"]}.<br/>
+           - Pertenecientes al fichero C: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros C"]}.<br/><br/>
+           + Códigos de unidad:<br/>
+           - Pertenecientes al fichero B ({my_dict["Información de sincronizacion"]["Conteo codireds"]["Num codireds encontrados en fichero B"]}):
+        {my_dict["Información de sincronizacion"]["Conteo codireds"]["Codireds en fichero B"]}.<br/>
+           - Pertenecientes al fichero C ({my_dict["Información de sincronizacion"]["Conteo codireds"]["Num codireds encontrados en fichero C"]}):
+        {my_dict["Información de sincronizacion"]["Conteo codireds"]["Codireds en fichero C"]}.<br/>
+           - Compartidos ({my_dict["Información de sincronizacion"]["Conteo codireds"]["Num codireds compartidos"]}):
+        {my_dict["Información de sincronizacion"]["Conteo codireds"]["Codireds compartidos"]}.<br/><br/>
+           + PDAs:<br/>
+           - Pertenecientes al fichero B ({my_dict["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs encontradas en el fichero B"]}):
+        {my_dict["Información de sincronizacion"]["Conteo PDAs"]["PDAs en fichero B"]}.<br/>
+           - Pertenecientes al fichero C ({my_dict["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs encontradas en el fichero C"]}):
+        {my_dict["Información de sincronizacion"]["Conteo PDAs"]["PDAs en fichero C"]}.<br/>
+           - Compartidos ({my_dict["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs compartida"]}):
+        {my_dict["Información de sincronizacion"]["Conteo PDAs"]["PDAs compartidas"]}.<br/><br/>
+           + Fechas:<br/>
+           - Pertenecientes al fichero B ({my_dict["Información de sincronizacion"]["Conteo fechas"]["Num fechas en fichero B"]}):
+        {my_dict["Información de sincronizacion"]["Conteo fechas"]["Lista fecha en fichero B"]}.<br/>
+           - Pertenecientes al fichero C ({my_dict["Información de sincronizacion"]["Conteo fechas"]["Num fechas en fichero C"]}):
+        {my_dict["Información de sincronizacion"]["Conteo fechas"]["Lista fecha en fichero C"]}.<br/>
+           - Compartidas ({my_dict["Información de sincronizacion"]["Conteo fechas"]["Num fechas compartidas"]}):
+        {my_dict["Información de sincronizacion"]["Conteo fechas"]["Lista fecha compartida"]}.<br/>
+        <br/>
+        Registros sin correspondencia (descartados):<br/>
+           - Registros totales: {my_dict["Registros_no_usados"]["Totales no usados en la union"]}.<br/>
+           - Registros del fichero B: {my_dict["Registros_no_usados"]["B_no_usados en la union"]}.<br/>
+           - Registros del fichero C: {my_dict["Registros_no_usados"]["C_no_usados en la union"]}.<br/>
         <br/>
         <br/>
-        - Registros finales: {my_dict["Registros_finales"]}.<br/>
+        Resultado de la unión: {my_dict["Registros_finales"]} registros.<br/>
         """
     elif type == 'E':
-        info= f"""
+        intro = f"""
+        Registros totales: {my_dict["Informacion inicial"]["Conteo de registros"]["Registros totales"]}.<br/>
+            - Pertenecientes al fichero A: {my_dict["Informacion inicial"]["Conteo de registros"]["Registros B"]}.<br/>
+            - Pertenecientes al fichero D: {my_dict["Informacion inicial"]["Conteo de registros"]["Registros C"]}.<br/>
         <br/>
-        Información de lectura de los datos:<br/>
-        - Registros totales: {my_dict["Informacion inicial"]["Conteo de registros"]["Registros totales"]}.<br/>
-        \t - Pertenecientes al fichero A: {my_dict["Informacion inicial"]["Conteo de registros"]["Registros B"]}.<br/>
-        \t - Pertenecientes al conjunto D: {my_dict["Informacion inicial"]["Conteo de registros"]["Registros C"]}.<br/>
-        - Códigos de unidad:<br/>
-        \t - Pertenecientes al fichero A: {my_dict["Informacion inicial"]["Conteo codireds"]["Num codireds encontrados en fichero B"]}.<br/>
-        \t - Lista: {my_dict["Informacion inicial"]["Conteo codireds"]["Codireds en fichero B"]}.<br/>
-        \t - Pertenecientes al fichero D: {my_dict["Informacion inicial"]["Conteo codireds"]["Num codireds encontrados en fichero C"]}.<br/>
-        \t - Lista: {my_dict["Informacion inicial"]["Conteo codireds"]["Codireds en fichero C"]}.<br/>
-        \t - Compartidos: {my_dict["Informacion inicial"]["Conteo codireds"]["Num codireds compartidos"]}.<br/>
-        \t - Lista: {my_dict["Informacion inicial"]["Conteo codireds"]["Codireds compartidos"]}.<br/>
-        - PDAs:<br/>
-        \t - Pertenecientes al fichero A: {my_dict["Informacion inicial"]["Conteo PDAs"]["Num PDAs encontradas en el fichero B"]}.<br/>
-        \t - Lista: {my_dict["Informacion inicial"]["Conteo PDAs"]["PDAs en fichero B"]}.<br/>
-        \t - Pertenecientes al fichero D: {my_dict["Informacion inicial"]["Conteo PDAs"]["Num PDAs encontradas en el fichero C"]}.<br/>
-        \t - Lista: {my_dict["Informacion inicial"]["Conteo PDAs"]["PDAs en fichero C"]}.<br/>
-        \t - Compartidos: {my_dict["Informacion inicial"]["Conteo PDAs"]["Num PDAs compartida"]}.<br/>
-        \t - Lista: {my_dict["Informacion inicial"]["Conteo PDAs"]["PDAs compartidas"]}.<br/>
-        - Fechas:<br/>
-        \t - Pertenecientes al fichero A: {my_dict["Informacion inicial"]["Conteo fechas"]["Num fechas en fichero B"]}.<br/>
-        \t - Primera fecha: {my_dict["Informacion inicial"]["Conteo fechas"]["Primera fecha en fichero B"]}.<br/>
-        \t - Última fecha: {my_dict["Informacion inicial"]["Conteo fechas"]["Ultima fecha en fichero B"]}.<br/>
-        \t - Pertenecientes al fichero D: {my_dict["Informacion inicial"]["Conteo fechas"]["Num fechas en fichero C"]}.<br/>
-        \t - Primera fecha: {my_dict["Informacion inicial"]["Conteo fechas"]["Primera fecha en fichero C"]}.<br/>
-        \t - Última fecha: {my_dict["Informacion inicial"]["Conteo fechas"]["Ultima fecha en fichero C"]}.<br/>
-        \t - Compartidas: {my_dict["Informacion inicial"]["Conteo fechas"]["Num fechas compartidas"]}.<br/>
-        \t - Primera fecha: {my_dict["Informacion inicial"]["Conteo fechas"]["Primera fecha compartida"]}.<br/>
-        \t - Última fecha: {my_dict["Informacion inicial"]["Conteo fechas"]["Ultima fecha compartida"]}.<br/>
+        Códigos de unidad:<br/>
+            - Códigos de unidad de A: {my_dict["Informacion inicial"]["Conteo codireds"]["Codireds en fichero B"]}.<br/>
+            - Códigos de unidad de D: {my_dict["Informacion inicial"]["Conteo codireds"]["Codireds en fichero C"]}.<br/>
+            - Códigos compartidos: {my_dict["Informacion inicial"]["Conteo codireds"]["Codireds compartidos"]}.<br/>
+        <br/>
+        PDAs:<br/>
+           - Pertenecientes al fichero A ({my_dict["Informacion inicial"]["Conteo PDAs"]["Num PDAs encontradas en el fichero B"]}):
+        {my_dict["Informacion inicial"]["Conteo PDAs"]["PDAs en fichero B"]}.<br/>
+           - Pertenecientes al fichero D ({my_dict["Informacion inicial"]["Conteo PDAs"]["Num PDAs encontradas en el fichero C"]}):
+        {my_dict["Informacion inicial"]["Conteo PDAs"]["PDAs en fichero C"]}.<br/>
+           - Compartidos ({my_dict["Informacion inicial"]["Conteo PDAs"]["Num PDAs compartida"]}):
+        {my_dict["Informacion inicial"]["Conteo PDAs"]["PDAs compartidas"]}.<br/>
+        <br/>
+        Fechas:<br/>
+           - Pertenecientes al fichero A ({my_dict["Informacion inicial"]["Conteo fechas"]["Num fechas en fichero B"]}):
+        {my_dict["Informacion inicial"]["Conteo fechas"]["Lista fecha en fichero B"]}.<br/>
+           - Pertenecientes al fichero D ({my_dict["Informacion inicial"]["Conteo fechas"]["Num fechas en fichero C"]}):
+        {my_dict["Informacion inicial"]["Conteo fechas"]["Lista fecha en fichero C"]}.<br/>
+           - Compartidas ({my_dict["Informacion inicial"]["Conteo fechas"]["Num fechas compartidas"]}):
+        {my_dict["Informacion inicial"]["Conteo fechas"]["Lista fecha compartida"]}.<br/>
         <br/>
         <br/>
-        Información de la unión de los datos:<br/>
-        - Información duplicada:<br/>
-        \t - Duplicados totales: {my_dict["Duplicados"]["Duplicados totales"]}.<br/>
-        \t\t - Pertenecientes al conjunto A: {my_dict["Duplicados"]["Duplicados A"]}.<br/>
-        \t\t - Pertenecientes al conjunto D: {my_dict["Duplicados"]["Duplicados D"]}.<br/>
-        \t\t - Datos totales no duplicados: {my_dict["Duplicados"]["Registros totales no duplicados"]}.<br/>
-        \t\t - Datos no duplicados del conjunto A: {my_dict["Duplicados"]["Registros A no duplicados"]}.<br/>
-        \t\t - Datos no duplicados del conjunto D: {my_dict["Duplicados"]["Registros D no duplicados"]}.<br/>
-        \t - Informacion de sincronización (eliminar PDAs y fechas no compartidas):<br/>
-        \t\t - Registros totales: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros totales"]}.<br/>
-        \t\t\t - Pertenecientes al fichero A: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros B"]}.<br/>
-        \t\t\t - Pertenecientes al fichero D: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros C"]}.<br/>
-        \t\t - Códigos de unidad:<br/>
-        \t\t\t - Pertenecientes al fichero A: {my_dict["Información de sincronizacion"]["Conteo codireds"]["Num codireds encontrados en fichero B"]}.<br/>
-        \t\t\t - Lista: {my_dict["Información de sincronizacion"]["Conteo codireds"]["Codireds en fichero B"]}.<br/>
-        \t\t\t - Pertenecientes al fichero D: {my_dict["Información de sincronizacion"]["Conteo codireds"]["Num codireds encontrados en fichero C"]}.<br/>
-        \t\t\t - Lista: {my_dict["Información de sincronizacion"]["Conteo codireds"]["Codireds en fichero C"]}.<br/>
-        \t\t\t - Compartidos: {my_dict["Información de sincronizacion"]["Conteo codireds"]["Num codireds compartidos"]}.<br/>
-        \t\t\t - Lista: {my_dict["Información de sincronizacion"]["Conteo codireds"]["Codireds compartidos"]}.<br/>
-        \t\t- PDAs:<br/>
-        \t\t\t - Pertenecientes al fichero A: {my_dict["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs encontradas en el fichero B"]}.<br/>
-        \t\t\t - Lista: {my_dict["Información de sincronizacion"]["Conteo PDAs"]["PDAs en fichero B"]}.<br/>
-        \t\t\t - Pertenecientes al fichero D: {my_dict["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs encontradas en el fichero C"]}.<br/>
-        \t\t\t - Lista: {my_dict["Información de sincronizacion"]["Conteo PDAs"]["PDAs en fichero C"]}.<br/>
-        \t\t\t - Compartidos: {my_dict["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs compartida"]}.<br/>
-        \t\t\t - Lista: {my_dict["Información de sincronizacion"]["Conteo PDAs"]["PDAs compartidas"]}.<br/>
-        \t\t - Fechas:<br/>
-        \t\t\t - Pertenecientes al fichero A: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Num fechas en fichero B"]}.<br/>
-        \t\t\t - Primera fecha: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Primera fecha en fichero B"]}.<br/>
-        \t\t\t - Última fecha: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Ultima fecha en fichero B"]}.<br/>
-        \t\t\t - Pertenecientes al fichero D: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Num fechas en fichero C"]}.<br/>
-        \t\t\t - Primera fecha: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Primera fecha en fichero C"]}.<br/>
-        \t\t\t - Última fecha: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Ultima fecha en fichero C"]}.<br/>
-        \t\t\t - Compartidas: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Num fechas compartidas"]}.<br/>
-        \t\t\t - Primera fecha: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Primera fecha compartida"]}.<br/>
-        \t\t\t - Última fecha: {my_dict["Información de sincronizacion"]["Conteo fechas"]["Ultima fecha compartida"]}.<br/>
+        Eliminación de registros defectuosos:<br/>
+           (Se eliminan PDAs como #N/D, sin formato PDA01, PDA13, PDA25, etc)<br/>
+           - PDAs fichero A: {my_dict["Defectuoso"]["PDAs A"]} registros.<br/>
+           - PDAs fichero D: {my_dict["Defectuoso"]["PDAs D"]} registros.<br/><br/>
+           (Se eliminan fechas que no se han podido usar, como nan)<br/>
+           - Fechas fichero A: {my_dict["Defectuoso"]["Fechas A"]} registros.<br/>
+           - Fechas fichero D: {my_dict["Defectuoso"]["Fechas D"]} registros.<br/><br/>
+           (Se eliminan horas fueras del rango laboral fijado entre 7:30 y 22:00)<br/>
+           - Horas fichero A: {my_dict["Defectuoso"]["Horas A"]} registros.<br/>
+           - Horas fichero D: {my_dict["Defectuoso"]["Horas D"]} registros.<br/><br/>
+        Eliminación de duplicados:<br/>
+           + Duplicados totales: {my_dict["Duplicados"]["Duplicados totales"]}.<br/>
+           - Pertenecientes al fichero A: {my_dict["Duplicados"]["Duplicados A"]}.<br/>
+           - Pertenecientes al fichero D: {my_dict["Duplicados"]["Duplicados D"]}.<br/><br/>
+           + Datos totales no duplicados: {my_dict["Duplicados"]["Registros totales no duplicados"]}.<br/>
+           - Pertenecientes al fichero A: {my_dict["Duplicados"]["Registros A no duplicados"]}.<br/>
+           - Pertenecientes al fichero D: {my_dict["Duplicados"]["Registros D no duplicados"]}.<br/>
+        <br/>
+        """
+        union = f"""
+        Información de sincronización (eliminar PDAs y fechas no compartidas):<br/><br/>
+           + Registros totales: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros totales"]}.<br/>
+           - Pertenecientes al fichero A: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros B"]}.<br/>
+           - Pertenecientes al fichero D: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros C"]}.<br/><br/>
+           + Códigos de unidad:<br/>
+           - Pertenecientes al fichero A ({my_dict["Información de sincronizacion"]["Conteo codireds"]["Num codireds encontrados en fichero B"]}):
+        {my_dict["Información de sincronizacion"]["Conteo codireds"]["Codireds en fichero B"]}.<br/>
+           - Pertenecientes al fichero D ({my_dict["Información de sincronizacion"]["Conteo codireds"]["Num codireds encontrados en fichero C"]}):
+        {my_dict["Información de sincronizacion"]["Conteo codireds"]["Codireds en fichero C"]}.<br/>
+           - Compartidos ({my_dict["Información de sincronizacion"]["Conteo codireds"]["Num codireds compartidos"]}):
+        {my_dict["Información de sincronizacion"]["Conteo codireds"]["Codireds compartidos"]}.<br/><br/>
+           + PDAs:<br/>
+           - Pertenecientes al fichero A ({my_dict["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs encontradas en el fichero B"]}):
+        {my_dict["Información de sincronizacion"]["Conteo PDAs"]["PDAs en fichero B"]}.<br/>
+           - Pertenecientes al fichero D ({my_dict["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs encontradas en el fichero C"]}):
+        {my_dict["Información de sincronizacion"]["Conteo PDAs"]["PDAs en fichero C"]}.<br/>
+           - Compartidos ({my_dict["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs compartida"]}):
+        {my_dict["Información de sincronizacion"]["Conteo PDAs"]["PDAs compartidas"]}.<br/><br/>
+           + Fechas:<br/>
+           - Pertenecientes al fichero A ({my_dict["Información de sincronizacion"]["Conteo fechas"]["Num fechas en fichero B"]}):
+        {my_dict["Información de sincronizacion"]["Conteo fechas"]["Lista fecha en fichero B"]}.<br/>
+           - Pertenecientes al fichero D ({my_dict["Información de sincronizacion"]["Conteo fechas"]["Num fechas en fichero C"]}):
+        {my_dict["Información de sincronizacion"]["Conteo fechas"]["Lista fecha en fichero C"]}.<br/>
+           - Compartidas ({my_dict["Información de sincronizacion"]["Conteo fechas"]["Num fechas compartidas"]}):
+        {my_dict["Información de sincronizacion"]["Conteo fechas"]["Lista fecha compartida"]}.<br/>
         <br/>
         <br/>
-        - Registros finales: {my_dict["Registros_finales"]}.<br/>
+        Resultado de la unión: {my_dict["Registros_finales"]} registros.<br/>
         """
     
-    return info
+    return intro, union

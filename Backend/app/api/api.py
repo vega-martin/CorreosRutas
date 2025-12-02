@@ -108,81 +108,40 @@ def unifyFilesBC():
     if isinstance(erased_info, Response):
         erased_info = erased_info.get_json()
 
-
     final_info = f"""
-    Información de lectura de los datos:
-    - Registros totales: {erased_info["Informacion inicial"]["Conteo de registros"]["Registros totales"]}.
-    \t - Pertenecientes al fichero B: {erased_info["Informacion inicial"]["Conteo de registros"]["Registros B"]}.
-    \t - Pertenecientes al fichero C: {erased_info["Informacion inicial"]["Conteo de registros"]["Registros C"]}.
-    - Códigos de unidad:
-    \t - Pertenecientes al fichero B: {erased_info["Informacion inicial"]["Conteo codireds"]["Num codireds encontrados en fichero B"]}.
-    \t - Lista: {erased_info["Informacion inicial"]["Conteo codireds"]["Codireds en fichero B"]}.
-    \t - Pertenecientes al fichero C: {erased_info["Informacion inicial"]["Conteo codireds"]["Num codireds encontrados en fichero C"]}.
-    \t - Lista: {erased_info["Informacion inicial"]["Conteo codireds"]["Codireds en fichero C"]}.
-    \t - Compartidos: {erased_info["Informacion inicial"]["Conteo codireds"]["Num codireds compartidos"]}.
-    \t - Lista: {erased_info["Informacion inicial"]["Conteo codireds"]["Codireds compartidos"]}.
-    - PDAs:
-    \t - Pertenecientes al fichero B: {erased_info["Informacion inicial"]["Conteo PDAs"]["Num PDAs encontradas en el fichero B"]}.
-    \t - Lista: {erased_info["Informacion inicial"]["Conteo PDAs"]["PDAs en fichero B"]}.
-    \t - Pertenecientes al fichero C: {erased_info["Informacion inicial"]["Conteo PDAs"]["Num PDAs encontradas en el fichero C"]}.
-    \t - Lista: {erased_info["Informacion inicial"]["Conteo PDAs"]["PDAs en fichero C"]}.
-    \t - Compartidos: {erased_info["Informacion inicial"]["Conteo PDAs"]["Num PDAs compartida"]}.
-    \t - Lista: {erased_info["Informacion inicial"]["Conteo PDAs"]["PDAs compartidas"]}.
-    - Fechas:
-    \t - Pertenecientes al fichero B: {erased_info["Informacion inicial"]["Conteo fechas"]["Num fechas en fichero B"]}.
-    \t - Primera fecha: {erased_info["Informacion inicial"]["Conteo fechas"]["Primera fecha en fichero B"]}.
-    \t - Última fecha: {erased_info["Informacion inicial"]["Conteo fechas"]["Ultima fecha en fichero B"]}.
-    \t - Pertenecientes al fichero C: {erased_info["Informacion inicial"]["Conteo fechas"]["Num fechas en fichero C"]}.
-    \t - Primera fecha: {erased_info["Informacion inicial"]["Conteo fechas"]["Primera fecha en fichero C"]}.
-    \t - Última fecha: {erased_info["Informacion inicial"]["Conteo fechas"]["Ultima fecha en fichero C"]}.
-    \t - Compartidas: {erased_info["Informacion inicial"]["Conteo fechas"]["Num fechas compartidas"]}.
-    \t - Primera fecha: {erased_info["Informacion inicial"]["Conteo fechas"]["Primera fecha compartida"]}.
-    \t - Última fecha: {erased_info["Informacion inicial"]["Conteo fechas"]["Ultima fecha compartida"]}.
-    
-    
-    Información de la unión de los datos:
-    - Información duplicada:
-    \t - Duplicados totales: {erased_info["Duplicados"]["Duplicados totales"]}.
-    \t\t - Pertenecientes al conjunto B: {erased_info["Duplicados"]["Duplicados B"]}.
-    \t\t - Pertenecientes al conjunto C: {erased_info["Duplicados"]["Duplicados C"]}.
-    \t\t - Datos totales no duplicados: {erased_info["Duplicados"]["Registros totales no duplicados"]}.
-    \t\t - Datos no duplicados del conjunto B: {erased_info["Duplicados"]["Registros B no duplicados"]}.
-    \t\t - Datos no duplicados del conjunto C: {erased_info["Duplicados"]["Registros C no duplicados"]}.
-    \t - Informacion de sincronización (eliminar PDAs y fechas no compartidas):
-    \t\t - Registros totales: {erased_info["Información de sincronizacion"]["Conteo de registros"]["Registros totales"]}.
-    \t\t\t - Pertenecientes al fichero B: {erased_info["Información de sincronizacion"]["Conteo de registros"]["Registros B"]}.
-    \t\t\t - Pertenecientes al fichero C: {erased_info["Información de sincronizacion"]["Conteo de registros"]["Registros C"]}.
-    \t\t - Códigos de unidad:
-    \t\t\t - Pertenecientes al fichero B: {erased_info["Información de sincronizacion"]["Conteo codireds"]["Num codireds encontrados en fichero B"]}.
-    \t\t\t - Lista: {erased_info["Información de sincronizacion"]["Conteo codireds"]["Codireds en fichero B"]}.
-    \t\t\t - Pertenecientes al fichero C: {erased_info["Información de sincronizacion"]["Conteo codireds"]["Num codireds encontrados en fichero C"]}.
-    \t\t\t - Lista: {erased_info["Información de sincronizacion"]["Conteo codireds"]["Codireds en fichero C"]}.
-    \t\t\t - Compartidos: {erased_info["Información de sincronizacion"]["Conteo codireds"]["Num codireds compartidos"]}.
-    \t\t\t - Lista: {erased_info["Información de sincronizacion"]["Conteo codireds"]["Codireds compartidos"]}.
-    \t\t- PDAs:
-    \t\t\t - Pertenecientes al fichero B: {erased_info["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs encontradas en el fichero B"]}.
-    \t\t\t - Lista: {erased_info["Información de sincronizacion"]["Conteo PDAs"]["PDAs en fichero B"]}.
-    \t\t\t - Pertenecientes al fichero C: {erased_info["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs encontradas en el fichero C"]}.
-    \t\t\t - Lista: {erased_info["Información de sincronizacion"]["Conteo PDAs"]["PDAs en fichero C"]}.
-    \t\t\t - Compartidos: {erased_info["Información de sincronizacion"]["Conteo PDAs"]["Num PDAs compartida"]}.
-    \t\t\t - Lista: {erased_info["Información de sincronizacion"]["Conteo PDAs"]["PDAs compartidas"]}.
-    \t\t - Fechas:
-    \t\t\t - Pertenecientes al fichero B: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Num fechas en fichero B"]}.
-    \t\t\t - Primera fecha: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Primera fecha en fichero B"]}.
-    \t\t\t - Última fecha: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Ultima fecha en fichero B"]}.
-    \t\t\t - Pertenecientes al fichero C: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Num fechas en fichero C"]}.
-    \t\t\t - Primera fecha: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Primera fecha en fichero C"]}.
-    \t\t\t - Última fecha: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Ultima fecha en fichero C"]}.
-    \t\t\t - Compartidas: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Num fechas compartidas"]}.
-    \t\t\t - Primera fecha: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Primera fecha compartida"]}.
-    \t\t\t - Última fecha: {erased_info["Información de sincronizacion"]["Conteo fechas"]["Ultima fecha compartida"]}.
-    \t - Informacion de correspondencia de registros en la unión:
-    \t\t - Registros totales no usados en la union: {erased_info["Registros_no_usados"]["Totales no usados en la union"]}.
-    \t\t - Registros del conjunto B no usados en la union: {erased_info["Registros_no_usados"]["B_no_usados en la union"]}.
-    \t\t - Registros del conjunto C no usados en la union: {erased_info["Registros_no_usados"]["C_no_usados en la union"]}.
-    
-    
-    - Registros finales: {erased_info["Registros_finales"]}.
+INFORMACIÓN SIMPLIFICADA DEL PREPROCESAMIENTO DE LOS FICHEROS B Y C.
+
+
+INFORMACIÓN DE LECTURA:
+Registros totales: {erased_info["Informacion inicial"]["Conteo de registros"]["Registros totales"]}.
+    - Pertenecientes al fichero B: {erased_info["Informacion inicial"]["Conteo de registros"]["Registros B"]}.
+    - Pertenecientes al fichero C: {erased_info["Informacion inicial"]["Conteo de registros"]["Registros C"]}.
+
+Códigos de unidad compartidos: {erased_info["Informacion inicial"]["Conteo codireds"]["Codireds compartidos"]}.
+PDAs compartidas ({erased_info["Informacion inicial"]["Conteo PDAs"]["Num PDAs compartida"]}): {erased_info["Informacion inicial"]["Conteo PDAs"]["PDAs compartidas"]}.
+Fechas compartidas ({erased_info["Informacion inicial"]["Conteo fechas"]["Num fechas compartidas"]}): {erased_info["Informacion inicial"]["Conteo fechas"]["Lista fecha compartida"]}.
+
+Duplicados totales: {erased_info["Duplicados"]["Duplicados totales"]}.
+    - Pertenecientes al fichero B: {erased_info["Duplicados"]["Duplicados B"]}.
+    - Pertenecientes al fichero C: {erased_info["Duplicados"]["Duplicados C"]}.
+Datos totales no duplicados: {erased_info["Duplicados"]["Registros totales no duplicados"]}.
+    - Pertenecientes al fichero B: {erased_info["Duplicados"]["Registros B no duplicados"]}.
+    - Pertenecientes al fichero C: {erased_info["Duplicados"]["Registros C no duplicados"]}.
+
+INFORMACIÓN DE SINCRONIZACIÓN Y UNIÓN:
+Registros totales: {erased_info["Información de sincronizacion"]["Conteo de registros"]["Registros totales"]}.
+    - Pertenecientes al fichero B: {erased_info["Información de sincronizacion"]["Conteo de registros"]["Registros B"]}.
+    - Pertenecientes al fichero C: {erased_info["Información de sincronizacion"]["Conteo de registros"]["Registros C"]}.
+
+Registros sin correspondencia (descartados):
+    - Registros totales: {erased_info["Registros_no_usados"]["Totales no usados en la union"]}.
+    - Registros del fichero B: {erased_info["Registros_no_usados"]["B_no_usados en la union"]}.
+    - Registros del fichero C: {erased_info["Registros_no_usados"]["C_no_usados en la union"]}.
+
+Resultado de la unión: {erased_info["Registros_finales"]} registros.
+
+
+Para más información descargue el fichero con las estadísticas.
     """
 
 

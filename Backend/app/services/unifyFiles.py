@@ -117,14 +117,11 @@ def calculate_base_statistics(df_B, df_C):
 
     dates_statistics = {
         "Num fechas en fichero B": dates_B_length,
-        "Primera fecha en fichero B": dates_B[0],
-        "Ultima fecha en fichero B": dates_B[-1],
+        "Lista fecha en fichero B": dates_B,
         "Num fechas en fichero C": dates_C_length,
-        "Primera fecha en fichero C": dates_C[0],
-        "Ultima fecha en fichero C": dates_C[-1],
+        "Lista fecha en fichero C": dates_C,
         "Num fechas compartidas": len(shared_dates),
-        "Primera fecha compartida": list(shared_dates)[0],
-        "Ultima fecha compartida": list(shared_dates)[-1]
+        "Lista fecha compartida": shared_dates
     }
 
     base_statistics = {
@@ -151,6 +148,7 @@ def unifyBCFiles(df_B, df_C, save_path):
     current_app.logger.info(f'======================== CALCULANDO ESTADISTICAS INICIALES')
     first_info = calculate_base_statistics(df_B, df_C)
 
+    # TODO: añadir a las estadisticas
 
     # Eliminar PDAs defectuosas
     current_app.logger.info(f'======================== ELIMINANDO PDAS DEFECTUOSAS')
@@ -161,9 +159,12 @@ def unifyBCFiles(df_B, df_C, save_path):
     current_app.logger.info("--------------- Calculando estadisticas")
     pda_erase_info = calculate_base_statistics(df_B, df_C)
 
+    # TODO: eliminar fechas defectuosas
+
+
 
     # Eliminar duplicados
-    current_app.logger.info(f'SEPARANDO FICHEROS POR PDAS Y POR FECHASELIMINANDO DUPLICADOS')
+    current_app.logger.info(f'SEPARANDO FICHEROS POR PDAS Y POR FECHAS ELIMINANDO DUPLICADOS')
     current_app.logger.info("--------------- Procesando Fichero B")
     df_B, duplicates_B = count_and_drop_duplicates(df_B)
     current_app.logger.info(f"Duplicados: {duplicates_B}")
@@ -303,23 +304,49 @@ def unifyADFiles(df_A, df_D, save_path):
     # Eliminar PDAs defectuosas
     current_app.logger.info(f'======================== ELIMINANDO PDAS DEFECTUOSAS')
     current_app.logger.info("--------------- Procesando Fichero A")
+    before_A_length = len(df_A)
     df_A = df_A[df_A['cod_pda'].str.startswith('PDA')]
+    pda_A_length = before_A_length - len(df_A)
     current_app.logger.info("--------------- Procesando Fichero D")
+    before_D_length = len(df_D)
     df_D = df_D[df_D['cod_pda'].str.startswith('PDA')]
+    pda_D_length = before_D_length - len(df_D)
+
+    # Eliminar fechas defectuosas
+    current_app.logger.info(f'======================== ELIMINANDO FECHAS DEFECTUOSAS')
+    current_app.logger.info("--------------- Procesando Fichero A")
+    before_A_length = len(df_A)
+    df_A = df_A.dropna(subset=['solo_fecha'])
+    fechas_A_length = before_A_length - len(df_A)
+    current_app.logger.info("--------------- Procesando Fichero D")
+    before_D_length = len(df_D)
+    df_D = df_D.dropna(subset=['solo_fecha'])
+    fechas_D_length = before_D_length - len(df_D)
 
     # Eliminar horas defectuosas
     current_app.logger.info(f'======================== ELIMINANDO HORAS DEFECTUOSAS')
     current_app.logger.info("--------------- Procesando Fichero A")
+    before_A_length = len(df_A)
     df_A = filter_by_time_range(df_A, START_TIME, END_TIME)
+    horas_A_length = before_A_length - len(df_A)
     current_app.logger.info("--------------- Procesando Fichero D")
+    before_D_length = len(df_D)
     df_D = filter_by_time_range(df_D, START_TIME, END_TIME)
+    hora_D_length = before_D_length - len(df_D)
 
     current_app.logger.info("--------------- Calculando estadisticas")
-    pda_erase_info = calculate_base_statistics(df_A, df_D)
+    defective_info = {
+        "PDAs A": pda_A_length,
+        "PDAs D": pda_D_length,
+        "Fechas A": fechas_A_length,
+        "Fechas D": fechas_D_length,
+        "Horas A": horas_A_length,
+        "Horas D": hora_D_length
+    }
 
 
     # Eliminar duplicados
-    current_app.logger.info(f'SEPARANDO FICHEROS POR PDAS Y POR FECHASELIMINANDO DUPLICADOS')
+    current_app.logger.info(f'SEPARANDO FICHEROS POR PDAS Y POR FECHAS ELIMINANDO DUPLICADOS')
     current_app.logger.info("--------------- Procesando Fichero A")
     df_A, duplicates_A = count_and_drop_duplicates(df_A)
     current_app.logger.info(f"Duplicados: {duplicates_A}")
@@ -407,6 +434,7 @@ def unifyADFiles(df_A, df_D, save_path):
     # Estructurar informacion final
     return_info = {
         "Informacion inicial": first_info,
+        "Defectuoso": defective_info,
         "Duplicados": duplicates_info,
         "Información de sincronizacion": clean_df_info,
         #"Registros_no_usados": unused_info,
