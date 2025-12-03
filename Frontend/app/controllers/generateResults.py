@@ -280,7 +280,7 @@ def create_map(cod, pda, fecha):
         current_app.logger.error(f"No hay datos para PDA={pda} y fecha={fecha}")
         return []
 
-    df_filtrado = df_filtrado.sort_values('solo_fecha')
+    df_filtrado = df_filtrado.sort_values('solo_hora')
 
     current_app.logger.info(f"Creando mapa con {len(df_filtrado)} registros")
 
