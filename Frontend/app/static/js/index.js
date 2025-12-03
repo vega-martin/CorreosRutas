@@ -121,11 +121,11 @@ function enableBtns(areFiles) {
     const unifyBtn = document.getElementById("unifyBtn");
     if (areFiles === true) {
         estadisticasBtn.disabled = false;
-        //mapaBtn.disabled = false;
+        mapaBtn.disabled = false;
         unifyBtn.disabled = false;
     } else {
         estadisticasBtn.disabled = true;
-        //mapaBtn.disabled = true;
+        mapaBtn.disabled = true;
         unifyBtn.disabled = true;
     }
 }

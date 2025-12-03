@@ -91,7 +91,7 @@ def uploadFileAToBackend():
         backend_response = requests.post(f"{api_url}/upload_A_file", data=data, files=files)
 
     uploaded = session.get("uploaded_files", {})
-    uploaded[file_type] = data_filename
+    uploaded[file_type] = save_path
     session["uploaded_files"] = uploaded
     current_app.logger.info(f"the session dict is {dict(session)}")
 
@@ -131,7 +131,7 @@ def uploadFilesBCToBackend():
             requests.post(f"{api_url}/upload_file", data=data, files=files)
 
         uploaded = session.get("uploaded_files", {})
-        uploaded[file_type] = data_filename
+        uploaded[file_type] = save_path
         session["uploaded_files"] = uploaded
 
         if not os.path.exists(save_path):

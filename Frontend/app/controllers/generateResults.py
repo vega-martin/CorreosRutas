@@ -22,41 +22,11 @@ def get_pdas(path):
         print(f"Error al leer el archivo CSV: {e}")
         return []
 
-    # Lista de nombres de columnas posibles que pueden contener las PDAs
-    posibles_columnas = ['cod_inv_pda', 'Num Inv', 'COD_SECCION']
-
-    for col in posibles_columnas:
-        if col in df.columns:
-            pdas = sorted(df[col].dropna().unique())
-            current_app.logger.info(f'Se encontraron {len(pdas)} PDAs.')
-            return pdas  # Devuelve al encontrar la primera columna válida
-
-    # Si no se encuentra ninguna columna válida
-    print("No se encontró ninguna columna válida para extraer PDAs.")
-    current_app.logger.info('No se encontró ninguna columna válida para extraer PDAs.')
-    return []
+    pdas = sorted(df['cod_pda'].dropna().unique())
+    current_app.logger.info(f'Se encontraron {len(pdas)} PDAs.')
+    return pdas
 
 
-def get_fechas(path):
-    try:
-        df = pd.read_csv(path, delimiter=';', low_memory=False)
-    except Exception as e:
-        print(f"Error al leer el archivo CSV: {e}")
-        return []
-
-    # Lista de nombres de columnas posibles que pueden contener las fechas
-    posibles_columnas = ['fec_lectura_medicion', 'Fec Actividad', 'INSTANTE']
-
-    for col in posibles_columnas:
-        if col in df.columns:
-            fechas = sorted(df[col].dropna().unique())
-            current_app.logger.info(f'Se encontraron {len(fechas)} fechas.')
-            return fechas  # Devuelve al encontrar la primera columna válida
-
-    # Si no se encuentra ninguna columna válida
-    print("No se encontró ninguna columna válida para extraer fechas.")
-    current_app.logger.info('No se encontró ninguna columna válida para extraer fechas.')
-    return []
 
 # ------------------------------------------------------------
 # TODO: Esto se elimina, deberia ser una llamada a la API
@@ -110,7 +80,7 @@ def calcular_metricas(df_filtrado):
 
     Parámetro:
         df_filtrado: DataFrame con columnas 
-                     ['fec_lectura_medicion', 'longitud_wgs84_gd', 'latitud_wgs84_gd']
+                     ['fecha_hora', 'solo_fecha', 'solo_hora' 'longitud', 'latitud', 'esParada']
 
     Retorna:
         Diccionario con los campos:
@@ -119,27 +89,24 @@ def calcular_metricas(df_filtrado):
     """
 
     # Asegurar que el DataFrame esté ordenado por fecha/hora
-    df_filtrado = df_filtrado.sort_values('fec_lectura_medicion').reset_index(drop=True)
+    df_filtrado = df_filtrado.sort_values('fecha_hora').reset_index(drop=True)
 
     resultados = []
 
     for i in range(len(df_filtrado)):
         fila = df_filtrado.iloc[i]
 
-        hora = fila['fec_lectura_medicion'].strftime('%H:%M:%S')
+        hora = fila['solo_hora']
+        esParada = fila['esParada']
 
-        #current_app.logger.info(f"Numero de puntos en la expresión (longitud {fila['longitud_wgs84_gd']}): {fila['longitud_wgs84_gd'].count('.')}")
-        #current_app.logger.info(f"Numero de puntos en la expresión (latitud {fila['latitud_wgs84_gd']}): {fila['latitud_wgs84_gd'].count('.')}")
-
-
-        if ((fila['longitud_wgs84_gd'].count('.') <= 1) and (fila['latitud_wgs84_gd'].count('.') <= 1)):
-            lon = float(str(fila['longitud_wgs84_gd']).replace(',', '.'))
-            lat = float(str(fila['latitud_wgs84_gd']).replace(',', '.'))
+        if ((fila['longitud'].count('.') <= 1) and (fila['latitud'].count('.') <= 1)):
+            lon = float(str(fila['longitud']).replace(',', '.'))
+            lat = float(str(fila['latitud']).replace(',', '.'))
         else:
-            lon_int = fila['longitud_wgs84_gd'].replace('.', '')
+            lon_int = fila['longitud'].replace('.', '')
             lon_float = lon_int[:2] + '.' + lon_int[2:]
             lon = float(lon_float)
-            lat_int = fila['latitud_wgs84_gd'].replace('.', '')
+            lat_int = fila['latitud'].replace('.', '')
             lat_float = lat_int[:2] + '.' + lat_int[2:]
             lat = float(lat_float)
 
@@ -152,13 +119,13 @@ def calcular_metricas(df_filtrado):
             fila_prev = df_filtrado.iloc[i - 1]
 
             # Calcular distancia (en km)
-            if ((fila_prev['longitud_wgs84_gd'].count('.') <= 1) and (fila_prev['latitud_wgs84_gd'].count('.') <= 1)):
-                punto1 = (float(str(fila_prev['latitud_wgs84_gd']).replace(',', '.')), float(str(fila_prev['longitud_wgs84_gd']).replace(',', '.')))
+            if ((fila_prev['longitud'].count('.') <= 1) and (fila_prev['latitud'].count('.') <= 1)):
+                punto1 = (float(str(fila_prev['latitud']).replace(',', '.')), float(str(fila_prev['longitud']).replace(',', '.')))
             else:
-                lon_int = ''.join(fila_prev['longitud_wgs84_gd'].split('.'))
+                lon_int = ''.join(fila_prev['longitud'].split('.'))
                 lon_float = lon_int[:2] + '.' + lon_int[2:]
                 lon2 = float(lon_float)
-                lat_int = ''.join(fila_prev['latitud_wgs84_gd'].split('.'))
+                lat_int = ''.join(fila_prev['latitud'].split('.'))
                 lat_float = lat_int[:2] + '.' + lat_int[2:]
                 lat2 = float(lat_float)
                 punto1 = (lat2, lon2)
@@ -173,7 +140,9 @@ def calcular_metricas(df_filtrado):
             
 
             # Calcular tiempo en horas
-            delta_t = (fila['fec_lectura_medicion'] - fila_prev['fec_lectura_medicion']).total_seconds()
+            hora_i = pd.to_datetime(fila['solo_hora'], format='%H:%M:%S')
+            hora_prev = pd.to_datetime(fila_prev['solo_hora'], format='%H:%M:%S')
+            delta_t = int((hora_i - hora_prev).total_seconds())
             tiempo_horas = delta_t / 3600.0
 
             # Calcular velocidad (km/h)
@@ -194,7 +163,8 @@ def calcular_metricas(df_filtrado):
             "latitud": lat,
             "distancia": distancia,
             "tiempo": tiempo,
-            "velocidad": velocidad
+            "velocidad": velocidad,
+            "esParada": bool(esParada)
         })
 
     resumen = calcular_resumen(resultados)
@@ -209,7 +179,7 @@ def get_datos(cod, pda, fecha):
     """
     # Obtener fichero
     uploaded = session.get('uploaded_files', {})
-    path = uploaded.get('A')
+    path = uploaded.get('E')
     
     # Abrir fichero
     try:
@@ -220,21 +190,10 @@ def get_datos(cod, pda, fecha):
     
     df = df[df['codired'] == int(cod)]
 
-    if 'fec_lectura_medicion' not in df.columns:
-        current_app.logger.error("No se encontró la columna 'fec_lectura_medicion' en el CSV.")
-        return []
-    # Convertir columna de fecha-hora a tipo datetime (UTC con zona)
-    try:
-        df['fec_lectura_medicion'] = pd.to_datetime(df['fec_lectura_medicion'], utc=True, errors='coerce')
-        df['fec_lectura_medicion'] = df['fec_lectura_medicion'].dt.tz_convert(pytz.timezone('Europe/Paris'))
-    except Exception as e:
-        current_app.logger.error(f"Error al convertir las fechas: {e}")
-        return []
-
     # Filtrar por PDA y fecha (ignorando hora)
     df_filtrado = df[
-        (df['cod_inv_pda'] == pda) &
-        (df['fec_lectura_medicion'].dt.strftime('%Y-%m-%d') == fecha)
+        (df['cod_pda'] == pda) &
+        (df['solo_fecha'] == fecha)
     ].copy()
 
     if df_filtrado.empty:
@@ -242,7 +201,7 @@ def get_datos(cod, pda, fecha):
         return []
 
     # Extraer solo las columnas que interesan
-    columnas = ['fec_lectura_medicion', 'longitud_wgs84_gd', 'latitud_wgs84_gd']
+    columnas = ['fecha_hora', 'solo_fecha', 'solo_hora', 'longitud', 'latitud', 'esParada']
     df_filtrado = df_filtrado[columnas].dropna()
     resultados = calcular_metricas(df_filtrado)
 
@@ -296,7 +255,7 @@ def create_map(cod, pda, fecha):
     """Crea un archivo html temporal con el mapa y agrega la dirección a la sesion"""
     # Obtener fichero
     uploaded = session.get('uploaded_files', {})
-    path = uploaded.get('A')
+    path = uploaded.get('E')
     
     # Abrir fichero
     try:
@@ -310,34 +269,24 @@ def create_map(cod, pda, fecha):
 
 
     current_app.logger.info(f"Buscando fecha especifica en el df")
-    if 'fec_lectura_medicion' not in df.columns:
-        current_app.logger.error("No se encontró la columna 'fec_lectura_medicion' en el CSV.")
-        return []
-    # Convertir columna de fecha-hora a tipo datetime (UTC con zona)
-    try:
-        df['fec_lectura_medicion'] = pd.to_datetime(df['fec_lectura_medicion'], utc=True, errors='coerce')
-        df['fec_lectura_medicion'] = df['fec_lectura_medicion'].dt.tz_convert(pytz.timezone('Europe/Paris'))
-    except Exception as e:
-        current_app.logger.error(f"Error al convertir las fechas: {e}")
-        return []
 
     # Filtrar por PDA y fecha (ignorando hora)
     df_filtrado = df[
-        (df['cod_inv_pda'] == pda) &
-        (df['fec_lectura_medicion'].dt.strftime('%Y-%m-%d') == fecha)
+        (df['cod_pda'] == pda) &
+        (df['solo_fecha'] == fecha)
     ].copy()
 
     if df_filtrado.empty:
         current_app.logger.error(f"No hay datos para PDA={pda} y fecha={fecha}")
         return []
 
-    df_filtrado = df_filtrado.sort_values('fec_lectura_medicion')
+    df_filtrado = df_filtrado.sort_values('solo_fecha')
 
     current_app.logger.info(f"Creando mapa con {len(df_filtrado)} registros")
 
     # Contamos cuántos puntos hay en cada valor
-    df_filtrado['num_pts_lon'] = df_filtrado['longitud_wgs84_gd'].astype(str).str.count(r'\.')
-    df_filtrado['num_pts_lat'] = df_filtrado['latitud_wgs84_gd'].astype(str).str.count(r'\.')
+    df_filtrado['num_pts_lon'] = df_filtrado['longitud'].astype(str).str.count(r'\.')
+    df_filtrado['num_pts_lat'] = df_filtrado['latitud'].astype(str).str.count(r'\.')
 
     # Comprobamos la media (o el valor típico) de puntos
     media_lon = df_filtrado['num_pts_lon'].mean()
@@ -346,27 +295,27 @@ def create_map(cod, pda, fecha):
     if ((media_lon <= 1) and (media_lat <= 1)):
         current_app.logger.info(f"Probando formato correcto de coordenadas")
         # Pasar de string a num
-        df_filtrado['latitud_wgs84_gd'] = df_filtrado['latitud_wgs84_gd'].astype(str).str.replace(',', '.')
-        df_filtrado['longitud_wgs84_gd'] = df_filtrado['longitud_wgs84_gd'].astype(str).str.replace(',', '.')
+        df_filtrado['latitud'] = df_filtrado['latitud'].astype(str).str.replace(',', '.')
+        df_filtrado['longitud'] = df_filtrado['longitud'].astype(str).str.replace(',', '.')
 
-        df_filtrado['latitud_wgs84_gd'] = pd.to_numeric(df_filtrado['latitud_wgs84_gd'], errors='coerce')
-        df_filtrado['longitud_wgs84_gd'] = pd.to_numeric(df_filtrado['longitud_wgs84_gd'], errors='coerce')
+        df_filtrado['latitud'] = pd.to_numeric(df_filtrado['latitud'], errors='coerce')
+        df_filtrado['longitud'] = pd.to_numeric(df_filtrado['longitud'], errors='coerce')
     else:
-        df_filtrado['latitud_wgs84_gd'] = df_filtrado['latitud_wgs84_gd'].astype(str).str.replace('.', '', regex=False)
-        df_filtrado['longitud_wgs84_gd'] = df_filtrado['longitud_wgs84_gd'].astype(str).str.replace('.', '', regex=False)
+        df_filtrado['latitud'] = df_filtrado['latitud'].astype(str).str.replace('.', '', regex=False)
+        df_filtrado['longitud'] = df_filtrado['longitud'].astype(str).str.replace('.', '', regex=False)
 
         current_app.logger.info(f"Probando a corregir coordenadas")
         # Corregir coordenadas ----------------------------
-        df_filtrado['latitud_wgs84_gd'] = corregir_coordenada(df_filtrado['latitud_wgs84_gd'])
-        df_filtrado['longitud_wgs84_gd'] = corregir_coordenada(df_filtrado['longitud_wgs84_gd'])
+        df_filtrado['latitud'] = corregir_coordenada(df_filtrado['latitud'])
+        df_filtrado['longitud'] = corregir_coordenada(df_filtrado['longitud'])
 
     df_filtrado.dropna()
     current_app.logger.info(f"Quedan {len(df_filtrado)} registros para generar el mapa")
 
 
     # Centrar mapa en promedio lat/lon
-    lat_promedio = df_filtrado['latitud_wgs84_gd'].mean()
-    lon_promedio = df_filtrado['longitud_wgs84_gd'].mean()
+    lat_promedio = df_filtrado['latitud'].mean()
+    lon_promedio = df_filtrado['longitud'].mean()
     current_app.logger.info(f"Mapa centrado en coordenadas {lat_promedio},{lon_promedio}")
 
     mapa = folium.Map(location=[lat_promedio, lon_promedio], zoom_start=15, control_scale=True)
@@ -375,36 +324,44 @@ def create_map(cod, pda, fecha):
     coordenadas = []
 
     for _, fila in df_filtrado.iterrows():
-        coord = [fila['latitud_wgs84_gd'], fila['longitud_wgs84_gd']]
+        coord = [fila['latitud'], fila['longitud']]
         coordenadas.append(coord)
+        if bool(fila['esParada']):
+            my_color = 'darkpurple'
+            my_opcacity = 0.8
+        else:
+            my_color = 'blue'
+            my_opcacity = 0.6
+        my_radius = 4
         folium.CircleMarker(
             location=coord,
-            radius=4,
-            color='blue',
+            radius=my_radius,
+            stroke=False,
             fill=True,
-            fill_color='blue',
-            fill_opacity=0.7,
-            popup=f"Fecha: {fila['fec_lectura_medicion']}<br>Coordenada: {fila['latitud_wgs84_gd']}, {fila['longitud_wgs84_gd']}"
+            fill_color=my_color,
+            fill_opacity=my_opcacity,
+            popup=f"{my_radius}px",
+            tooltip=f"Fecha: {fila['fecha_hora']}<br>Coordenada: {fila['latitud']}, {fila['longitud']}"
         ).add_to(mapa)
 
     for i in range(len(coordenadas)-1):
         folium.PolyLine(
             locations=[coordenadas[i], coordenadas[i+1]],
             color='blue',
-            weight=3,
-            opacity=0.7
+            weight=2,
+            opacity=0.4
         ).add_to(mapa)
     
     inicio = df_filtrado.iloc[0]
     folium.Marker(
-        location=[inicio['latitud_wgs84_gd'], fila['longitud_wgs84_gd']],
+        location=[inicio['latitud'], fila['longitud']],
         icon=folium.Icon(color='green', icon='play', prefix='fa'),
         popup="INICIO"
     ).add_to(mapa)
 
     fin = df_filtrado.iloc[-1]
     folium.Marker(
-        location=[fin['latitud_wgs84_gd'], fin['longitud_wgs84_gd']],
+        location=[fin['latitud'], fin['longitud']],
         icon=folium.Icon(color='red', icon='play', prefix='fa'),
         popup="FIN"
     ).add_to(mapa)
@@ -418,14 +375,25 @@ def create_map(cod, pda, fecha):
 @generateResults_bp.route('/generar_mapa')
 def generar_mapa():
     uploaded = session.get('uploaded_files', {})
+    api_url = current_app.config.get("API_URL")
+    data = {"id": session.get("id")}
 
-    # Comprobar que el fichero A existe en la sesión
-    file_A_path = uploaded.get('A')
-    if not file_A_path or not os.path.exists(file_A_path):
-        flash("Error: Necesitas subir el fichero A para generar el mapa.", 'error')
+    response = requests.post(f"{api_url}/get_fichero_unificado", data=data)
+
+    if response.status_code == 200:
+        upload_dir = current_app.config.get("UPLOAD_FOLDER")
+        save_path = os.path.join(upload_dir, session.get("id"), "Fichero_E.csv")
+        with open(save_path, "wb") as f:
+            f.write(response.content)
+        uploaded["E"] = save_path
+        current_app.logger.info("Se ha descargado el fichero unificado")
+    else:
+        current_app.logger.error("Error:", response.text)
+
+    if not os.path.exists(save_path):
         return redirect(url_for('main.root'))
 
-    pdas = get_pdas(file_A_path)
+    pdas = get_pdas(save_path)
 
     return render_template('options.html', pdas=pdas)
 

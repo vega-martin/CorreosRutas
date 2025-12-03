@@ -13,47 +13,15 @@ options_bp = Blueprint('options', __name__, template_folder='templates')
 def options():
     return render_template('options.html')
 
-def normalizar_fechas(lista_fechas):
-    fechas_convertidas = []
-
-    for fecha in lista_fechas:
-        try:
-            # Convertir con pandas, autodetecta formato
-            fecha_convertida = pd.to_datetime(fecha, errors='coerce')
-            if pd.isna(fecha_convertida):
-                continue  # si no se pudo convertir, se ignora
-            fechas_convertidas.append(fecha_convertida.strftime('%Y-%m-%d'))
-        except Exception as e:
-            print(f"Error al convertir la fecha {fecha}: {e}")
-
-    # Eliminar duplicados y ordenar
-    return sorted(list(set(fechas_convertidas)))
 
 def get_fechas_por_pda(df, pda):
-    posibles_columnas_fecha = ['fec_lectura_medicion', 'Fec Actividad', 'INSTANTE']
-    posibles_columnas_pda = ['cod_inv_pda', 'Num Inv', 'COD_SECCION']
-
-    col_fecha = next((col for col in posibles_columnas_fecha if col in df.columns), None)
-    col_pda = next((col for col in posibles_columnas_pda if col in df.columns), None)
-
-    if col_fecha and col_pda:
-        df_filtrado = df[df[col_pda] == pda]
-        fechas = sorted(df_filtrado[col_fecha].dropna().unique())
-        return normalizar_fechas(fechas)
-    else:
-        print("No se encontraron columnas válidas para fechas o PDAs.")
-        return []
+    df_filtrado = df[df['cod_pda'] == pda]
+    fechas = sorted(df_filtrado['solo_fecha'].dropna().unique())
+    return fechas
 
 def get_fechas_por_todas_las_pdas(df):
-    posibles_columnas_fecha = ['fec_lectura_medicion', 'Fec Actividad', 'INSTANTE']
-    col_fecha = next((col for col in posibles_columnas_fecha if col in df.columns), None)
-
-    if col_fecha:
-        fechas = sorted(df[col_fecha].dropna().unique())
-        return normalizar_fechas(fechas)
-    else:
-        print("No se encontró una columna válida de fechas.")
-        return []
+    fechas = sorted(df['solo_fecha'].dropna().unique())
+    return fechas
     
 def extraer_num(text):
     """Busca el primer número (entero o decimal) en un string y lo devuelve como float."""
@@ -94,15 +62,15 @@ def codireds():
     """
 
     uploaded = session.get('uploaded_files', {})
-    path = uploaded.get('A')
-    current_app.logger.info("Abriendo fichero A")
+    path = uploaded.get('E')
+    current_app.logger.info("Abriendo fichero E")
 
     if not path or not os.path.exists(path):
-        current_app.logger.warning("Ruta de Fichero A no disponible o archivo no encontrado en disco.")
-        return jsonify({'codireds': [], 'error': 'Ruta de Fichero A no disponible o no válido.'})
+        current_app.logger.warning("Ruta de Fichero E no disponible o archivo no encontrado en disco.")
+        return jsonify({'codireds': [], 'error': 'Ruta de Fichero E no disponible o no válido.'})
 
     try:
-        current_app.logger.info(f"Abriendo fichero A desde: {path}")
+        current_app.logger.info(f"Abriendo fichero E desde: {path}")
         df = pd.read_csv(path, delimiter=';', low_memory=False)
         
     except Exception as e:
@@ -125,8 +93,8 @@ def codireds():
 def pda_por_codired():
     cod = request.args.get('cod')
     uploaded = session.get('uploaded_files', {})
-    path = uploaded.get('A')
-    current_app.logger.info("Abriendo fichero A")
+    path = uploaded.get('E')
+    current_app.logger.info("Abriendo fichero E")
     try:
         df = pd.read_csv(path, delimiter=';', low_memory=False)
     except Exception as e:
@@ -139,7 +107,7 @@ def pda_por_codired():
     current_app.logger.info(f"Buscando regsitros perteneciente a la oficina {cod}")
     df = df[df['codired'] == int(cod)]
     current_app.logger.info(f"Se han encotrado {len(df)} registros de la oficina {cod}")
-    pdas = df['cod_inv_pda'].dropna().unique()
+    pdas = df['cod_pda'].dropna().unique()
     pdas = np.sort(pdas).tolist()
     current_app.logger.info(f"Se han encontrado {len(pdas)} pdas en la oficina {cod}")
     return jsonify({'pdas': pdas})
@@ -149,7 +117,7 @@ def pda_por_codired():
 def fechas_por_pda():
     pda = request.args.get('pda')
     uploaded = session.get('uploaded_files', {})
-    path = uploaded.get('A')
+    path = uploaded.get('E')
     try:
         df = pd.read_csv(path, delimiter=';', low_memory=False)
     except Exception as e:

@@ -74,6 +74,10 @@ document.addEventListener("DOMContentLoaded", () => {
             distanceFormateada = fila.distance.toFixed(3); 
         }
 
+        if (fila.esParada) {
+            tr.style.backgroundColor = "#F2FCFF";  // light blue
+        }
+
         const celdas = [
             fila.n,
             fila.hora,

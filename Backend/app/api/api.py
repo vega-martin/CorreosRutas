@@ -209,7 +209,7 @@ def estan_unificados():
 
 @api_bp.route("/descargar_estadisticas", methods=['POST'])
 def descargar_estadisticas():
-    # Ruta absoluta o relativa al PDF
+    # Ruta al PDF
     id = request.form.get('id')
     base_upload = current_app.config.get("UPLOAD_FOLDER")
     id_path = os.path.join(base_upload, str(id))
@@ -225,4 +225,24 @@ def descargar_estadisticas():
         mimetype="application/pdf",
         as_attachment=True,
         download_name="estadisticas.pdf"
+    )
+
+@api_bp.route("/get_fichero_unificado", methods=['POST'])
+def get_fichero_unificado():
+    # Ruta al CSV
+    id = request.form.get('id')
+    base_upload = current_app.config.get("UPLOAD_FOLDER")
+    id_path = os.path.join(base_upload, str(id))
+    csv_path = os.path.join(id_path, 'Fichero_E.csv')
+    current_app.logger.info({csv_path})
+    # Comprobar si existe
+    if not os.path.exists(csv_path):
+        return "El archivo no existe", 404
+
+    # Devolver el CSV
+    return send_file(
+        csv_path,
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name="Fichero_E.csv"
     )

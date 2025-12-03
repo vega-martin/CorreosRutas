@@ -42,7 +42,7 @@
         <h2>📂 Ficheros cargados en sesión</h2>
         <ul>
             {% for key, path in session['uploaded_files'].items() %}
-                <li><strong>{{ key }}:</strong> {{ path }}</li>
+                <li><strong>{{ key }}:</strong> {{ path.replace('\\', '/').split('/')[-1] }}</li>
             {% endfor %}
         </ul>
     </div>
@@ -51,7 +51,7 @@
 
     <h2>Generar tabla y mapa</h2>
     <form action="{{ url_for('generateResults.generar_mapa') }}" method="get">
-        <button type="submit" class="generate-btn" id="mapaBtn">Ver mapa</button>
+        <button type="submit" class="generate-btn" id="mapaBtn" disabled>Ver mapa</button>
     </form><br><br>
 
 
