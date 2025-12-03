@@ -209,6 +209,29 @@ h1, h2 {
     transform: translateY(0);
 }
 
+.blue-label {
+    background-color: #2889a7;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.blue-label:hover {
+    background-color: #216b88;
+    transform: translateY(-2px);
+}
+
+.blue-label:active {
+    background-color: #1e587e;
+    transform: translateY(0);
+}
+
 .clear-btn {
     background-color: #dc3545;
     color: white;
@@ -263,6 +286,27 @@ input[disabled] {
 input:disabled:hover,
 input[disabled]:hover {
     background-color: #cccccc;
+}
+
+.disabled-blue-label {
+    background-color: #cccccc;
+    color: #666666; 
+    border: 1px solid #b3b3b3;
+    cursor: not-allowed;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    opacity: 0.5; 
+    font-weight: bold;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Opcional: Evitar efectos hover cuando está desactivado */
+.disabled-blue-label:hover {
+    background-color: #cccccc;
+    transform: translateY(-2px);
 }
 
 .contenedor {

@@ -28,6 +28,19 @@
 
                     <input type="hidden" name="codired" id="codiredInput">
 
+                    <label class="disabled-blue-label" for="btn-nuevo-geojson" id="label-nuevo-geojson" >
+                        Nuevo GeoJSON
+                    </label><br>
+                    <input type="file" id="btn-nuevo-geojson" name="btn-nuevo-geojson" accept=".geojson" style="display: none;">
+
+                    <p id="usar-geojson" style="display: none; color: #1e587e;">
+                        Ya hay un GeoJson cargado para ese código de unidad.<br>Si no se sube un fichero nuevo se usará ese.
+                    </p>
+                    <p id="msj-nuevo-geojson" style="display: none; color: #1e587e;">
+                        Nuevo GeoJSON subido correctamente.
+                    </p>
+
+
                     <h2>Seleccionar PDA</h2>
                     <div class="custom-select">
                         <button type="button" class="select-btn" id="pdaBtn" disabled>Selecciona una PDA</button>

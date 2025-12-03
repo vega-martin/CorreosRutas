@@ -233,9 +233,34 @@ def filtrar_registros():
 
 
 # ----------- Llamada geoAnalysis ---------------- #
-@options_bp.route('/clusterizar_portales', methods=['GET'])
+@options_bp.route('/upload_geojson', methods=['POST'])
+def upload_geojson():
+    cod = request.form.get('cod')
+    file = request.files.get('geojson_file')
+
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    static_path = current_app.config.get("GEOJSON_FOLDER")
+    geojson_path = Path(os.path.join(static_path, f'{cod}.geojson'))
+    file.save(geojson_path)
+
+    return jsonify({'success': True})
+
+@options_bp.route('/existsGeoJSON', methods=['POST'])
+def existsGeoJSON():
+    data = request.get_json()
+    cod = data.get("cod")
+    static_path = current_app.config.get("GEOJSON_FOLDER")
+    geojson_path = Path(os.path.join(static_path, f'{cod}.geojson'))
+    current_app.logger.info(f"existe el geojson? {geojson_path.exists()}")
+    return jsonify(exists=geojson_path.exists())
+
+
+@options_bp.route('/clusterizar_portales', methods=['POST'])
 def clusterizar_portales():
-    
+    data = request.get_json()
+    cod = data.get("cod")
     # Por el momento, solo se pasa los datos de la sesión.
     # Los datos de geojson los proporcionarán ellos.
 
@@ -259,8 +284,8 @@ def clusterizar_portales():
         current_app.logger.error(f"Error al leer o decodificar datos de usuario: {e}")
         return jsonify({"tabla": [], "resumen": {}, "warnings": ["Error al cargar datos de usuario."]})
     
-    base_dir = current_app.config.get("BASE_DIR")
-    file_geojson = os.path.join(base_dir, "Addresses.geojson")
+    static_dir = current_app.config.get("GEOJSON_FOLDER")
+    file_geojson = os.path.join(static_dir, f'{cod}.geojson')
     current_app.logger.error(f"Ruta del archivo geojson {file_geojson}")
 
     puntos_asociados = asociar_direcciones_a_puntos(datos_completos,file_geojson)

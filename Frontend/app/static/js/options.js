@@ -5,6 +5,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const codiredOptions = document.getElementById('codiredOptions');
     const codiredInput = document.getElementById('codiredInput');
 
+    const nuevoGeojson = document.getElementById('label-nuevo-geojson');
+    const nuevoGeojsonBtn = document.getElementById('btn-nuevo-geojson');
+    const nuevoGeojsonMsj = document.getElementById('msj-nuevo-geojson');
+    const usarGeojson = document.getElementById('usar-geojson');
+
     const pdaBtn = document.getElementById('pdaBtn');
     const pdaOptions = document.getElementById('pdaOptions');
     const pdaInput = document.getElementById('pdaInput');
@@ -142,6 +147,33 @@ document.addEventListener("DOMContentLoaded", () => {
         
     });
 
+    nuevoGeojsonBtn.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        const cod = codiredInput.value;
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('geojson_file', file);
+        formData.append('cod', cod); // add extra data if needed
+
+        try {
+            const response = await fetch('/upload_geojson', {
+                method: 'POST',
+                body: formData // send FormData directly
+            });
+
+            if (!response.ok) throw new Error('Error al subir el archivo');
+
+            const data = await response.json();
+            console.log('Archivo subido con éxito:', data);
+            usarGeojson.style.display = "none";
+            nuevoGeojsonMsj.style.display = "block";
+        } catch (err) {
+            console.error(err);
+            alert('Error al subir el GeoJSON');
+        }
+    });
+
     const cargarCodiredsInicial = () => {
         pdaOptions.innerHTML = '';
         pdaBtn.textContent = 'Selecciona una PDA';
@@ -188,6 +220,29 @@ document.addEventListener("DOMContentLoaded", () => {
         
         codiredOptions.classList.remove('show');
         
+        nuevoGeojson.className = "blue-label";
+
+        // Comprobar si existe un GeoJSON para el codired
+        fetch('/existsGeoJSON', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cod })
+        })
+        .then(response => {
+            if (!response.ok) throw new Error("Error al obtener los datos del servidor");
+            return response.json();
+        })
+        .then(data => {
+            if (data.exists) {
+                usarGeojson.style.display = 'block';
+            } else {
+                usarGeojson.style.display = 'none';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+        });
+
         pdaOptions.innerHTML = '';
         pdaBtn.disabled = true;
         
@@ -314,11 +369,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (form) {
         // Validar formulario
-        function validarFormulario() {
+        async function validarFormulario() {
             const cod = codiredInput.value;
             const pda = pdaInput.value;
             const ini = fechaInicio.value;
             const fin = fechaFin.value;
+
+            // Comprobar si existe un GeoJSON para el codired
+            const res = await fetch('/existsGeoJSON', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cod })
+            });
+
+            const data = await res.json();
+
+            if (!data.exists) {
+                alert("No hay un GeoJSON cargado. Debes cargar uno.");
+                return false;
+            }
         
             if (!cod) {
                 alert("Debes introducir un código de unidad.");
@@ -512,10 +581,12 @@ document.addEventListener("DOMContentLoaded", () => {
             asociarPortalesBtn.textContent = "Asociando...";
             asociarPortalesBtn.disabled = true;
             asociarPortalesBtn.style.cursor = "wait";
+            const cod = codiredInput.value;
 
             fetch('/clusterizar_portales', {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' }
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cod })
             })
             .then(response => {
                 if (!response.ok) {
