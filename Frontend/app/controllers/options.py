@@ -295,5 +295,14 @@ def clusterizar_portales():
         current_app.logger.error(f"Error en servicio geoAnalysis: {puntos_asociados['error']}")
         return jsonify({"tabla": [], "resumen": {}, "warnings": [puntos_asociados['error']]}), 500
     
+    # Reescribir json de la tabla con los portales
+    upload_folder = current_app.config.get("UPLOAD_FOLDER")
+    processed_filename = 'table_data.json'
+    save_path = os.path.join(upload_folder, session.get("id"), processed_filename)
+    
+    # Guardar la lista de diccionarios (el valor de 'tabla') en el disco
+    with open(save_path, 'w', encoding='utf-8') as f:
+        json.dump(puntos_asociados, f, ensure_ascii=False, indent=4)
+
     # Retorno Final: Devolvemos la lista de puntos de usuario enriquecidos
     return jsonify({"tabla": puntos_asociados, "resumen": {}, "warnings": []}), 200
