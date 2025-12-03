@@ -191,10 +191,14 @@ def get_datos(cod, pda, fecha):
     df = df[df['codired'] == int(cod)]
 
     # Filtrar por PDA y fecha (ignorando hora)
-    df_filtrado = df[
-        (df['cod_pda'] == pda) &
-        (df['solo_fecha'] == fecha)
-    ].copy()
+    if (pda == "TODAS"):
+        df_filtrado = df[(df['solo_fecha'] == fecha)].copy()
+    else:
+        df_filtrado = df[
+            (df['cod_pda'] == pda) &
+            (df['solo_fecha'] == fecha)
+        ].copy()
+
 
     if df_filtrado.empty:
         current_app.logger.error(f"No hay datos para PDA={pda} y fecha={fecha}")
@@ -267,105 +271,116 @@ def create_map(cod, pda, fecha):
     df = df[df['codired'] == int(cod)]
     current_app.logger.info(f"Encontrados {len(df)} en la oficina {cod}")
 
-
-    current_app.logger.info(f"Buscando fecha especifica en el df")
-
-    # Filtrar por PDA y fecha (ignorando hora)
-    df_filtrado = df[
-        (df['cod_pda'] == pda) &
-        (df['solo_fecha'] == fecha)
-    ].copy()
-
-    if df_filtrado.empty:
-        current_app.logger.error(f"No hay datos para PDA={pda} y fecha={fecha}")
-        return []
-
-    df_filtrado = df_filtrado.sort_values('solo_hora')
-
-    current_app.logger.info(f"Creando mapa con {len(df_filtrado)} registros")
-
-    # Contamos cuántos puntos hay en cada valor
-    df_filtrado['num_pts_lon'] = df_filtrado['longitud'].astype(str).str.count(r'\.')
-    df_filtrado['num_pts_lat'] = df_filtrado['latitud'].astype(str).str.count(r'\.')
-
-    # Comprobamos la media (o el valor típico) de puntos
-    media_lon = df_filtrado['num_pts_lon'].mean()
-    media_lat = df_filtrado['num_pts_lat'].mean()
-
-    if ((media_lon <= 1) and (media_lat <= 1)):
-        current_app.logger.info(f"Probando formato correcto de coordenadas")
-        # Pasar de string a num
-        df_filtrado['latitud'] = df_filtrado['latitud'].astype(str).str.replace(',', '.')
-        df_filtrado['longitud'] = df_filtrado['longitud'].astype(str).str.replace(',', '.')
-
-        df_filtrado['latitud'] = pd.to_numeric(df_filtrado['latitud'], errors='coerce')
-        df_filtrado['longitud'] = pd.to_numeric(df_filtrado['longitud'], errors='coerce')
+    if (pda == "TODAS"):
+        pdas_unicas = df['cod_pda'].unique().tolist()
     else:
-        df_filtrado['latitud'] = df_filtrado['latitud'].astype(str).str.replace('.', '', regex=False)
-        df_filtrado['longitud'] = df_filtrado['longitud'].astype(str).str.replace('.', '', regex=False)
+        pdas_unicas = [pda]
+    
+    colores = ['black', 'lightblue', 'blue', 'darkred', 'lightgreen',
+               'purple', 'red', 'green', 'lightred', 'darkblue', 'darkpurple',
+               'cadetblue', 'orange', 'pink', 'darkgreen']
 
-        current_app.logger.info(f"Probando a corregir coordenadas")
-        # Corregir coordenadas ----------------------------
-        df_filtrado['latitud'] = corregir_coordenada(df_filtrado['latitud'])
-        df_filtrado['longitud'] = corregir_coordenada(df_filtrado['longitud'])
+    pda_colors = {pda: colores[i % len(colores)] for i, pda in enumerate(pdas_unicas)}
 
-    df_filtrado.dropna()
-    current_app.logger.info(f"Quedan {len(df_filtrado)} registros para generar el mapa")
+    latitud_centrada = float(pd.to_numeric(df['latitud'].iloc[0].replace(",", "."), errors="coerce"))
+    longitud_centrada = float(pd.to_numeric(df['longitud'].iloc[0].replace(",", "."), errors="coerce"))
 
 
-    # Centrar mapa en promedio lat/lon
-    lat_promedio = df_filtrado['latitud'].mean()
-    lon_promedio = df_filtrado['longitud'].mean()
-    current_app.logger.info(f"Mapa centrado en coordenadas {lat_promedio},{lon_promedio}")
-
-    mapa = folium.Map(location=[lat_promedio, lon_promedio], zoom_start=15, control_scale=True)
+    mapa = folium.Map(location=[latitud_centrada, longitud_centrada], zoom_start=15, control_scale=True)
     folium.TileLayer('CartoDB positron', name='Carto claro').add_to(mapa)
 
-    coordenadas = []
+    for idx, pda_unica in enumerate(pdas_unicas):
+        ruta_color = pda_colors[pda_unica]
+        current_app.logger.info(f"Buscando fecha especifica en el df")
 
-    for _, fila in df_filtrado.iterrows():
-        coord = [fila['latitud'], fila['longitud']]
-        coordenadas.append(coord)
-        if bool(fila['esParada']):
-            my_color = 'darkpurple'
-            my_opcacity = 0.8
+        # Filtrar por PDA y fecha (ignorando hora)
+        df_filtrado = df[
+            (df['cod_pda'] == pda_unica) &
+            (df['solo_fecha'] == fecha)
+        ].copy()
+
+        if df_filtrado.empty:
+            current_app.logger.error(f"No hay datos para PDA={pda_unica} y fecha={fecha}")
+            continue
+
+        df_filtrado = df_filtrado.sort_values('solo_hora')
+
+        current_app.logger.info(f"Creando mapa con {len(df_filtrado)} registros")
+
+        # Contamos cuántos puntos hay en cada valor
+        df_filtrado['num_pts_lon'] = df_filtrado['longitud'].astype(str).str.count(r'\.')
+        df_filtrado['num_pts_lat'] = df_filtrado['latitud'].astype(str).str.count(r'\.')
+
+        # Comprobamos la media (o el valor típico) de puntos
+        media_lon = df_filtrado['num_pts_lon'].mean()
+        media_lat = df_filtrado['num_pts_lat'].mean()
+
+        if ((media_lon <= 1) and (media_lat <= 1)):
+            current_app.logger.info(f"Probando formato correcto de coordenadas")
+            # Pasar de string a num
+            df_filtrado['latitud'] = df_filtrado['latitud'].astype(str).str.replace(',', '.')
+            df_filtrado['longitud'] = df_filtrado['longitud'].astype(str).str.replace(',', '.')
+
+            df_filtrado['latitud'] = pd.to_numeric(df_filtrado['latitud'], errors='coerce')
+            df_filtrado['longitud'] = pd.to_numeric(df_filtrado['longitud'], errors='coerce')
         else:
-            my_color = 'blue'
-            my_opcacity = 0.6
-        my_radius = 4
-        folium.CircleMarker(
-            location=coord,
-            radius=my_radius,
-            stroke=False,
-            fill=True,
-            fill_color=my_color,
-            fill_opacity=my_opcacity,
-            popup=f"{my_radius}px",
-            tooltip=f"Fecha: {fila['fecha_hora']}<br>Coordenada: {fila['latitud']}, {fila['longitud']}"
+            df_filtrado['latitud'] = df_filtrado['latitud'].astype(str).str.replace('.', '', regex=False)
+            df_filtrado['longitud'] = df_filtrado['longitud'].astype(str).str.replace('.', '', regex=False)
+
+            current_app.logger.info(f"Probando a corregir coordenadas")
+            # Corregir coordenadas ----------------------------
+            df_filtrado['latitud'] = corregir_coordenada(df_filtrado['latitud'])
+            df_filtrado['longitud'] = corregir_coordenada(df_filtrado['longitud'])
+
+        df_filtrado.dropna()
+        current_app.logger.info(f"Quedan {len(df_filtrado)} registros para generar el mapa")
+
+        coordenadas = []
+
+        for _, fila in df_filtrado.iterrows():
+            coord = [fila['latitud'], fila['longitud']]
+            coordenadas.append(coord)
+            if bool(fila['esParada']):
+                my_color = ruta_color
+                my_opcacity = 1
+            else:
+                my_color = ruta_color
+                my_opcacity = 0.7
+            my_radius = 4
+            folium.CircleMarker(
+                location=coord,
+                radius=my_radius,
+                stroke=False,
+                fill=True,
+                fill_color=my_color,
+                fill_opacity=my_opcacity,
+                popup=f"{my_radius}px",
+                tooltip=f"PDA: {pda_unica}<br>Fecha: {fila['fecha_hora']}<br>Coordenada: {fila['latitud']}, {fila['longitud']}"
+            ).add_to(mapa)
+
+        for i in range(len(coordenadas)-1):
+            folium.PolyLine(
+                locations=[coordenadas[i], coordenadas[i+1]],
+                color=ruta_color,
+                weight=2,
+                opacity=0.4
+            ).add_to(mapa)
+        
+        inicio = df_filtrado.iloc[0]
+        folium.Marker(
+            location=[inicio['latitud'], fila['longitud']],
+            icon=folium.Icon(color='green', icon='play', prefix='fa'),
+            popup="INICIO"
         ).add_to(mapa)
 
-    for i in range(len(coordenadas)-1):
-        folium.PolyLine(
-            locations=[coordenadas[i], coordenadas[i+1]],
-            color='blue',
-            weight=2,
-            opacity=0.4
+        fin = df_filtrado.iloc[-1]
+        folium.Marker(
+            location=[fin['latitud'], fin['longitud']],
+            icon=folium.Icon(color='red', icon='play', prefix='fa'),
+            popup="FIN"
         ).add_to(mapa)
+        current_app.logger.info(f"Mapa creado")
     
-    inicio = df_filtrado.iloc[0]
-    folium.Marker(
-        location=[inicio['latitud'], fila['longitud']],
-        icon=folium.Icon(color='green', icon='play', prefix='fa'),
-        popup="INICIO"
-    ).add_to(mapa)
-
-    fin = df_filtrado.iloc[-1]
-    folium.Marker(
-        location=[fin['latitud'], fin['longitud']],
-        icon=folium.Icon(color='red', icon='play', prefix='fa'),
-        popup="FIN"
-    ).add_to(mapa)
-    current_app.logger.info(f"Mapa creado")
     return save_map(cod, pda, fecha, mapa)
 
 # ------------------------------------------------------------

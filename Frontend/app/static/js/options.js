@@ -264,57 +264,22 @@ document.addEventListener("DOMContentLoaded", () => {
             if (pdas.length === 0) {
                 pdaOptions.innerHTML = "<div>No hay PDAs disponibles</div>";
             } else {
+                // Crear el primer div para coger todas las PDAS
+                const todasDiv = document.createElement("div");
+                todasDiv.dataset.value = "TODAS";
+                todasDiv.textContent = "TODAS";
+
+                attachPdaClickHandler(todasDiv, "TODAS");
+
+                pdaOptions.appendChild(todasDiv);
+
                 // Crear los divs de las opciones
                 pdas.forEach(pda => {
                     const div = document.createElement("div");
                     div.dataset.value = pda;
                     div.textContent = pda;
 
-                    // Añadir funcionalidad al div
-                    div.addEventListener('click', () => {
-                        pdaBtn.textContent = pda;
-                        pdaInput.value = pda;
-                        pdaOptions.classList.remove('show');
-
-                        // Mostrar mensaje de espera al usuario
-                        waitMessage.textContent = 'Procesando fechas válidas.';
-                        waitMessage.style.display = 'block';
-                        
-                        // Bloquear campos y limpiar valores
-                        fechaInicio.disabled = true;
-                        fechaFin.disabled = true;
-                        fechaInicio.value = "";
-                        fechaFin.value = "";
-                        aviso.style.display = "none";
-                        fechasDisponibles.clear();
-
-                        // Obtener fechas disponibles desde el backend
-                        fetch(`/fechas_por_pda?pda=${encodeURIComponent(pdaInput.value)}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.fechas && data.fechas.length > 0) {
-                                    fechaInicio.disabled = false;
-                                    fechaFin.disabled = true;
-
-                                    // Guardamos fechas válidas
-                                    fechasDisponibles = new Set(data.fechas);
-
-                                    // Ajustar límites del calendario
-                                    fechaInicio.setAttribute("min", data.fechas[0]);
-                                    fechaInicio.setAttribute("max", data.fechas[data.fechas.length - 1]);
-                                    fechaFin.setAttribute("min", data.fechas[0]);
-                                    fechaFin.setAttribute("max", data.fechas[data.fechas.length - 1]);
-                                }
-                            })
-                            .catch(error => {
-                                // Mostrar mensaje de error al usuario
-                                waitMessage.textContent = 'Error al cargar las fechas.'
-                            })
-                            .finally(() => {
-                                // Ocultar mensaje de espera al usuario
-                                waitMessage.style.display = 'none';
-                            });
-                    });
+                    attachPdaClickHandler(div, pda);
 
                     pdaOptions.appendChild(div);
                 });
@@ -329,6 +294,50 @@ document.addEventListener("DOMContentLoaded", () => {
             pdaBtn.textContent = "PDAs no encontradas";
         });
     };
+
+    // EventListener para las opciones de pdas
+    function attachPdaClickHandler(div, pdaValue) {
+        div.addEventListener('click', () => {
+            pdaBtn.textContent = pdaValue;
+            pdaInput.value = pdaValue;
+            pdaOptions.classList.remove('show');
+
+            // Show message to user
+            waitMessage.textContent = 'Procesando fechas válidas.';
+            waitMessage.style.display = 'block';
+
+            // Reset fields
+            fechaInicio.disabled = true;
+            fechaFin.disabled = true;
+            fechaInicio.value = "";
+            fechaFin.value = "";
+            aviso.style.display = "none";
+            fechasDisponibles.clear();
+
+            // Fetch dates
+            fetch(`/fechas_por_pda?pda=${encodeURIComponent(pdaValue)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.fechas && data.fechas.length > 0) {
+                        fechaInicio.disabled = false;
+                        fechaFin.disabled = true;
+
+                        fechasDisponibles = new Set(data.fechas);
+
+                        fechaInicio.setAttribute("min", data.fechas[0]);
+                        fechaInicio.setAttribute("max", data.fechas[data.fechas.length - 1]);
+                        fechaFin.setAttribute("min", data.fechas[0]);
+                        fechaFin.setAttribute("max", data.fechas[data.fechas.length - 1]);
+                    }
+                })
+                .catch(() => {
+                    waitMessage.textContent = 'Error al cargar las fechas.';
+                })
+                .finally(() => {
+                    waitMessage.style.display = 'none';
+                });
+        });
+    }
 
     // Validar fechas seleccionadas
     function validarFecha(campo) {
