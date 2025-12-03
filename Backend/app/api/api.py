@@ -176,7 +176,7 @@ def unifyAllFiles():
     erased_info = unifyADFiles(df_A, df_D, id_path)
 
     
-    outliers_info = removeOutliers(id_path)
+    #outliers_info = removeOutliers(id_path)
     
     if isinstance(read_info, Response):
         read_info = read_info.get_json()
