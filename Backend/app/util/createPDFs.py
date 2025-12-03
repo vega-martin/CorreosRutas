@@ -269,7 +269,7 @@ def getInfo(path, type):
         <br/>
         <br/>
         Eliminación de registros defectuosos:<br/>
-           (Se eliminan PDAs como #N/D, sin formato PDA01, PDA13, PDA25, etc)<br/>
+           (Se eliminan PDAs con identificador defectuoso, como #N/D)<br/>
            - PDAs fichero A: {my_dict["Defectuoso"]["PDAs A"]} registros.<br/>
            - PDAs fichero D: {my_dict["Defectuoso"]["PDAs D"]} registros.<br/><br/>
            (Se eliminan fechas que no se han podido usar, como nan)<br/>
@@ -288,7 +288,14 @@ def getInfo(path, type):
         <br/>
         """
         union = f"""
-        Información de sincronización (eliminar PDAs y fechas no compartidas):<br/><br/>
+        Registro del fichero B eliminados durante la sincronización (descartados):<br/>
+           + Totales: {my_dict["Motivo eliminar sincronizacion"]["total_eliminados"]} registros.<br/>
+           - PDA no encontrada en el fichero A: {my_dict["Motivo eliminar sincronizacion"]["solo_cod_pda_no_existe"]} registros.<br/>
+           - Fecha no encontrada en el fichero A: {my_dict["Motivo eliminar sincronizacion"]["solo_fecha_no_existe"]} registros.<br/>
+           - PDA y fecha no encontrada en el fichero A: {my_dict["Motivo eliminar sincronizacion"]["cod_pda_y_fecha_no_existen"]} registros.<br/>
+           - La combinacion de PDA y fecha no encontrada en el fichero A: {my_dict["Motivo eliminar sincronizacion"]["solo_combinacion_no_existe"]} registros.<br/>
+        <br/><br/>
+        Información tras la sincronización <br/><br/>
            + Registros totales: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros totales"]}.<br/>
            - Pertenecientes al fichero A: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros B"]}.<br/>
            - Pertenecientes al fichero D: {my_dict["Información de sincronizacion"]["Conteo de registros"]["Registros C"]}.<br/><br/>

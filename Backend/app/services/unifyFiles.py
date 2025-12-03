@@ -30,11 +30,54 @@ def align_two_dfs_on_zone_date(df1, df2):
 def align_one_df_on_zone_date(df1, df2):
     keys = ['cod_pda', 'solo_fecha']
 
+    # Claves comunes
     common = df1[keys].merge(df2[keys]).drop_duplicates()
 
+    # Filtrar df2
     df_filt = df2.merge(common, on=keys, how='inner')
 
-    return df_filt
+    # Registros eliminados
+    df_removed = df2.merge(common, on=keys, how='left', indicator=True)
+    df_removed = df_removed[df_removed['_merge'] == 'left_only']
+    
+    total_removed = len(df_removed)
+
+    # Conjuntos para comprobar existencia individual
+    set_pda   = set(df1['cod_pda'])
+    set_fecha = set(df1['solo_fecha'])
+    set_pairs = set(map(tuple, df1[keys].drop_duplicates().to_numpy()))
+
+    def clasificar(row):
+        cod_ok   = row['cod_pda'] in set_pda
+        fecha_ok = row['solo_fecha'] in set_fecha
+
+        # Todos los removed tienen pair_ok == False
+        if not cod_ok and fecha_ok:
+            return "solo_cod_pda_no_existe"
+        elif cod_ok and not fecha_ok:
+            return "solo_fecha_no_existe"
+        elif not cod_ok and not fecha_ok:
+            return "cod_pda_y_fecha_no_existen"
+        else:
+            return "solo_combinacion_no_existe"
+
+    df_removed["motivo"] = df_removed.apply(clasificar, axis=1)
+
+    # Diccionario de conteos
+    #conteo = df_removed["motivo"].value_counts().to_dict()
+    conteo = {
+    "solo_cod_pda_no_existe": (df_removed["motivo"] == "solo_cod_pda_no_existe").sum(),
+    "solo_fecha_no_existe": (df_removed["motivo"] == "solo_fecha_no_existe").sum(),
+    "cod_pda_y_fecha_no_existen": (df_removed["motivo"] == "cod_pda_y_fecha_no_existen").sum(),
+    "solo_combinacion_no_existe": (df_removed["motivo"] == "solo_combinacion_no_existe").sum()
+}
+
+    # Añadir total al diccionario
+    conteo["total_eliminados"] = total_removed
+
+    current_app.logger.info(f"Diccionario {conteo}")
+
+    return df_filt, conteo
 
 
 def filter_by_time_range(df, start_time, end_time):
@@ -373,7 +416,7 @@ def unifyADFiles(df_A, df_D, save_path):
 
     # Extraer PDAS y Fechas compartidas
     current_app.logger.info(f'======================== SINCORNIZANDO DATAFRAMES')
-    df_D = align_one_df_on_zone_date(df_A, df_D)
+    df_D, aling_info = align_one_df_on_zone_date(df_A, df_D)
 
     current_app.logger.info("--------------- Calculando estadisticas")
     clean_df_info = calculate_base_statistics(df_A, df_D)
@@ -436,6 +479,7 @@ def unifyADFiles(df_A, df_D, save_path):
         "Informacion inicial": first_info,
         "Defectuoso": defective_info,
         "Duplicados": duplicates_info,
+        "Motivo eliminar sincronizacion": aling_info,
         "Información de sincronizacion": clean_df_info,
         #"Registros_no_usados": unused_info,
         "Registros_finales": len(df_E)
