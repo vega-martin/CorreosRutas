@@ -31,7 +31,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const inputTiempo = document.getElementById('filtroTiempo');
     const inputVelocidad = document.getElementById('filtroVelocidad');
 
-    const asociarPortalesBtn = document.getElementById('asociar-portales-btn');
+    // const asociarPortalesBtn = document.getElementById('asociar-portales-btn');
+
+    const btnAgruparPuntos = document.getElementById('btn-agrupar-puntos');
     
 
     // PAGINACIÓN Y RENDERIZADO
@@ -44,82 +46,84 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --------- FUNCIONES --------- //
     function renderPagina(pagina) {
-    const tbody = document.querySelector('#tablaDatos tbody');
-    tbody.innerHTML = "";
+        const tbody = document.querySelector('#tablaDatos tbody');
+        tbody.innerHTML = "";
 
-    const datos = filtradoActivo ? tablaFiltrada : tablaDatos;
+        const datos = filtradoActivo ? tablaFiltrada : tablaDatos;
 
-    // --- CÓDIGO DE MANEJO DE CERO RESULTADOS ---
-    if (datos.length === 0 && filtradoActivo) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td colspan="11" style="text-align: center; color: #cc3333; padding: 15px;">
-                ⚠️ No se encontraron registros que coincidan con los filtros aplicados.
-            </td>
-        `; 
-        // Nota: Ajusté el colspan a 11 para que cubra todas tus columnas
-        tbody.appendChild(tr);
-        
-        document.getElementById('paginador').style.display = 'none'; 
-        document.getElementById('pagina-info').textContent = 'Página 0 de 0';
-        return; 
-    }
-
-    const inicio = (pagina - 1) * filasPorPagina;
-    const fin = inicio + filasPorPagina;
-    const fragment = document.createDocumentFragment();
-
-    const filas = datos.slice(inicio, fin);
-    filas.forEach(fila => {
-        const tr = document.createElement('tr');
-        
-        let distanceFormateada = fila.distance;
-        
-        if (typeof fila.distance === 'number') {
-            distanceFormateada = fila.distance.toFixed(3); 
-        }
-
-        if (fila.esParada) {
-            tr.style.backgroundColor = "#F2FCFF";  // light blue
-        }
-
-        const celdas = [
-            fila.n,
-            fila.hora,
-            fila.longitud,
-            fila.latitud,
-            fila.distancia, // Esta es la otra distancia (sin redondear)
-            fila.tiempo,
-            fila.velocidad,
-            fila.street,    
-            fila.number,    
-            fila.post_code, 
-            distanceFormateada // Usamos la variable ya redondeada
-        ];
-        
-        celdas.forEach(valor => {
-            const td = document.createElement('td');
+        // --- CÓDIGO DE MANEJO DE CERO RESULTADOS ---
+        if (datos.length === 0 && filtradoActivo) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td colspan="11" style="text-align: center; color: #cc3333; padding: 15px;">
+                    ⚠️ No se encontraron registros que coincidan con los filtros aplicados.
+                </td>
+            `; 
+            // Nota: Ajusté el colspan a 11 para que cubra todas tus columnas
+            tbody.appendChild(tr);
             
-            if (valor === undefined || valor === null) {
-                td.textContent = '';
-            } else {
-                td.textContent = valor;
+            document.getElementById('paginador').style.display = 'none'; 
+            document.getElementById('pagina-info').textContent = 'Página 0 de 0';
+            return; 
+        }
+
+        const inicio = (pagina - 1) * filasPorPagina;
+        const fin = inicio + filasPorPagina;
+        const fragment = document.createDocumentFragment();
+
+        const filas = datos.slice(inicio, fin);
+        filas.forEach(fila => {
+            const tr = document.createElement('tr');
+            
+            let distanceFormateada = fila.distance;
+            
+            // if (typeof fila.distance === 'number') {
+            //     distanceFormateada = fila.distance.toFixed(3); 
+            // }
+
+            if (fila.esParada) {
+                tr.style.backgroundColor = "#F2FCFF";  // light blue
             }
-            tr.appendChild(td);
+
+            const fechaHora = `${fila.fecha}, ${fila.hora}`;
+            const calleCompleta = fila.street ? `${fila.street}, ${fila.number || ''}`.trim() : '';
+            const tipoCalle = parseInt(fila.number) % 2 === 0 ? 'Par' : 'Impar';
+
+            const celdas = [
+                fila.cod_pda,
+                fechaHora,
+                calleCompleta,
+                fila.nearest_longitud,
+                fila.nearest_latitud,
+                fila.distancia,
+                fila.tiempo,
+                fila.velocidad,
+                tipoCalle
+            ];
+            
+            celdas.forEach(valor => {
+                const td = document.createElement('td');
+                
+                if (valor === undefined || valor === null) {
+                    td.textContent = '';
+                } else {
+                    td.textContent = valor;
+                }
+                tr.appendChild(td);
+            });
+            fragment.appendChild(tr);
         });
-        fragment.appendChild(tr);
-    });
 
-        tbody.appendChild(fragment);
+            tbody.appendChild(fragment);
 
-        document.getElementById('pagina-info').textContent =
-            `Página ${pagina} de ${Math.ceil(datos.length / filasPorPagina)}`;
+            document.getElementById('pagina-info').textContent =
+                `Página ${pagina} de ${Math.ceil(datos.length / filasPorPagina)}`;
+            
+            document.getElementById('btn-prev').style.visibility = (pagina === 1) ? 'hidden' : 'visible';
+            document.getElementById('btn-next').style.visibility = pagina >= Math.ceil(datos.length / filasPorPagina) ? 'hidden' : 'visible';
+            
+            document.getElementById('paginador').style.display = 'flex';
         
-        document.getElementById('btn-prev').style.visibility = (pagina === 1) ? 'hidden' : 'visible';
-        document.getElementById('btn-next').style.visibility = pagina >= Math.ceil(datos.length / filasPorPagina) ? 'hidden' : 'visible';
-        
-        document.getElementById('paginador').style.display = 'flex';
-    
     }
     // --------- EVENTOS --------- //
     document.addEventListener('click', (e) => {
@@ -177,7 +181,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const cargarCodiredsInicial = () => {
         pdaOptions.innerHTML = '';
         pdaBtn.textContent = 'Selecciona una PDA';
-        pdaBtn.disabled = true; 
+        pdaBtn.disabled = true;
+        
+        nuevoGeojsonBtn.disabled = true;
         
         codiredBtn.textContent = 'Cargando códigos...';
         
@@ -219,6 +225,8 @@ document.addEventListener("DOMContentLoaded", () => {
         codiredInput.value = cod;
         
         codiredOptions.classList.remove('show');
+
+        nuevoGeojsonBtn.disabled = false;
         
         nuevoGeojson.className = "blue-label";
 
@@ -419,10 +427,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ cod, pda, ini })
             })
             .then(response => {
-                if (!response.ok) throw new Error("Error al obtener los datos del servidor");
+                console.log("📊 Respuesta datos_tabla:", response.status, response.statusText);
+                
+                if (!response.ok) {
+                    return response.json().then(errData => {
+                        console.error("❌ Error del servidor:", errData);
+                        throw new Error(errData.error || `Error HTTP ${response.status}`);
+                    }).catch(e => {
+                        throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
+                    });
+                }
                 return response.json();
             })
             .then(data => {
+                console.log("✅ Datos recibidos exitosamente:", data);
+                
                 // === Actualizar los resultados del resumen ===
                 const resumen = data.resumen;
                 document.getElementById('res-puntos').textContent = resumen.puntos_totales;
@@ -434,20 +453,27 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('titulo-pda').textContent = pda;
                 document.getElementById('titulo-fecha').textContent = ini + (fin ? " → " + fin : "");
         
-                // === Guardar los datos globalmente y renderizar ===
+                // Actualizar la tabla con los datos enriquecidos (con calle, número, etc.)
                 tablaDatos = data.tabla;
+                // Reiniciar paginación para mostrar desde el principio
                 paginaActual = 1;
+                filtradoActivo = false; // Resetear filtros para ver todo
                 renderPagina(paginaActual);
-        
+
                 // === Mostrar la tabla y los controles de paginación ===
                 document.getElementById('tabla-resultados').style.display = 'block';
                 document.getElementById('paginador').style.display = 'flex';
 
-                asociarPortalesBtn.disabled = false;
+                // asociarPortalesBtn.disabled = false;
+
+                if (btnAgruparPuntos) {
+                    btnAgruparPuntos.style.display = 'inline-block';
+                    btnAgruparPuntos.disabled = false;
+                }
             })
             .catch(err => {
-                console.error(err);
-                alert("Ocurrió un error al procesar la solicitud.");
+                console.error("❌ Error capturado:", err);
+                alert("Ocurrió un error al procesar la solicitud:\n\n" + err.message);
             });
         
             fetch('/generar_mapa/get_mapa', {
@@ -455,18 +481,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ cod, pda, ini })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) throw new Error("Error al cargar el mapa");
+                return response.json();
+            })
             .then(map_data => {
+                console.log("🗺️ Mapa cargado:", map_data.url);
                 document.getElementById('iMap').src = map_data.url;
+            })
+            .catch(err => {
+                console.error("❌ Error al cargar mapa:", err);
             });
         
         }
 
-        // Escucha el evento
+        // EVENTO GENERAR TABLA -------------------- //
         form.addEventListener("submit", (e) => {
             e.preventDefault(); // Evita el envío por defecto
             validarFormulario();
         });
+        // -------------------- //
     }
 
     if (btnPrev) {
@@ -580,58 +614,91 @@ document.addEventListener("DOMContentLoaded", () => {
         btnLimpiar.addEventListener('click', limpiarFiltros);
     }
 
-    // --------- LÓGICA BOTÓN ASOCIAR PORTALES --------- //
-    if (asociarPortalesBtn) {
-        asociarPortalesBtn.addEventListener('click', (e) => {
+    if (btnAgruparPuntos) {
+        btnAgruparPuntos.addEventListener('click', (e) => {
             e.preventDefault();
 
-            // Feedback visual de carga
-            const textoOriginal = asociarPortalesBtn.textContent;
-            asociarPortalesBtn.textContent = "Asociando...";
-            asociarPortalesBtn.disabled = true;
-            asociarPortalesBtn.style.cursor = "wait";
-            const cod = codiredInput.value;
+            console.log("🔗 Agrupando puntos duplicados...");
 
-            fetch('/clusterizar_portales', {
+            fetch('/agrupar_puntos', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cod })
             })
             .then(response => {
-                if (!response.ok) {
-                    // Intentar obtener mensaje de error del backend
-                    return response.json().then(errData => {
-                        const msg = (errData && errData.warnings && errData.warnings.length > 0) 
-                                    ? errData.warnings[0] 
-                                    : "Error desconocido al asociar portales.";
-                        throw new Error(msg);
-                    });
-                }
+                if (!response.ok) throw new Error("Error al agrupar puntos");
                 return response.json();
             })
             .then(data => {
-                // Actualizar la tabla con los datos enriquecidos (con calle, número, etc.)
+                console.log("✅ Puntos agrupados exitosamente", data);
+                
+                // Actualizar la tabla global
                 tablaDatos = data.tabla;
                 
-                // Reiniciar paginación para mostrar desde el principio
                 paginaActual = 1;
-                filtradoActivo = false; // Resetear filtros para ver todo
+                filtradoActivo = false;
                 renderPagina(paginaActual);
 
-                alert("Portales asociados correctamente.");
+                // alert("✅ Puntos agrupados correctamente");
             })
             .catch(err => {
-                console.error("Error:", err);
-                alert("Error: " + err.message);
-            })
-            .finally(() => {
-                // Restaurar estado del botón
-                asociarPortalesBtn.textContent = textoOriginal;
-                asociarPortalesBtn.disabled = false;
-                asociarPortalesBtn.style.cursor = "pointer";
+                console.error("❌ Error:", err);
+                alert("Error al agrupar puntos: " + err.message);
             });
-
         });
     }
+
+    // --------- LÓGICA BOTÓN ASOCIAR PORTALES --------- //
+    // if (asociarPortalesBtn) {
+    //     asociarPortalesBtn.addEventListener('click', (e) => {
+    //         e.preventDefault();
+
+    //         // Feedback visual de carga
+    //         const textoOriginal = asociarPortalesBtn.textContent;
+    //         asociarPortalesBtn.textContent = "Asociando...";
+    //         asociarPortalesBtn.disabled = true;
+    //         asociarPortalesBtn.style.cursor = "wait";
+    //         const cod = codiredInput.value;
+
+    //         fetch('/clusterizar_portales', {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             body: JSON.stringify({ cod })
+    //         })
+    //         .then(response => {
+    //             if (!response.ok) {
+    //                 // Intentar obtener mensaje de error del backend
+    //                 return response.json().then(errData => {
+    //                     const msg = (errData && errData.warnings && errData.warnings.length > 0) 
+    //                                 ? errData.warnings[0] 
+    //                                 : "Error desconocido al asociar portales.";
+    //                     throw new Error(msg);
+    //                 });
+    //             }
+    //             return response.json();
+    //         })
+    //         .then(data => {
+    //             // Actualizar la tabla con los datos enriquecidos (con calle, número, etc.)
+    //             tablaDatos = data.tabla;
+                
+    //             // Reiniciar paginación para mostrar desde el principio
+    //             paginaActual = 1;
+    //             filtradoActivo = false; // Resetear filtros para ver todo
+    //             renderPagina(paginaActual);
+
+    //             alert("Portales asociados correctamente.");
+    //         })
+    //         .catch(err => {
+    //             console.error("Error:", err);
+    //             alert("Error: " + err.message);
+    //         })
+    //         .finally(() => {
+    //             // Restaurar estado del botón
+    //             asociarPortalesBtn.textContent = textoOriginal;
+    //             asociarPortalesBtn.disabled = false;
+    //             asociarPortalesBtn.style.cursor = "pointer";
+    //         });
+
+    //     });
+    // }
 });
 

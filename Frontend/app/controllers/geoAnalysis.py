@@ -196,7 +196,7 @@ def initialize_global_tree(file_geojson):
 
 # --- FUNCIÓN PRINCIPAL ---
 
-def asociar_direcciones_a_puntos(datos_completos,file_geojson):
+def asociar_direcciones_a_puntos(datos_completos, file_geojson):
     """
     Función principal que construye el K-D Tree y asocia la dirección 
     más cercana a cada punto de la lista de usuario.
@@ -224,11 +224,15 @@ def asociar_direcciones_a_puntos(datos_completos,file_geojson):
                 point['street'] = nearest_info['street']
                 point['number'] = nearest_info['number']
                 point['post_code'] = nearest_info['post_code']
+                point['nearest_latitud'] = nearest_info['nearest_latitud']
+                point['nearest_longitud'] = nearest_info['nearest_longitud']
             else:
                 # Caso si el K-D Tree no se construyó o no encontró nada (p. ej., datos fuera de rango)
                 point['distance'] = 'N/A'
                 point['street'] = 'No encontrado'
                 point['number'] = 'N/A'
                 point['post_code'] = 'N/A'
+                point['nearest_latitud'] = 'N/A'
+                point['nearest_longitud'] = 'N/A'
         
     return datos_completos

@@ -73,8 +73,13 @@
                         Generar tabla
                     </button>
 
-                    <button type="button" class="generate-btn" id="asociar-portales-btn" disabled>
+                    <!-- <button type="button" class="generate-btn" id="asociar-portales-btn" disabled>
                         Asociar portales
+                    </button> -->
+
+                    <!-- Botón para agrupar puntos duplicados -->
+                    <button type="button" class="accept-btn" id="btn-agrupar-puntos" disabled>
+                        Agrupar Puntos
                     </button>
                 </form>
             </div>
@@ -170,17 +175,16 @@
         <table id="tablaDatos">
             <thead>
                 <tr>
-                    <th>nº punto</th>
-                    <th>hora</th>
-                    <th>longitud</th>
-                    <th>latitud</th>
-                    <th>distancia</th>
-                    <th>tiempo</th>
-                    <th>velocidad</th>
-                    <th>calle</th>
-                    <th>nº</th>
-                    <th>código postal</th>
-                    <th>distancia real (m)</th>
+                    <th>PDA</th>
+                    <th>Fecha y Hora</th>
+                    <!-- Calle, Nº  -->
+                    <th>Calle</th>
+                    <th>Longitud</th>
+                    <th>Latitud</th>
+                    <th>Distancia</th>
+                    <th>Tiempo</th>
+                    <th>Velocidad</th>
+                    <th>Tipo</th>
                 </tr>
             </thead>
             <tbody></tbody>

@@ -8,6 +8,8 @@ import pytz
 import json
 import requests
 from app.controllers.fileUpload import ensure_session_folder
+from .geoAnalysis import asociar_direcciones_a_puntos
+from pathlib import Path
 
 generateResults_bp = Blueprint('generateResults', __name__, template_folder='templates')
 
@@ -80,11 +82,11 @@ def calcular_metricas(df_filtrado):
 
     Parámetro:
         df_filtrado: DataFrame con columnas 
-                     ['fecha_hora', 'solo_fecha', 'solo_hora' 'longitud', 'latitud', 'esParada']
+                     ['fecha_hora', 'solo_fecha', 'solo_hora' 'longitud', 'latitud', 'esParada', 'cod_pda']
 
     Retorna:
         Diccionario con los campos:
-        tabla: {[{n, hora, longitud, latitud, distancia, tiempo, velocidad},...]},
+        tabla: {[{n, hora, longitud, latitud, distancia, tiempo, velocidad, cod_pda, fecha},...]},
         resumen: {puntos_totales, distancia_total, tiempo_total, velocidad_media}
     """
 
@@ -98,6 +100,8 @@ def calcular_metricas(df_filtrado):
 
         hora = fila['solo_hora']
         esParada = fila['esParada']
+        cod_pda = fila['cod_pda']
+        fecha = fila['solo_fecha']
 
         if ((fila['longitud'].count('.') <= 1) and (fila['latitud'].count('.') <= 1)):
             lon = float(str(fila['longitud']).replace(',', '.'))
@@ -164,7 +168,9 @@ def calcular_metricas(df_filtrado):
             "distancia": distancia,
             "tiempo": tiempo,
             "velocidad": velocidad,
-            "esParada": bool(esParada)
+            "esParada": bool(esParada),
+            "cod_pda": cod_pda,
+            "fecha": fecha
         })
 
     resumen = calcular_resumen(resultados)
@@ -205,7 +211,8 @@ def get_datos(cod, pda, fecha):
         return []
 
     # Extraer solo las columnas que interesan
-    columnas = ['fecha_hora', 'solo_fecha', 'solo_hora', 'longitud', 'latitud', 'esParada']
+    # CAMBIO: se añade cod_pda
+    columnas = ['fecha_hora', 'solo_fecha', 'solo_hora', 'longitud', 'latitud', 'esParada','cod_pda']
     df_filtrado = df_filtrado[columnas].dropna()
     resultados = calcular_metricas(df_filtrado)
 
@@ -383,6 +390,63 @@ def create_map(cod, pda, fecha):
     
     return save_map(cod, pda, fecha, mapa)
 
+def agrupar_puntos_duplicados(resultados):
+    """
+    Agrupa puntos consecutivos con las mismas coordenadas y suma sus tiempos.
+    
+    Parámetro:
+        resultados: lista de diccionarios con campos [n, hora, longitud, latitud, distancia, tiempo, velocidad, esParada, cod_pda, fecha, ...]
+    
+    Retorna:
+        lista de diccionarios con puntos agrupados y tiempos acumulados
+    """
+    
+    if not resultados:
+        return resultados
+    
+    resultados_agrupados = []
+    tiempo_acumulado = 0
+    velocidad_acumulada = 0
+    punto_anterior = None
+    indice = 1
+
+    for r in resultados:
+        # Crear tupla de coordenadas actual
+        coord_actual = (r['street'], r['number'])
+        
+        # Si es el primer punto o es diferente al anterior
+        if punto_anterior is None or coord_actual != punto_anterior:
+            # Si hay un punto anterior, actualizar su tiempo con el acumulado
+            if punto_anterior is not None and resultados_agrupados:
+                if tiempo_acumulado > 0:
+                    resultados_agrupados[-1]["tiempo"] = f"{int(tiempo_acumulado)} sec"
+                    resultados_agrupados[-1]["velocidad"] = f"{round(velocidad_acumulada / indice,2)} km/h"
+            
+            # Añadir el punto actual como nuevo punto
+            nuevo_punto = r.copy()
+            nuevo_punto["n"] = indice
+            resultados_agrupados.append(nuevo_punto)
+            tiempo_acumulado = 0
+            velocidad_acumulada = 0
+            punto_anterior = coord_actual
+            indice += 1
+        else:
+            # Mismo punto que el anterior, acumular tiempo
+            if r["tiempo"] != "-":
+                try:
+                    tiempo_sec = float(r["tiempo"].replace(" sec", ""))
+                    tiempo_acumulado += tiempo_sec
+                    velocidad_km_h = float(r["velocidad"].replace(" km/h",""))
+                    velocidad_acumulada += velocidad_km_h
+                except ValueError:
+                    pass
+
+    # No olvidar el último grupo
+    if resultados_agrupados and tiempo_acumulado > 0:
+        resultados_agrupados[-1]["tiempo"] = f"{int(tiempo_acumulado)} sec"
+
+    return resultados_agrupados
+
 # ------------------------------------------------------------
 # ENDPOINTS
 # ------------------------------------------------------------
@@ -432,6 +496,32 @@ def datos_tabla():
         return jsonify({"error": "Error al obtener los datos procesados."}), 500
     
     try:
+        # 2. Preparar la Clusterización (Lógica traída de clusterizar_portales)
+        static_dir = current_app.config.get("GEOJSON_FOLDER")
+        file_geojson = os.path.join(static_dir, f'{cod}.geojson')
+
+        # Verificar si existe el GeoJSON antes de procesar
+        if not os.path.exists(file_geojson):
+            current_app.logger.warning(f"No se encontró archivo GeoJSON en: {file_geojson}. Se devolverán datos sin clusterizar.")
+            # Si no hay mapa, usamos los datos originales sin procesar geometría
+            datos_finales = resultados['tabla']
+        else:
+            # Llamamos a la función de geoAnalysis directamente pasando la lista 'tabla'
+            puntos_asociados = asociar_direcciones_a_puntos(resultados['tabla'], file_geojson)
+
+            # Manejo de errores de la función de clusterización
+            if isinstance(puntos_asociados, dict) and 'error' in puntos_asociados:
+                current_app.logger.error(f"Error en clusterización: {puntos_asociados['error']}")
+                return jsonify({"error": f"Error al procesar mapa: {puntos_asociados['error']}"}), 500
+            
+            datos_finales = puntos_asociados
+        
+        
+        # datos_agrupados = agrupar_puntos_duplicados(datos_finales)
+        
+        # # Recalcular resumen con puntos agrupados
+        # resumen_actualizado = calcular_resumen(datos_agrupados)
+
         # Obtener la ruta de la carpeta única del usuario
         user_folder = ensure_session_folder() 
         
@@ -445,12 +535,16 @@ def datos_tabla():
         
         current_app.logger.info(f"Tabla procesada guardada en disco en: {str(save_path)}")
 
+        # 4. Actualizar el objeto resultados con la tabla procesada para el retorno
+        # resultados['tabla'] = datos_agrupados
+        # resultados['resumen'] = resumen_actualizado
+
+        # Devolvemos todo junto: tabla procesada + resumen + warnings
+        return jsonify(resultados)
 
     except Exception as e:
-        current_app.logger.error(f"Error al guardar datos procesados en disco: {e}")
-        return jsonify({"error": f"Error interno del servidor al guardar datos: {str(e)}"}), 500
-
-    return jsonify(resultados)
+        current_app.logger.error(f"Excepción en el proceso datos_tabla: {e}")
+        return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
 
 @generateResults_bp.route('/generar_mapa/get_mapa', methods=['GET', 'POST'])
 def get_mapa():
@@ -515,3 +609,50 @@ def getStadistics():
         mimetype="application/pdf",     # tipo MIME correcto
         headers={"Content-Disposition": "attachment; filename=estadisticas.pdf"}
     )
+
+@generateResults_bp.route('/agrupar_puntos', methods=['POST'])
+def agrupar_puntos():
+    """
+    Endpoint que recibe una tabla de puntos y los agrupa si tienen coordenadas duplicadas
+    """
+
+    # Obtener la ruta del archivo de la sesión
+    file_path = Path(os.path.join(current_app.config['UPLOAD_FOLDER'], session['id'], 'table_data.json'))
+    current_app.logger.info(f"La ruta donde se encuentran los datos es {file_path}")
+
+    datos_completos = []
+
+    # Comprobar si la ruta existe y si el archivo realmente está allí
+    if not file_path.exists():
+        current_app.logger.error(f"Ruta de archivo no encontrada en sesión o archivo no existe: {file_path}")
+        # Retorna una lista vacía si no hay datos disponibles
+        return jsonify({"tabla": [], "resumen": {}, "warnings": ["No hay datos cargados para filtrar mostrar."]})
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            datos_completos = json.load(f)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al leer o decodificar datos de usuario: {e}")
+        return jsonify({"tabla": [], "resumen": {}, "warnings": ["Error al cargar datos de usuario."]})
+
+    tabla = datos_completos
+
+    if not tabla:
+        return jsonify({"error": "No hay datos para agrupar"}), 400
+
+    try:
+        # Agrupar puntos duplicados
+        datos_agrupados = agrupar_puntos_duplicados(tabla)
+        
+        # Recalcular resumen con puntos agrupados
+        resumen_actualizado = calcular_resumen(datos_agrupados)
+
+        return jsonify({
+            "tabla": datos_agrupados,
+            "resumen": resumen_actualizado
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error al agrupar puntos: {e}")
+        return jsonify({"error": f"Error al agrupar puntos: {str(e)}"}), 500
