@@ -311,10 +311,16 @@ def create_map(cod, pda, fecha_ini, fecha_fin):
                'purple', 'red', 'green', 'lightred', 'darkblue', 'darkpurple',
                'cadetblue', 'orange', 'pink', 'darkgreen']
 
-    if len(pdas_unicas) != 1:
-        pda_colors = {pda: colores[i % len(colores)] for i, pda in enumerate(pdas_unicas)}
+    if pda == "TODAS":
+        # color per PDA
+        color_map = {pda_unica: colores[i % len(colores)]
+                    for i, pda_unica in enumerate(pdas_unicas)}
+        color_mode = "pda"
     else:
-        pda_colors = {pda: colores[i % len(colores)] for i, pda in enumerate(fechas_unicas)}
+        # only one PDA -> color per date if multiple dates
+        color_map = {dia: colores[i % len(colores)]
+                    for i, dia in enumerate(fechas_unicas)}
+        color_mode = "date"
 
     latitud_centrada = float(pd.to_numeric(df['latitud'].iloc[0].replace(",", "."), errors="coerce"))
     longitud_centrada = float(pd.to_numeric(df['longitud'].iloc[0].replace(",", "."), errors="coerce"))
@@ -324,8 +330,6 @@ def create_map(cod, pda, fecha_ini, fecha_fin):
     folium.TileLayer('CartoDB positron', name='Carto claro').add_to(mapa)
 
     for idx, pda_unica in enumerate(pdas_unicas):
-        if (len(pdas_unicas) != 1):
-            ruta_color = pda_colors[pda_unica]
         current_app.logger.info(f"Buscando fecha especifica en el df")
 
         # Filtrar por PDA y fecha (ignorando hora)
@@ -338,7 +342,11 @@ def create_map(cod, pda, fecha_ini, fecha_fin):
 
         dias = df_aux['solo_fecha'].unique()
         for dia in dias:
-            ruta_color = pda_colors[dia]
+            if color_mode == "pda":
+                ruta_color = color_map[pda_unica]
+            else:
+                ruta_color = color_map[dia]
+                
             df_filtrado = df_aux[df_aux['solo_fecha'] == dia].copy()
             if df_filtrado.empty:
                 current_app.logger.error(f"No hay datos para PDA={pda_unica} y fecha={dia}")
