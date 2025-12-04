@@ -420,7 +420,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 alert("Debes seleccionar una fecha de inicio.");
                 return false;
             }
-        
+            const t_inicio = performance.now();
             fetch('/generar_mapa/datos_tabla', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -440,6 +440,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return response.json();
             })
             .then(data => {
+                const t_fin = performance.now();
                 console.log("✅ Datos recibidos exitosamente:", data);
                 
                 // === Actualizar los resultados del resumen ===
@@ -448,7 +449,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('res-distancia').textContent = resumen.distancia_total;
                 document.getElementById('res-tiempo').textContent = resumen.tiempo_total;
                 document.getElementById('res-velocidad').textContent = resumen.velocidad_media;
-        
+                const segundos = (t_fin - t_inicio) / 1000;
+                document.getElementById('res-t-ejecucion').textContent = `${segundos.toFixed(3)} s`;
+
+
                 // === Actualizar los títulos ===
                 document.getElementById('titulo-pda').textContent = pda;
                 document.getElementById('titulo-fecha').textContent = ini + (fin ? " → " + fin : "");
