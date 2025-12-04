@@ -42,6 +42,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // const asociarPortalesBtn = document.getElementById('asociar-portales-btn');
 
     const btnAgruparPuntos = document.getElementById('btn-agrupar-puntos');
+
+    const btnDescargarTabla = document.getElementById('descargarTabla');
     
 
     // PAGINACIÓN Y RENDERIZADO
@@ -183,6 +185,32 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             console.error(err);
             alert('Error al subir el GeoJSON');
+        }
+    });
+
+    btnDescargarTabla.addEventListener("click", async () => {
+        try {
+            const response = await fetch("/getTable", {  method: "GET",  });
+
+            if (!response.ok) {
+                throw new Error("Error al descargar el PDF");
+            }
+            // Convertir la respuesta a Blob
+            const blob = await response.blob();
+            // Crear URL temporal
+            const url = window.URL.createObjectURL(blob);
+            // Crear enlace temporal para forzar la descarga
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "tabla.csv";
+            document.body.appendChild(a);
+            a.click();
+            // Limpiar
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error(error);
+            alert("No se pudo descargar el PDF");
         }
     });
 

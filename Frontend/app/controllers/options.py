@@ -1,11 +1,11 @@
-from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template
+from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template, Response
 from pathlib import Path
 from .geoAnalysis import asociar_direcciones_a_puntos
 import pandas as pd
 import numpy as np
 import re
 import json
-import os
+import os, io, csv
 
 options_bp = Blueprint('options', __name__, template_folder='templates')
 
@@ -306,3 +306,35 @@ def clusterizar_portales():
 
     # Retorno Final: Devolvemos la lista de puntos de usuario enriquecidos
     return jsonify({"tabla": puntos_asociados, "resumen": {}, "warnings": []}), 200
+
+
+@options_bp.route("/getTable", methods=["GET"])
+def get_table():
+    # Ruta del JSON local
+    json_path = os.path.join(current_app.config["UPLOAD_FOLDER"], session.get("id"), "table_data.json")
+
+    if not os.path.exists(json_path):
+        return "JSON file not found", 404
+
+    # Leer JSON
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    if not isinstance(data, list) or len(data) == 0:
+        return "JSON empty or invalid", 400
+
+    # Convertir a CSV en memoria
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=data[0].keys(), delimiter=';')
+    writer.writeheader()
+    writer.writerows(data)
+    csv_data = output.getvalue()
+
+    # Enviar a frontend como archivo descargable
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=tabla.csv"
+        }
+    )

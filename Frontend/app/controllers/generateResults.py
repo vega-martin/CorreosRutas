@@ -778,6 +778,15 @@ def agrupar_puntos():
     try:
         # Agrupar puntos duplicados
         datos_agrupados = agrupar_puntos_duplicados(tabla)
+
+        # Reescribir json de la tabla con los portales
+        upload_folder = current_app.config.get("UPLOAD_FOLDER")
+        processed_filename = 'table_data.json'
+        save_path = os.path.join(upload_folder, session.get("id"), processed_filename)
+        
+        # Guardar la lista de diccionarios (el valor de 'tabla') en el disco
+        with open(save_path, 'w', encoding='utf-8') as f:
+            json.dump(datos_agrupados, f, ensure_ascii=False, indent=4)
         
         # Recalcular resumen con puntos agrupados
         resumen_actualizado = calcular_resumen(datos_agrupados)

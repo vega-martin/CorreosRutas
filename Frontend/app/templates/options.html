@@ -171,8 +171,10 @@
 
     <!-- Tabla de resultados del codigo de unidad, PDA y fecha -->
     <div id="tabla-resultados" style="display:none;">
-        <h2>Resultados — <span id="titulo-pda"></span> (<span id="titulo-fecha"></span>)</h2>
-
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>Resultados — <span id="titulo-pda"></span> (<span id="titulo-fecha"></span>)</h2>
+            <button class="generate-btn" id="descargarTabla">Descargar tabla</button>
+        </div>
         <table id="tablaDatos">
             <thead>
                 <tr>
