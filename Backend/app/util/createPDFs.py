@@ -288,7 +288,7 @@ def getInfo(path, type):
         <br/>
         """
         union = f"""
-        Registro del fichero B eliminados durante la sincronización (descartados):<br/>
+        Registros del fichero D eliminados durante la sincronización (descartados):<br/>
            + Totales: {my_dict["Motivo eliminar sincronizacion"]["total_eliminados"]} registros.<br/>
            - PDA no encontrada en el fichero A: {my_dict["Motivo eliminar sincronizacion"]["solo_cod_pda_no_existe"]} registros.<br/>
            - Fecha no encontrada en el fichero A: {my_dict["Motivo eliminar sincronizacion"]["solo_fecha_no_existe"]} registros.<br/>
