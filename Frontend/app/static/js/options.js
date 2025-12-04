@@ -1,4 +1,12 @@
+function showLoading() {
+    $("#loadingOverlay").css("display", "flex");
+}
+function hideLoading() {
+    $("#loadingOverlay").css("display", "none");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+    hideLoading();
     // --------- VARIABLES GLOBALES --------- //
     // Formulario completo
     const codiredBtn = document.getElementById('codiredBtn');
@@ -385,6 +393,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (form) {
+        // EVENTO GENERAR TABLA -------------------- //
+        form.addEventListener("submit", (e) => {
+            e.preventDefault(); // Evita el envío por defecto
+            showLoading();
+            validarFormulario();
+        });
+        // -------------------- //
         // Validar formulario
         async function validarFormulario() {
             const cod = codiredInput.value;
@@ -402,35 +417,41 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await res.json();
 
             if (!data.exists) {
+                hideLoading();
                 alert("No hay un GeoJSON cargado. Debes cargar uno.");
                 return false;
             }
         
             if (!cod) {
+                hideLoading();
                 alert("Debes introducir un código de unidad.");
                 return false;
             }
         
             if (!pda) {
+                hideLoading();
                 alert("Debes seleccionar una PDA.");
                 return false;
             }
         
             if (!ini) {
+                hideLoading();
                 alert("Debes seleccionar una fecha de inicio.");
                 return false;
             }
 
             if (ini > fin) {
-                    alert("La fecha de fin debe ser mayor que la de inicio.");
-                    return false;
-                }
+                hideLoading();
+                alert("La fecha de fin debe ser mayor que la de inicio.");
+                return false;
+            }
 
             if (!fin) {
                 fin = ini;
             }
 
             const t_inicio = performance.now();
+            
             fetch('/generar_mapa/datos_tabla', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -492,8 +513,11 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(err => {
                 console.error("❌ Error capturado:", err);
                 alert("Ocurrió un error al procesar la solicitud:\n\n" + err.message);
+            })
+            .finally(() => {
+                hideLoading();
             });
-        
+            
             fetch('/generar_mapa/get_mapa', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -510,15 +534,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(err => {
                 console.error("❌ Error al cargar mapa:", err);
             });
-        
         }
-
-        // EVENTO GENERAR TABLA -------------------- //
-        form.addEventListener("submit", (e) => {
-            e.preventDefault(); // Evita el envío por defecto
-            validarFormulario();
-        });
-        // -------------------- //
     }
 
     if (btnPrev) {

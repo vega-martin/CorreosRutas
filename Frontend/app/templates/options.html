@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="/static/js/options.js"></script>
 
     <form action="{{ url_for('main.root') }}" method="get">
@@ -201,6 +201,9 @@
             </button>
         </div>
 
+    </div>
+    <div id="loadingOverlay" style="display: flex;">
+        <div class="loader"></div>
     </div>
 
 {% endblock %}
