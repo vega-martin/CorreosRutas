@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import folium
 import os
-import pytz
+import urllib
 import json
 import requests
 from app.controllers.fileUpload import ensure_session_folder
@@ -91,87 +91,99 @@ def calcular_metricas(df_filtrado):
     """
 
     # Asegurar que el DataFrame esté ordenado por fecha/hora
-    df_filtrado = df_filtrado.sort_values('fecha_hora').reset_index(drop=True)
+    df_filtrado = df_filtrado.sort_values(['cod_pda', 'fecha_hora'], ascending=[True, True]).reset_index(drop=True)
+
+    # Obtener todos los dias
+    dias = df_filtrado['solo_fecha'].unique()
 
     resultados = []
 
-    for i in range(len(df_filtrado)):
-        fila = df_filtrado.iloc[i]
+    # Recorrer todos los dias
+    for dia in dias:
+        df_diario = df_filtrado[df_filtrado['solo_fecha'] == dia]
+        # Obtener todas las pdas del dia
+        pdas = df_filtrado['cod_pda'].unique()
+        for pda in pdas:
+            df_diario_pda = df_diario[df_diario['cod_pda'] == pda]
 
-        hora = fila['solo_hora']
-        esParada = fila['esParada']
-        cod_pda = fila['cod_pda']
-        fecha = fila['solo_fecha']
+            # Generar datos de cada df por dia
+            for i in range(len(df_diario_pda)):
+                fila = df_diario_pda.iloc[i]
 
-        if ((fila['longitud'].count('.') <= 1) and (fila['latitud'].count('.') <= 1)):
-            lon = float(str(fila['longitud']).replace(',', '.'))
-            lat = float(str(fila['latitud']).replace(',', '.'))
-        else:
-            lon_int = fila['longitud'].replace('.', '')
-            lon_float = lon_int[:2] + '.' + lon_int[2:]
-            lon = float(lon_float)
-            lat_int = fila['latitud'].replace('.', '')
-            lat_float = lat_int[:2] + '.' + lat_int[2:]
-            lat = float(lat_float)
+                hora = fila['solo_hora']
+                esParada = fila['esParada']
+                cod_pda = fila['cod_pda']
+                fecha = fila['solo_fecha']
 
-        # Primer punto
-        if i == 0:
-            distancia = "-"
-            tiempo = "-"
-            velocidad = "-"
-        else:
-            fila_prev = df_filtrado.iloc[i - 1]
+                if ((fila['longitud'].count('.') <= 1) and (fila['latitud'].count('.') <= 1)):
+                    lon = float(str(fila['longitud']).replace(',', '.'))
+                    lat = float(str(fila['latitud']).replace(',', '.'))
+                else:
+                    lon_int = fila['longitud'].replace('.', '')
+                    lon_float = lon_int[:2] + '.' + lon_int[2:]
+                    lon = float(lon_float)
+                    lat_int = fila['latitud'].replace('.', '')
+                    lat_float = lat_int[:2] + '.' + lat_int[2:]
+                    lat = float(lat_float)
 
-            # Calcular distancia (en km)
-            if ((fila_prev['longitud'].count('.') <= 1) and (fila_prev['latitud'].count('.') <= 1)):
-                punto1 = (float(str(fila_prev['latitud']).replace(',', '.')), float(str(fila_prev['longitud']).replace(',', '.')))
-            else:
-                lon_int = ''.join(fila_prev['longitud'].split('.'))
-                lon_float = lon_int[:2] + '.' + lon_int[2:]
-                lon2 = float(lon_float)
-                lat_int = ''.join(fila_prev['latitud'].split('.'))
-                lat_float = lat_int[:2] + '.' + lat_int[2:]
-                lat2 = float(lat_float)
-                punto1 = (lat2, lon2)
-            punto2 = (lat, lon)
+                # Primer punto
+                if i == 0:
+                    distancia = "-"
+                    tiempo = "-"
+                    velocidad = "-"
+                else:
+                    fila_prev = df_diario_pda.iloc[i - 1]
 
-                        
-            try:
-                distancia_km = geodesic(punto1, punto2).kilometers
-                distancia_m = geodesic(punto1, punto2).meters
-            except Exception:
-                flash("Error: El punto no es válido", 'warning')
-            
+                    # Calcular distancia (en km)
+                    if ((fila_prev['longitud'].count('.') <= 1) and (fila_prev['latitud'].count('.') <= 1)):
+                        punto1 = (float(str(fila_prev['latitud']).replace(',', '.')), float(str(fila_prev['longitud']).replace(',', '.')))
+                    else:
+                        lon_int = ''.join(fila_prev['longitud'].split('.'))
+                        lon_float = lon_int[:2] + '.' + lon_int[2:]
+                        lon2 = float(lon_float)
+                        lat_int = ''.join(fila_prev['latitud'].split('.'))
+                        lat_float = lat_int[:2] + '.' + lat_int[2:]
+                        lat2 = float(lat_float)
+                        punto1 = (lat2, lon2)
+                    punto2 = (lat, lon)
 
-            # Calcular tiempo en horas
-            hora_i = pd.to_datetime(fila['solo_hora'], format='%H:%M:%S')
-            hora_prev = pd.to_datetime(fila_prev['solo_hora'], format='%H:%M:%S')
-            delta_t = int((hora_i - hora_prev).total_seconds())
-            tiempo_horas = delta_t / 3600.0
+                                
+                    try:
+                        distancia_km = geodesic(punto1, punto2).kilometers
+                        distancia_m = geodesic(punto1, punto2).meters
+                    except Exception:
+                        flash("Error: El punto no es válido", 'warning')
+                    
 
-            # Calcular velocidad (km/h)
-            if tiempo_horas > 0:
-                velocidad_kmh = distancia_km / tiempo_horas
-            else:
-                velocidad_kmh = 0.0
+                    # Calcular tiempo en horas
+                    hora_i = pd.to_datetime(fila['solo_hora'], format='%H:%M:%S')
+                    hora_prev = pd.to_datetime(fila_prev['solo_hora'], format='%H:%M:%S')
+                    delta_t = int((hora_i - hora_prev).total_seconds())
+                    tiempo_horas = delta_t / 3600.0
 
-            # Formatear resultados legibles
-            distancia = f"{distancia_m:.3f} m"
-            tiempo = f"{int(delta_t)} sec"
-            velocidad = f"{velocidad_kmh:.2f} km/h"
+                    # Calcular velocidad (km/h)
+                    if tiempo_horas > 0:
+                        velocidad_kmh = distancia_km / tiempo_horas
+                    else:
+                        velocidad_kmh = 0.0
 
-        resultados.append({
-            "n": i + 1,
-            "hora": hora,
-            "longitud": lon,
-            "latitud": lat,
-            "distancia": distancia,
-            "tiempo": tiempo,
-            "velocidad": velocidad,
-            "esParada": bool(esParada),
-            "cod_pda": cod_pda,
-            "fecha": fecha
-        })
+                    # Formatear resultados legibles
+                    distancia = f"{distancia_m:.3f} m"
+                    tiempo = f"{int(delta_t)} sec"
+                    velocidad = f"{velocidad_kmh:.2f} km/h"
+
+                resultados.append({
+                    "n": i + 1,
+                    "hora": hora,
+                    "longitud": lon,
+                    "latitud": lat,
+                    "distancia": distancia,
+                    "tiempo": tiempo,
+                    "velocidad": velocidad,
+                    "esParada": bool(esParada),
+                    "cod_pda": cod_pda,
+                    "fecha": fecha
+                })
 
     resumen = calcular_resumen(resultados)
 
@@ -179,7 +191,7 @@ def calcular_metricas(df_filtrado):
 
 
 
-def get_datos(cod, pda, fecha):
+def get_datos(cod, pda, fecha_ini, fecha_fin):
     """
     Devuelve un diccionario con los cambios tabla y resumen
     """
@@ -196,18 +208,25 @@ def get_datos(cod, pda, fecha):
     
     df = df[df['codired'] == int(cod)]
 
-    # Filtrar por PDA y fecha (ignorando hora)
-    if (pda == "TODAS"):
-        df_filtrado = df[(df['solo_fecha'] == fecha)].copy()
+    # --- FILTRO POR PDA ---
+    if pda == "TODAS":
+        df_aux = df
     else:
-        df_filtrado = df[
-            (df['cod_pda'] == pda) &
-            (df['solo_fecha'] == fecha)
-        ].copy()
+        df_aux = df[df['cod_pda'] == pda]
 
+    # --- FILTRO POR FECHA SIN HORA
+    if fecha_fin:  
+        # rango de fechas
+        df_filtrado = df_aux[
+            (df_aux['solo_fecha'] >= fecha_ini) &
+            (df_aux['solo_fecha'] <= fecha_fin)
+        ].copy()
+    else:
+        # solo una fecha
+        df_filtrado = df_aux[df_aux['solo_fecha'] == fecha_ini].copy()
 
     if df_filtrado.empty:
-        current_app.logger.error(f"No hay datos para PDA={pda} y fecha={fecha}")
+        current_app.logger.error(f"No hay datos para PDA={pda} y fecha={fecha_ini}")
         return []
 
     # Extraer solo las columnas que interesan
@@ -262,7 +281,7 @@ def save_map(cod, pda, fecha, map):
 
 
 
-def create_map(cod, pda, fecha):
+def create_map(cod, pda, fecha_ini, fecha_fin):
     """Crea un archivo html temporal con el mapa y agrega la dirección a la sesion"""
     # Obtener fichero
     uploaded = session.get('uploaded_files', {})
@@ -283,11 +302,19 @@ def create_map(cod, pda, fecha):
     else:
         pdas_unicas = [pda]
     
+    if (fecha_ini != fecha_fin):
+        fechas_unicas = df['solo_fecha'].unique().tolist()
+    else:
+        fechas_unicas = [fecha_ini]
+    
     colores = ['black', 'lightblue', 'blue', 'darkred', 'lightgreen',
                'purple', 'red', 'green', 'lightred', 'darkblue', 'darkpurple',
                'cadetblue', 'orange', 'pink', 'darkgreen']
 
-    pda_colors = {pda: colores[i % len(colores)] for i, pda in enumerate(pdas_unicas)}
+    if len(pdas_unicas) != 1:
+        pda_colors = {pda: colores[i % len(colores)] for i, pda in enumerate(pdas_unicas)}
+    else:
+        pda_colors = {pda: colores[i % len(colores)] for i, pda in enumerate(fechas_unicas)}
 
     latitud_centrada = float(pd.to_numeric(df['latitud'].iloc[0].replace(",", "."), errors="coerce"))
     longitud_centrada = float(pd.to_numeric(df['longitud'].iloc[0].replace(",", "."), errors="coerce"))
@@ -297,97 +324,104 @@ def create_map(cod, pda, fecha):
     folium.TileLayer('CartoDB positron', name='Carto claro').add_to(mapa)
 
     for idx, pda_unica in enumerate(pdas_unicas):
-        ruta_color = pda_colors[pda_unica]
+        if (len(pdas_unicas) != 1):
+            ruta_color = pda_colors[pda_unica]
         current_app.logger.info(f"Buscando fecha especifica en el df")
 
         # Filtrar por PDA y fecha (ignorando hora)
-        df_filtrado = df[
-            (df['cod_pda'] == pda_unica) &
-            (df['solo_fecha'] == fecha)
+        df_aux = df[df['cod_pda'] == pda_unica].copy()
+
+        df_aux = df_aux[
+            (df_aux['solo_fecha'] >= fecha_ini) &
+            (df_aux['solo_fecha'] <= fecha_fin)
         ].copy()
 
-        if df_filtrado.empty:
-            current_app.logger.error(f"No hay datos para PDA={pda_unica} y fecha={fecha}")
-            continue
+        dias = df_aux['solo_fecha'].unique()
+        for dia in dias:
+            ruta_color = pda_colors[dia]
+            df_filtrado = df_aux[df_aux['solo_fecha'] == dia].copy()
+            if df_filtrado.empty:
+                current_app.logger.error(f"No hay datos para PDA={pda_unica} y fecha={dia}")
+                continue
 
-        df_filtrado = df_filtrado.sort_values('solo_hora')
+            df_filtrado = df_filtrado.sort_values('solo_hora')
 
-        current_app.logger.info(f"Creando mapa con {len(df_filtrado)} registros")
+            current_app.logger.info(f"Creando mapa con {len(df_filtrado)} registros")
 
-        # Contamos cuántos puntos hay en cada valor
-        df_filtrado['num_pts_lon'] = df_filtrado['longitud'].astype(str).str.count(r'\.')
-        df_filtrado['num_pts_lat'] = df_filtrado['latitud'].astype(str).str.count(r'\.')
+            # Contamos cuántos puntos hay en cada valor
+            df_filtrado['num_pts_lon'] = df_filtrado['longitud'].astype(str).str.count(r'\.')
+            df_filtrado['num_pts_lat'] = df_filtrado['latitud'].astype(str).str.count(r'\.')
 
-        # Comprobamos la media (o el valor típico) de puntos
-        media_lon = df_filtrado['num_pts_lon'].mean()
-        media_lat = df_filtrado['num_pts_lat'].mean()
+            # Comprobamos la media (o el valor típico) de puntos
+            media_lon = df_filtrado['num_pts_lon'].mean()
+            media_lat = df_filtrado['num_pts_lat'].mean()
 
-        if ((media_lon <= 1) and (media_lat <= 1)):
-            current_app.logger.info(f"Probando formato correcto de coordenadas")
-            # Pasar de string a num
-            df_filtrado['latitud'] = df_filtrado['latitud'].astype(str).str.replace(',', '.')
-            df_filtrado['longitud'] = df_filtrado['longitud'].astype(str).str.replace(',', '.')
+            if ((media_lon <= 1) and (media_lat <= 1)):
+                current_app.logger.info(f"Probando formato correcto de coordenadas")
+                # Pasar de string a num
+                df_filtrado['latitud'] = df_filtrado['latitud'].astype(str).str.replace(',', '.')
+                df_filtrado['longitud'] = df_filtrado['longitud'].astype(str).str.replace(',', '.')
 
-            df_filtrado['latitud'] = pd.to_numeric(df_filtrado['latitud'], errors='coerce')
-            df_filtrado['longitud'] = pd.to_numeric(df_filtrado['longitud'], errors='coerce')
-        else:
-            df_filtrado['latitud'] = df_filtrado['latitud'].astype(str).str.replace('.', '', regex=False)
-            df_filtrado['longitud'] = df_filtrado['longitud'].astype(str).str.replace('.', '', regex=False)
-
-            current_app.logger.info(f"Probando a corregir coordenadas")
-            # Corregir coordenadas ----------------------------
-            df_filtrado['latitud'] = corregir_coordenada(df_filtrado['latitud'])
-            df_filtrado['longitud'] = corregir_coordenada(df_filtrado['longitud'])
-
-        df_filtrado.dropna()
-        current_app.logger.info(f"Quedan {len(df_filtrado)} registros para generar el mapa")
-
-        coordenadas = []
-
-        for _, fila in df_filtrado.iterrows():
-            coord = [fila['latitud'], fila['longitud']]
-            coordenadas.append(coord)
-            if bool(fila['esParada']):
-                my_color = ruta_color
-                my_opcacity = 1
+                df_filtrado['latitud'] = pd.to_numeric(df_filtrado['latitud'], errors='coerce')
+                df_filtrado['longitud'] = pd.to_numeric(df_filtrado['longitud'], errors='coerce')
             else:
-                my_color = ruta_color
-                my_opcacity = 0.7
-            my_radius = 4
-            folium.CircleMarker(
-                location=coord,
-                radius=my_radius,
-                stroke=False,
-                fill=True,
-                fill_color=my_color,
-                fill_opacity=my_opcacity,
-                popup=f"{my_radius}px",
-                tooltip=f"PDA: {pda_unica}<br>Fecha: {fila['fecha_hora']}<br>Coordenada: {fila['latitud']}, {fila['longitud']}"
+                df_filtrado['latitud'] = df_filtrado['latitud'].astype(str).str.replace('.', '', regex=False)
+                df_filtrado['longitud'] = df_filtrado['longitud'].astype(str).str.replace('.', '', regex=False)
+
+                current_app.logger.info(f"Probando a corregir coordenadas")
+                # Corregir coordenadas ----------------------------
+                df_filtrado['latitud'] = corregir_coordenada(df_filtrado['latitud'])
+                df_filtrado['longitud'] = corregir_coordenada(df_filtrado['longitud'])
+
+            df_filtrado.dropna()
+            current_app.logger.info(f"Quedan {len(df_filtrado)} registros para generar el mapa")
+
+            coordenadas = []
+
+            for _, fila in df_filtrado.iterrows():
+                coord = [fila['latitud'], fila['longitud']]
+                coordenadas.append(coord)
+                if bool(fila['esParada']):
+                    my_color = ruta_color
+                    my_opcacity = 1
+                else:
+                    my_color = ruta_color
+                    my_opcacity = 0.7
+                my_radius = 4
+                folium.CircleMarker(
+                    location=coord,
+                    radius=my_radius,
+                    stroke=False,
+                    fill=True,
+                    fill_color=my_color,
+                    fill_opacity=my_opcacity,
+                    popup=f"{my_radius}px",
+                    tooltip=f"PDA: {pda_unica}<br>Fecha: {fila['fecha_hora']}<br>Coordenada: {fila['latitud']}, {fila['longitud']}"
+                ).add_to(mapa)
+
+            for i in range(len(coordenadas)-1):
+                folium.PolyLine(
+                    locations=[coordenadas[i], coordenadas[i+1]],
+                    color=ruta_color,
+                    weight=2,
+                    opacity=0.4
+                ).add_to(mapa)
+            
+            inicio = df_filtrado.iloc[0]
+            folium.Marker(
+                location=[inicio['latitud'], fila['longitud']],
+                icon=folium.Icon(color='green', icon='play', prefix='fa'),
+                popup="INICIO"
             ).add_to(mapa)
 
-        for i in range(len(coordenadas)-1):
-            folium.PolyLine(
-                locations=[coordenadas[i], coordenadas[i+1]],
-                color=ruta_color,
-                weight=2,
-                opacity=0.4
+            fin = df_filtrado.iloc[-1]
+            folium.Marker(
+                location=[fin['latitud'], fin['longitud']],
+                icon=folium.Icon(color='red', icon='play', prefix='fa'),
+                popup="FIN"
             ).add_to(mapa)
-        
-        inicio = df_filtrado.iloc[0]
-        folium.Marker(
-            location=[inicio['latitud'], fila['longitud']],
-            icon=folium.Icon(color='green', icon='play', prefix='fa'),
-            popup="INICIO"
-        ).add_to(mapa)
-
-        fin = df_filtrado.iloc[-1]
-        folium.Marker(
-            location=[fin['latitud'], fin['longitud']],
-            icon=folium.Icon(color='red', icon='play', prefix='fa'),
-            popup="FIN"
-        ).add_to(mapa)
-        current_app.logger.info(f"Mapa creado")
-    
+            current_app.logger.info(f"Mapa creado")
+    fecha = f"{fecha_ini}-{fecha_fin}"
     return save_map(cod, pda, fecha, mapa)
 
 def agrupar_puntos_duplicados(resultados):
@@ -482,13 +516,14 @@ def datos_tabla():
     cod = data.get('cod')
     pda = data.get('pda')
     ini = data.get('ini')
+    fin = data.get('fin')
 
     # TODO: cambiar para que llame a la API del backend y no lo haga aqui
 
     # Los argumentos son strings, por ejemplo
     # pda = "PDA01"
     # ini = "2025-10-18"
-    resultados = get_datos(cod, pda, ini)
+    resultados = get_datos(cod, pda, ini, fin)
 
     # Almacenar datos tabla en carpeta del usuario
     if not isinstance(resultados, dict) or 'tabla' not in resultados:
@@ -552,24 +587,35 @@ def get_mapa():
     cod = data.get('cod')
     pda = data.get('pda')
     ini = data.get('ini')
+    fin = data.get('fin')
 
     # TODO: cambiar para que llame a la API del backend y no lo haga aqui
 
-    created_maps = session.get('created_maps', [])
-    map = pda + "_" + ini
-    if map in created_maps:
-        path = "/static/maps/" + cod + "/" + map + ".html"
-        current_app.logger.info(f"Mapa ya creado. Url del mapa para la {pda}: {path}")
-        return jsonify({'url': path})
+    #created_maps = session.get('created_maps', [])
+    #map = pda + "_" + ini
+    #if map in created_maps:
+    #    path = "/static/maps/" + cod + "/" + map + ".html"
+    #    current_app.logger.info(f"Mapa ya creado. Url del mapa para la {pda}: {path}")
+    #    return jsonify({'url': path})
 
-    abs_path = create_map(cod, pda, ini)
+    if pda == "TODAS" and ini != fin:
+        html = """
+        <html><body style="font-family:sans-serif;text-align:center;padding:20px;">
+            <h2>Mapa no disponible</h2>
+            <p>No se puede generar un mapa para varias fechas cuando PDA = TODAS.</p>
+        </body></html>
+        """
+        data_url = "data:text/html," + urllib.parse.quote(html)
+        return jsonify({'url': data_url})
+
+    abs_path = create_map(cod, pda, ini, fin)
     current_app.logger.info(f"Ruta absoluta del mapa: {abs_path}")
     base_dir = current_app.config.get("BASE_DIR")
     base_dir = os.path.join(base_dir, "app")
     path = os.path.relpath(abs_path, base_dir)
-    created_maps.append(map)
-    session["created_maps"] = created_maps
-    current_app.logger.info(f"Nuevo mapa creado. Mapas creados: {created_maps}")
+    #created_maps.append(map)
+    #session["created_maps"] = created_maps
+    #current_app.logger.info(f"Nuevo mapa creado. Mapas creados: {created_maps}")
     current_app.logger.info(f"Url del mapa para la {pda}: {path}")
     return jsonify({'url': path})
 

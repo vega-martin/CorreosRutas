@@ -328,7 +328,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 .then(data => {
                     if (data.fechas && data.fechas.length > 0) {
                         fechaInicio.disabled = false;
-                        fechaFin.disabled = true;
+                        fechaFin.disabled = false;
 
                         fechasDisponibles = new Set(data.fechas);
 
@@ -420,11 +420,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 alert("Debes seleccionar una fecha de inicio.");
                 return false;
             }
+
+            if (ini > fin) {
+                    alert("La fecha de fin debe ser mayor que la de inicio.");
+                    return false;
+                }
+
+            if (!fin) {
+                fin = ini;
+            }
+
             const t_inicio = performance.now();
             fetch('/generar_mapa/datos_tabla', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cod, pda, ini })
+                body: JSON.stringify({ cod, pda, ini, fin })
             })
             .then(response => {
                 console.log("📊 Respuesta datos_tabla:", response.status, response.statusText);
@@ -455,7 +465,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 // === Actualizar los títulos ===
                 document.getElementById('titulo-pda').textContent = pda;
-                document.getElementById('titulo-fecha').textContent = ini + (fin ? " → " + fin : "");
+                if (ini === fin) {
+                    document.getElementById('titulo-fecha').textContent = ini;
+                } else {
+                    document.getElementById('titulo-fecha').textContent = ini + (fin ? " → " + fin : "");
+                }
         
                 // Actualizar la tabla con los datos enriquecidos (con calle, número, etc.)
                 tablaDatos = data.tabla;
@@ -483,7 +497,7 @@ document.addEventListener("DOMContentLoaded", () => {
             fetch('/generar_mapa/get_mapa', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cod, pda, ini })
+                body: JSON.stringify({ cod, pda, ini, fin })
             })
             .then(response => {
                 if (!response.ok) throw new Error("Error al cargar el mapa");
