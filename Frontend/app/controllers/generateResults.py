@@ -346,7 +346,7 @@ def create_map(cod, pda, fecha_ini, fecha_fin):
                 ruta_color = color_map[pda_unica]
             else:
                 ruta_color = color_map[dia]
-                
+
             df_filtrado = df_aux[df_aux['solo_fecha'] == dia].copy()
             if df_filtrado.empty:
                 current_app.logger.error(f"No hay datos para PDA={pda_unica} y fecha={dia}")
@@ -489,6 +489,80 @@ def agrupar_puntos_duplicados(resultados):
 
     return resultados_agrupados
 
+
+def conteo_tipo_de_calles(datos):
+    """
+    Funcion que cuenta el num de par/impar y zigzag por cada calle
+    de la tabla.
+    Devuleve un diccionario con la siugiente estructura:
+    resultado = {
+        "nombre_calle": {
+            "par/impar": num1,
+            "zigzag": num2
+            "tipo": "par/impar o zigzag"
+        }
+    }
+    """
+    resultado = {}
+
+    # Recorremos pares consecutivos
+    for i in range(1, len(datos)):
+        actual = datos[i]
+        anterior = datos[i - 1]
+
+        calle_act = actual["street"]
+        calle_ant = anterior["street"]
+
+        # Solo comparamos si es la misma calle
+        if calle_act != calle_ant:
+            continue
+
+        # Convertir números a enteros
+        try:
+            num_act = int(actual["number"])
+            num_ant = int(anterior["number"])
+        except ValueError:
+            # Si algún número no es válido, saltamos comparación
+            continue
+
+        # Inicializar estructura si no existe
+        if calle_act not in resultado:
+            resultado[calle_act] = {
+                "par/impar": 0,
+                "zigzag": 0,
+                "tipo": ""
+            }
+
+        mismo_tipo = (num_act % 2) == (num_ant % 2)
+
+        if mismo_tipo:
+            resultado[calle_act]["par/impar"] += 1
+        else:
+            resultado[calle_act]["zigzag"] += 1
+
+    # Determinar tipo dominante por cada calle
+    for calle, valores in resultado.items():
+        if valores["par/impar"] >= valores["zigzag"]:
+            valores["tipo"] = "par/impar"
+        else:
+            valores["tipo"] = "zigzag"
+
+    return resultado
+
+
+def asignar_tipo_de_calle(datos, conteo):
+    """
+    A partir del conteo asignar el tipo de calle a cada uno de los pts
+    """
+    for dato in datos:
+        calle = dato["street"]
+        if calle in conteo:
+            dato["tipo"] = conteo[calle]["tipo"]
+        else:
+            dato["tipo"] = "-"
+    return datos
+
+
 # ------------------------------------------------------------
 # ENDPOINTS
 # ------------------------------------------------------------
@@ -549,6 +623,7 @@ def datos_tabla():
             # Si no hay mapa, usamos los datos originales sin procesar geometría
             datos_finales = resultados['tabla']
         else:
+            current_app.logger.error(f"Empezando asignacion de portales...")
             # Llamamos a la función de geoAnalysis directamente pasando la lista 'tabla'
             puntos_asociados = asociar_direcciones_a_puntos(resultados['tabla'], file_geojson)
 
@@ -558,6 +633,11 @@ def datos_tabla():
                 return jsonify({"error": f"Error al procesar mapa: {puntos_asociados['error']}"}), 500
             
             datos_finales = puntos_asociados
+            current_app.logger.error(f"Empezando conteo de par/impar y zigzag...")
+            conteo = conteo_tipo_de_calles(resultados['tabla'])
+            asignar_tipo_de_calle(resultados['tabla'], conteo)
+
+
         
         
         # datos_agrupados = agrupar_puntos_duplicados(datos_finales)

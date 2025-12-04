@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const fechaHora = `${fila.fecha}, ${fila.hora}`;
             const calleCompleta = fila.street ? `${fila.street}, ${fila.number || ''}`.trim() : '';
-            const tipoCalle = parseInt(fila.number) % 2 === 0 ? 'Par' : 'Impar';
+            //const tipoCalle = parseInt(fila.number) % 2 === 0 ? 'Par' : 'Impar';
 
             const celdas = [
                 fila.cod_pda,
@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 fila.distancia,
                 fila.tiempo,
                 fila.velocidad,
-                tipoCalle
+                fila.tipo
             ];
             
             celdas.forEach(valor => {
