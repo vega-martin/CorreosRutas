@@ -108,7 +108,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 fila.distancia,
                 fila.tiempo,
                 fila.velocidad,
-                fila.tipo
+                fila.tipo,
+                fila.conteo_par_impar,
+                fila.conteo_zigzag
             ];
             
             celdas.forEach(valor => {

@@ -557,8 +557,12 @@ def asignar_tipo_de_calle(datos, conteo):
     for dato in datos:
         calle = dato["street"]
         if calle in conteo:
+            dato["conteo_par_impar"] = conteo[calle]["par/impar"]
+            dato["conteo_zigzag"] = conteo[calle]["zigzag"]
             dato["tipo"] = conteo[calle]["tipo"]
         else:
+            dato["conteo_par_impar"] = "-"
+            dato["conteo_zigzag"] = "-"
             dato["tipo"] = "-"
     return datos
 
