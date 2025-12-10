@@ -40,7 +40,6 @@
                         Nuevo GeoJSON subido correctamente.
                     </p>
 
-
                     <h2>Seleccionar PDA</h2>
                     <div class="custom-select">
                         <button type="button" class="select-btn" id="pdaBtn" disabled>Selecciona una PDA</button>
@@ -51,7 +50,6 @@
 
                     <div id="waitMessage"></div>
 
-                    <br><br>
                     
                     <input type="hidden" name="pda" id="pdaInput">
                     
@@ -73,13 +71,28 @@
                         Generar tabla
                     </button>
 
-                    <!-- <button type="button" class="generate-btn" id="asociar-portales-btn" disabled>
-                        Asociar portales
-                    </button> -->
-
-                    <!-- Botón para agrupar puntos duplicados -->
+                    <!-- Botón para agrupar puntos duplicados por rutas -->
                     <button type="button" class="accept-btn" id="btn-agrupar-puntos" disabled>
-                        Agrupar Puntos
+                        Compactar ruta
+                    </button>
+                    <br><br>
+                    <!-- Botón para agrupar puntos duplicados por portales -->
+                    <button type="button" class="accept-btn" id="btn-agrupar-portales" disabled>
+                        Compactar portales
+                    </button>
+                    <br><br>
+
+                    <!-- Seleccion metodo de agrupamiento -->
+                    <div class="custom-select">
+                        <button type="button" class="select-btn" id="agrupamientoBtn" disabled>Selecciona metodo de agrupamiento</button>
+                        <div class="options" id="agrupamientoOptions">
+                             <div data-value="tiempo">Por tiempo</div>
+                             <div data-value="distancia">Por distancia</div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="agrupamiento" id="agrupamientoInput">
+                    <button type="button" class="accept-btn" id="btn-agrupar-general" disabled>
+                        Agrupar
                     </button>
                 </form>
             </div>

@@ -39,9 +39,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const inputTiempo = document.getElementById('filtroTiempo');
     const inputVelocidad = document.getElementById('filtroVelocidad');
 
-    // const asociarPortalesBtn = document.getElementById('asociar-portales-btn');
-
+    // Botones agrupamiento
     const btnAgruparPuntos = document.getElementById('btn-agrupar-puntos');
+    const btnAgruparPortales = document.getElementById('btn-agrupar-portales');
+    const btnAgruparGeneral = document.getElementById('btn-agrupar-general');
+
+    const agrupamientoBtn = document.getElementById('agrupamientoBtn');
+    const agrupamientoOptions = document.getElementById('agrupamientoOptions');
+    const agrupamientoInput = document.getElementById('agrupamientoInput');
 
     const btnDescargarTabla = document.getElementById('descargarTabla');
     
@@ -195,7 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch("/getTable", {  method: "GET",  });
 
             if (!response.ok) {
-                throw new Error("Error al descargar el PDF");
+                throw new Error("Error al descargar el CSV");
             }
             // Convertir la respuesta a Blob
             const blob = await response.blob();
@@ -488,11 +493,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ cod, pda, ini, fin })
             })
             .then(response => {
-                console.log("📊 Respuesta datos_tabla:", response.status, response.statusText);
+                console.log("Respuesta datos_tabla:", response.status, response.statusText);
                 
                 if (!response.ok) {
                     return response.json().then(errData => {
-                        console.error("❌ Error del servidor:", errData);
+                        console.error("Error del servidor:", errData);
                         throw new Error(errData.error || `Error HTTP ${response.status}`);
                     }).catch(e => {
                         throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
@@ -502,7 +507,7 @@ document.addEventListener("DOMContentLoaded", () => {
             })
             .then(data => {
                 const t_fin = performance.now();
-                console.log("✅ Datos recibidos exitosamente:", data);
+                console.log("Datos recibidos exitosamente:", data);
                 
                 // === Actualizar los resultados del resumen ===
                 const resumen = data.resumen;
@@ -533,7 +538,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('tabla-resultados').style.display = 'block';
                 document.getElementById('paginador').style.display = 'flex';
 
-                // asociarPortalesBtn.disabled = false;
 
                 if (btnAgruparPuntos) {
                     btnAgruparPuntos.style.display = 'inline-block';
@@ -541,7 +545,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             })
             .catch(err => {
-                console.error("❌ Error capturado:", err);
+                console.error("Error capturado:", err);
                 alert("Ocurrió un error al procesar la solicitud:\n\n" + err.message);
             })
             .finally(() => {
@@ -558,11 +562,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 return response.json();
             })
             .then(map_data => {
-                console.log("🗺️ Mapa cargado:", map_data.url);
+                console.log("Mapa cargado:", map_data.url);
                 document.getElementById('iMap').src = map_data.url;
             })
             .catch(err => {
-                console.error("❌ Error al cargar mapa:", err);
+                console.error("Error al cargar mapa:", err);
             });
         }
     }
@@ -682,7 +686,7 @@ document.addEventListener("DOMContentLoaded", () => {
         btnAgruparPuntos.addEventListener('click', (e) => {
             e.preventDefault();
 
-            console.log("🔗 Agrupando puntos duplicados...");
+            console.log("Agrupando puntos duplicados...");
 
             fetch('/agrupar_puntos', {
                 method: 'POST',
@@ -693,7 +697,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return response.json();
             })
             .then(data => {
-                console.log("✅ Puntos agrupados exitosamente", data);
+                console.log("Puntos agrupados exitosamente", data);
                 
                 // Actualizar la tabla global
                 tablaDatos = data.tabla;
@@ -702,67 +706,107 @@ document.addEventListener("DOMContentLoaded", () => {
                 filtradoActivo = false;
                 renderPagina(paginaActual);
 
-                // alert("✅ Puntos agrupados correctamente");
+                // alert("Puntos agrupados correctamente");
             })
             .catch(err => {
-                console.error("❌ Error:", err);
+                console.error("Error:", err);
                 alert("Error al agrupar puntos: " + err.message);
+            });
+            btnAgruparPortales.disabled = false;
+            btnAgruparPuntos.disabled = true;
+        });
+    }
+
+    if (btnAgruparPortales) {
+        btnAgruparPortales.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            console.log("Agrupando portales...");
+/*
+            fetch('/agrupar_portales', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            })
+            .then(response => {
+                if (!response.ok) throw new Error("Error al agrupar portales");
+                return response.json();
+            })
+            .then(data => {
+                console.log("Portales agrupados exitosamente", data);
+                
+                // Actualizar la tabla global
+                tablaDatos = data.tabla;
+                
+                paginaActual = 1;
+                filtradoActivo = false;
+                renderPagina(paginaActual);
+            })
+            .catch(err => {
+                console.error("Error:", err);
+                alert("Error al agrupar portales: " + err.message);
+            });
+*/
+            btnAgruparPortales.disabled = true;
+            btnAgruparGeneral.disabled = false;
+            agrupamientoBtn.disabled = false;
+        });
+    }
+
+    if (agrupamientoBtn) { 
+        agrupamientoBtn.addEventListener('click', () => {
+            agrupamientoOptions.classList.toggle('show');
+        });
+
+        const optionElements = agrupamientoOptions.querySelectorAll("div");
+
+        optionElements.forEach(option => {
+            option.addEventListener('click', () => {
+                const value = option.dataset.value;
+                agrupamientoInput.value = value;
+                agrupamientoBtn.textContent = option.textContent;
+                agrupamientoOptions.classList.remove('show');
             });
         });
     }
 
-    // --------- LÓGICA BOTÓN ASOCIAR PORTALES --------- //
-    // if (asociarPortalesBtn) {
-    //     asociarPortalesBtn.addEventListener('click', (e) => {
-    //         e.preventDefault();
+    if (btnAgruparGeneral) {
+        btnAgruparGeneral.addEventListener('click', (e) => {
+            e.preventDefault();
 
-    //         // Feedback visual de carga
-    //         const textoOriginal = asociarPortalesBtn.textContent;
-    //         asociarPortalesBtn.textContent = "Asociando...";
-    //         asociarPortalesBtn.disabled = true;
-    //         asociarPortalesBtn.style.cursor = "wait";
-    //         const cod = codiredInput.value;
+            if(!agrupamientoInput) {
+                alert("Seleccione un método de agrupamiento.");
+                return;
+            }
 
-    //         fetch('/clusterizar_portales', {
-    //             method: 'POST',
-    //             headers: { 'Content-Type': 'application/json' },
-    //             body: JSON.stringify({ cod })
-    //         })
-    //         .then(response => {
-    //             if (!response.ok) {
-    //                 // Intentar obtener mensaje de error del backend
-    //                 return response.json().then(errData => {
-    //                     const msg = (errData && errData.warnings && errData.warnings.length > 0) 
-    //                                 ? errData.warnings[0] 
-    //                                 : "Error desconocido al asociar portales.";
-    //                     throw new Error(msg);
-    //                 });
-    //             }
-    //             return response.json();
-    //         })
-    //         .then(data => {
-    //             // Actualizar la tabla con los datos enriquecidos (con calle, número, etc.)
-    //             tablaDatos = data.tabla;
+            const agrupamiento = agrupamientoInput.value;
+
+            console.log("Agrupando portales...");
+/*
+            fetch('/agrupar_por_tipo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ agrupamiento })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error("Error al agrupar portales");
+                return response.json();
+            })
+            .then(data => {
+                console.log("Portales agrupados exitosamente", data);
                 
-    //             // Reiniciar paginación para mostrar desde el principio
-    //             paginaActual = 1;
-    //             filtradoActivo = false; // Resetear filtros para ver todo
-    //             renderPagina(paginaActual);
-
-    //             alert("Portales asociados correctamente.");
-    //         })
-    //         .catch(err => {
-    //             console.error("Error:", err);
-    //             alert("Error: " + err.message);
-    //         })
-    //         .finally(() => {
-    //             // Restaurar estado del botón
-    //             asociarPortalesBtn.textContent = textoOriginal;
-    //             asociarPortalesBtn.disabled = false;
-    //             asociarPortalesBtn.style.cursor = "pointer";
-    //         });
-
-    //     });
-    // }
+                // Actualizar la tabla global
+                tablaDatos = data.tabla;
+                
+                paginaActual = 1;
+                filtradoActivo = false;
+                renderPagina(paginaActual);
+            })
+            .catch(err => {
+                console.error("Error:", err);
+                alert("Error al agrupar portales: " + err.message);
+            });
+*/
+        });
+    }
 });
 
