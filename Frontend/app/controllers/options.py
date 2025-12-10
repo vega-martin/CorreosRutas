@@ -322,6 +322,18 @@ def get_table():
 
     if not isinstance(data, list) or len(data) == 0:
         return "JSON empty or invalid", 400
+    
+    for dato in data:
+        dato['longitud'] = str(dato['longitud']).replace('.', ',')
+        dato['latitud'] = str(dato['latitud']).replace('.', ',')
+        dato['distance'] = str(dato['distance']).replace('.', ',')
+        dato['nearest_latitud'] = str(dato['nearest_latitud']).replace('.', ',')
+        dato['nearest_longitud'] = str(dato['nearest_longitud']).replace('.', ',')
+        dato['distancia'] = str(dato['distancia']).replace(' m', '').replace('.', ',')
+        dato['tiempo'] = str(dato['tiempo']).replace(' sec', '')
+        dato['velocidad'] = str(dato['velocidad']).replace(' km/h', '').replace('.', ',')
+        
+
 
     # Convertir a CSV en memoria
     output = io.StringIO()
@@ -330,9 +342,12 @@ def get_table():
     writer.writerows(data)
     csv_data = output.getvalue()
 
+    # Ponerle el BOM a los datos
+    csv_text = '\ufeff' + output.getvalue()
+
     # Enviar a frontend como archivo descargable
     return Response(
-        csv_data,
+        csv_text,
         mimetype="text/csv",
         headers={
             "Content-Disposition": "attachment; filename=tabla.csv"
