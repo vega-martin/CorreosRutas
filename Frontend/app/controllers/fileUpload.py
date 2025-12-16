@@ -206,9 +206,9 @@ def try_unify_all_files():
     """
     # Comprobar si estan o no todos los ficheros
     uploaded_files = session.get("uploaded_files", {})
-    ready = all(f in uploaded_files and uploaded_files[f] != '' for f in ('A', 'B', 'C'))
+    files_ready = all(f in uploaded_files and uploaded_files[f] != '' for f in ('A', 'B', 'C'))
 
-    if ready:
+    if files_ready:
         # Mandar a unificar los 3 ficheros
         data = {
             "id": session.get("id")
@@ -221,6 +221,9 @@ def try_unify_all_files():
             backend_unify_response = requests.post(f"{api_url}/unifyAllFiles", data=data)
             backend_unify_response.raise_for_status()
 
+            if backend_unify_response.status_code != 200:
+                return jsonify({"ready": False})
+
             # Check if the response has content
             if backend_unify_response.content:
                 unify_data = backend_unify_response.json()
@@ -230,4 +233,4 @@ def try_unify_all_files():
         except requests.exceptions.RequestException as e:
             unify_data = {"logs": f"Error al llamar al backend: {e}"}
 
-    return jsonify({"ready": ready})
+    return jsonify({"ready": files_ready})

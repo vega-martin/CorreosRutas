@@ -3,6 +3,15 @@
 {% block content %}
 
     <script src="/static/js/index.js"></script>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <script type="text/javascript">
+                    alert("{{ message }}");
+                </script>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
 
     <h1>Visualizador de puntos de parada</h1>
 
