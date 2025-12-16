@@ -195,10 +195,13 @@ def unifyBCFiles(df_B, df_C, save_path):
 
     # Eliminar PDAs defectuosas
     current_app.logger.info(f'======================== ELIMINANDO PDAS DEFECTUOSAS')
+    VALORES_DEFECTUOSOS = ['#N/D', '#N/A', '', 'NULL']
     current_app.logger.info("--------------- Procesando Fichero B")
-    df_B = df_B[df_B['cod_pda'].str.startswith('PDA')]
+    df_B['cod_pda'] = df_B['cod_pda'].replace(VALORES_DEFECTUOSOS, pd.NA)
+    df_B = df_B[df_B['cod_pda'].notna()]
     current_app.logger.info("--------------- Procesando Fichero C")
-    df_C = df_C[df_C['cod_pda'].str.startswith('PDA')]
+    df_C['cod_pda'] = df_C['cod_pda'].replace(VALORES_DEFECTUOSOS, pd.NA)
+    df_C = df_C[df_C['cod_pda'].notna()]
     current_app.logger.info("--------------- Calculando estadisticas")
     pda_erase_info = calculate_base_statistics(df_B, df_C)
 
@@ -302,10 +305,15 @@ def unifyBCFiles(df_B, df_C, save_path):
     total_not_used = unmerged_rows + C_not_used
     dates_D = df_D['solo_fecha'].sort_values().unique()
     dates_D_length = len(dates_D)
-    not_used_day_mean = total_not_used/dates_D_length
-    B_not_used_day_mean = unmerged_rows/dates_D_length
-    C_not_used_day_mean = C_not_used/dates_D_length
-
+    if (dates_D_length != 0):
+        not_used_day_mean = total_not_used/dates_D_length
+        B_not_used_day_mean = unmerged_rows/dates_D_length
+        C_not_used_day_mean = C_not_used/dates_D_length
+    else:
+        not_used_day_mean = 0
+        B_not_used_day_mean = 0
+        C_not_used_day_mean = 0
+    
     unused_info = {
         "Totales no usados en la union": total_not_used,
         "B_no_usados en la union": unmerged_rows,
@@ -346,13 +354,16 @@ def unifyADFiles(df_A, df_D, save_path):
 
     # Eliminar PDAs defectuosas
     current_app.logger.info(f'======================== ELIMINANDO PDAS DEFECTUOSAS')
+    VALORES_DEFECTUOSOS = ['#N/D', '#N/A', '', 'NULL']
     current_app.logger.info("--------------- Procesando Fichero A")
     before_A_length = len(df_A)
-    df_A = df_A[df_A['cod_pda'].str.startswith('PDA')]
+    df_A['cod_pda'] = df_A['cod_pda'].replace(VALORES_DEFECTUOSOS, pd.NA)
+    df_A = df_A[df_A['cod_pda'].notna()]
     pda_A_length = before_A_length - len(df_A)
     current_app.logger.info("--------------- Procesando Fichero D")
     before_D_length = len(df_D)
-    df_D = df_D[df_D['cod_pda'].str.startswith('PDA')]
+    df_D['cod_pda'] = df_D['cod_pda'].replace(VALORES_DEFECTUOSOS, pd.NA)
+    df_D = df_D[df_D['cod_pda'].notna()]
     pda_D_length = before_D_length - len(df_D)
 
     # Eliminar fechas defectuosas
