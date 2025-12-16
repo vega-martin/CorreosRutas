@@ -13,7 +13,6 @@ options_bp = Blueprint('options', __name__, template_folder='templates')
 def options():
     return render_template('options.html')
 
-
 def get_fechas_por_pda(df, pda):
     df_filtrado = df[df['cod_pda'] == pda]
     fechas = sorted(df_filtrado['solo_fecha'].dropna().unique())
@@ -198,7 +197,23 @@ def filtrar_registros():
     
     # Preparar los datos para el filtrado
     resultados_filtrados = datos_completos.copy()
-    
+
+    # Filtrar por PDA si se ha proporcionado
+    signoPda = data.get('signoPDA')
+    valorPda = data.get('pda')
+
+    current_app.logger.info(f"Valor de la PDA {valorPda} y signo {signoPda}")
+    if signoPda == "igual" and valorPda:
+        resultados_filtrados = [
+                fila for fila in resultados_filtrados
+                if fila.get('cod_pda') == valorPda
+            ] 
+    elif signoPda == "no-igual" and valorPda:
+        resultados_filtrados = [
+                fila for fila in resultados_filtrados
+                if fila.get('cod_pda') != valorPda
+            ]
+
     # Aplicar los filtros iterativamente
     for filtro in filtros_recibidos:
         

@@ -154,6 +154,21 @@
                     </select>
                     <input type="number" name="filtroVelocidad" id="filtroVelocidad" placeholder="Velocidad">
                     <br><br>
+
+                    <label for="filtro-pda">PDA:</label>
+                    <select class="select-sign-btn" name="pda-signo" id="pda-signo">
+                        <option value="igual">=</option>
+                        <option value="no-igual">&ne;</option>
+                    </select>
+                    
+                    <button type="button" class="select-btn" id="pdaBtnFilter" disabled>Selecciona una PDA</button>
+                    <div class="options" id="pdaOptionsFilter">
+                        <!-- Las opciones se llenan dinámicamente con JavaScript -->
+                    </div>
+
+                    <input type="hidden" name="pda" id="pdaInputFilter">
+
+                    <br><br>
                     
                     <!-- Divisón botones de filtros -->
                     <div class="filter-actions"> 

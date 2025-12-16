@@ -547,6 +547,15 @@ table th {
     animation: spin 1s linear infinite;
 }
 
+#pdaOptionsFilter {
+    max-width: 200px;
+}
+
+#pdaOptionsFilter {
+    width: 100%;
+    max-width: 200px;
+}
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }

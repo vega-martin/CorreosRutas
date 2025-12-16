@@ -22,6 +22,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const pdaOptions = document.getElementById('pdaOptions');
     const pdaInput = document.getElementById('pdaInput');
 
+    const pdaBtnFilter = document.getElementById('pdaBtnFilter');
+    const pdaOptionsFilter = document.getElementById('pdaOptionsFilter');
+    const pdaInputFilter = document.getElementById('pdaInputFilter');
+
+
     const waitMessage = document.getElementById('waitMessage');
 
     const fechaInicio = document.getElementById('fechaInicio');
@@ -38,6 +43,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const inputDistancia = document.getElementById('filtroDistancia');
     const inputTiempo = document.getElementById('filtroTiempo');
     const inputVelocidad = document.getElementById('filtroVelocidad');
+    const inputPDA = document.getElementById('pdaInputFilter');
+    const signoPDA = document.getElementById('signoPDA');
 
     // Botones agrupamiento
     const btnAgruparPuntos = document.getElementById('btn-agrupar-puntos');
@@ -301,8 +308,8 @@ document.addEventListener("DOMContentLoaded", () => {
         fechaFin.disabled = true;
         fechaInicio.value = "";
         fechaFin.value = "";
-        
-        cargarPdas(cod); 
+
+        cargarPdas(cod);
     };
 
     const cargarPdas = (cod) => {
@@ -343,6 +350,38 @@ document.addEventListener("DOMContentLoaded", () => {
             pdaBtn.disabled = false;
             pdaInput.value = "";
             pdaBtn.textContent = "PDAs no encontradas";
+        });
+    };
+
+    const cargarPdasFiltrar = (cod) => {
+        fetch(`/pda_por_codired?cod=${encodeURIComponent(cod)}`)
+        .then(response => response.json())
+        .then(data => {
+            const pdas = data.pdas;
+            pdaOptions.innerHTML = "";
+
+            if (pdas.length === 0) {
+                pdaOptions.innerHTML = "<div>No hay PDAs disponibles</div>";
+            } else {
+                // Crear los divs de las opciones
+                pdas.forEach(pda => {
+                    const div = document.createElement("div");
+                    div.dataset.value = pda;
+                    div.textContent = pda;
+
+                    attachPdaClickHandler(div, pda);
+
+                    pdaOptions.appendChild(div);
+                });
+            }
+            // Activar el dropdown
+            pdaBtnFilter.textContent = "Selecciona una PDA";
+            pdaBtnFilter.disabled = false;
+        })
+        .catch(err => {
+            pdaBtnFilter.disabled = false;
+            pdaInput.value = "";
+            pdaBtnFilter.textContent = "PDAs no encontradas";
         });
     };
 
@@ -508,6 +547,25 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(data => {
                 const t_fin = performance.now();
                 console.log("Datos recibidos exitosamente:", data);
+
+                // === Actualizar el select de PDAs en filtros ===
+                const pdas = [...new Set(data.tabla.map(row => row.cod_pda))];
+                pdaOptionsFilter.innerHTML = '';
+                pdas.forEach(pda => {
+                    const div = document.createElement('div');
+                    div.classList.add('option-item');
+                    div.dataset.value = pda;
+                    div.textContent = pda;
+
+                    div.addEventListener('click', () => {
+                        handlePdaFilterSelection(pda);
+                    });
+
+                    pdaOptionsFilter.appendChild(div);
+                });
+
+                // Habilitar botón de filtro PDA
+                pdaBtnFilter.disabled = false;
                 
                 // === Actualizar los resultados del resumen ===
                 const resumen = data.resumen;
@@ -543,6 +601,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     btnAgruparPuntos.style.display = 'inline-block';
                     btnAgruparPuntos.disabled = false;
                 }
+
             })
             .catch(err => {
                 console.error("Error capturado:", err);
@@ -569,6 +628,37 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.error("Error al cargar mapa:", err);
             });
         }
+
+        if (pdaInput.value === "TODAS") {
+            const pdaOptionsFilterContainer = document.getElementById('pdaOptionsFilter');
+            pdaOptionsFilterContainer.innerHTML = "";
+
+            fetch(`/pda_por_codired?cod=${encodeURIComponent(codiredInput.value)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const pdas = data.pdas;
+
+                    if (pdas.length === 0) {
+                        pdaOptionsFilterContainer.innerHTML = "<div>No hay PDAs disponibles</div>";
+                    } else {
+                        pdas.forEach(pda => {
+                            const div = document.createElement("div");
+                            div.dataset.value = pda;
+                            div.textContent = pda;
+
+                            div.addEventListener('click', () => {
+                                pdaInputFilter.value = pda;
+                                pdaOptionsFilterContainer.classList.remove('show');
+                            });
+
+                            pdaOptionsFilterContainer.appendChild(div);
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error("Error al cargar PDAs para los filtros:", err);
+                });
+        }
     }
 
     if (btnPrev) {
@@ -590,6 +680,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (btnFilter) {
+
         btnFilter.addEventListener('click', (e) => {
             e.preventDefault();
 
@@ -598,9 +689,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const valueDistancia = document.getElementById('filtroDistancia').value;
             const valueTiempo = document.getElementById('filtroTiempo').value;
             const valueVelocidad = document.getElementById('filtroVelocidad').value;
+            const valuePDA = document.getElementById('pdaInputFilter').value;
             
             
-            if (!valueDistancia && !valueTiempo && !valueVelocidad){
+            if (!valueDistancia && !valueTiempo && !valueVelocidad && !valuePDA) {
                 alert("Debes seleccionar algún filtro.");
                 return false;
             }
@@ -610,6 +702,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const inputSignoDistancia = document.getElementById('distancia-signo').value;
             const inputSignoTiempo = document.getElementById('tiempo-signo').value;
             const inputSignoVelocidad = document.getElementById('velocidad-signo').value;
+            const inputSignoPDA = document.getElementById('pda-signo').value;
 
             fetch('/filtrar_registros', {
                 method: 'POST',
@@ -620,7 +713,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     tiempo : valueTiempo,
                     signoTiempo : inputSignoTiempo,
                     velocidad : valueVelocidad,
-                    signoVelocidad : inputSignoVelocidad,
+                    signoVelocidad: inputSignoVelocidad,
+                    pda: valuePDA,
+                    signoPDA: inputSignoPDA
                 })
             })
             .then(response => {
@@ -658,17 +753,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+    if (pdaBtnFilter) {
+        pdaBtnFilter.addEventListener('click', (e) => {
+            e.preventDefault();
+            pdaOptionsFilter.classList.toggle('show');
+        });
+    }
+
+    // Manejar selección de PDA en filtros
+    const handlePdaFilterSelection = (pda) => {
+        pdaBtnFilter.textContent = pda;
+        pdaInputFilter.value = pda;
+        pdaOptionsFilter.classList.remove('show');
+    };
+
+    // Cerrar dropdown al clickear fuera
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#pdaBtnFilter') && !e.target.closest('#pdaOptionsFilter')) {
+            pdaOptionsFilter.classList.remove('show');
+        }
+    });
+
     if (btnLimpiar) {
 
         function limpiarFiltros() {
             inputDistancia.value = '';
             inputTiempo.value = '';
             inputVelocidad.value = '';
-            
+            inputPDA.value = '';  // Limpiar el campo PDA
+
             // Establecer signos por defecto
             document.getElementById('distancia-signo').value = 'menor'; 
             document.getElementById('tiempo-signo').value = 'menor';
             document.getElementById('velocidad-signo').value = 'menor';
+            document.getElementById('pda-signo').value = 'igual';
 
             // Reiniciar el estado de filtrado
             filtradoActivo = false;
