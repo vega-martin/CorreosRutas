@@ -221,6 +221,9 @@ def try_unify_all_files():
             backend_unify_response = requests.post(f"{api_url}/unifyAllFiles", data=data)
             backend_unify_response.raise_for_status()
 
+            if backend_unify_response.status_code != 200:
+                return jsonify({"ready": False})
+
             # Check if the response has content
             if backend_unify_response.content:
                 unify_data = backend_unify_response.json()
