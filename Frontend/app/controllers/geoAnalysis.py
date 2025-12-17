@@ -6,7 +6,7 @@ import os
 from pyproj import Geod
 import numpy as np
 
-KD_TREE_ROOT = None
+kd_tree_dic = {}
 
 # Clase nodo para almacenar los datos
 class Node:
@@ -173,9 +173,9 @@ def find_nearest_address(kd_tree_root, target_lat, target_lon):
         }
     return None
 
-def initialize_global_tree(file_geojson):
-    global KD_TREE_ROOT
-    if KD_TREE_ROOT is not None: return
+def initialize_global_tree(file_geojson, cod):
+    global kd_tree_dic
+    if cod in kd_tree_dic: return
 
     if not os.path.exists(file_geojson):
         return
@@ -191,23 +191,27 @@ def initialize_global_tree(file_geojson):
         metadata_array = df_geojson['feature_original'].to_numpy()
 
         KD_TREE_ROOT = create_kd_tree_optimized(coord_array, metadata_array)
+
+        kd_tree_dic[cod] = KD_TREE_ROOT
     except Exception as e:
         return
 
 # --- FUNCIÓN PRINCIPAL ---
 
-def asociar_direcciones_a_puntos(datos_completos, file_geojson):
+def asociar_direcciones_a_puntos(datos_completos, file_geojson, cod):
     """
     Función principal que construye el K-D Tree y asocia la dirección 
     más cercana a cada punto de la lista de usuario.
     """
 
-    global KD_TREE_ROOT
-    if KD_TREE_ROOT is None:
+    global kd_tree_dic
+    if cod not in kd_tree_dic:
         print("Iniciando árbol binario")
-        initialize_global_tree(file_geojson)
-        if KD_TREE_ROOT is None:
+        initialize_global_tree(file_geojson, cod)
+        if cod not in kd_tree_dic:
             return {"error": "Fallo al inicializar datos de portales"}
+
+    KD_TREE_ROOT = kd_tree_dic[cod]
 
     for point in datos_completos:
         target_lat = point.get('latitud')

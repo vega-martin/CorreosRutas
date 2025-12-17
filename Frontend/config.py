@@ -6,6 +6,7 @@ class Config:
     BASE_DIR = os.path.dirname(__file__)
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
     GEOJSON_FOLDER = os.path.join(os.path.dirname(__file__), 'app', 'static', 'geojson')
+    MAPS_FOLDER = os.path.join(os.path.dirname(__file__), 'app', 'static', 'maps')
     ALLOWED_EXTENSIONS = {'csv'}
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=55)
     SESSION_REFRESH_EACH_REQUEST = True

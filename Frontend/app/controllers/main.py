@@ -43,18 +43,6 @@ def delete_user_folder(session_id):
     shutil.rmtree(folder, ignore_errors=True)
 
 
-def delete_generated_maps(maps):
-    base_dir = os.path.join(current_app.config.get("BASE_DIR"), "app", "static", "maps")
-    for m in maps:
-        file = os.path.join(base_dir, f"{m}.html")
-        try:
-            os.remove(file)
-        except FileNotFoundError:
-            pass
-        except Exception as e:
-            current_app.logger.warning(f"No se pudo borrar {file}: {e}")
-
-
 @main_bp.route('/logout')
 def logout():
     sid = session.get("id")
@@ -62,9 +50,6 @@ def logout():
 
     if sid:
         delete_user_folder(sid)
-
-    if maps:
-        delete_generated_maps(maps)
 
     current_app.logger.info(f"Sesion cerrada: {sid}")
     session.clear()
