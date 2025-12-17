@@ -840,7 +840,7 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
 
             console.log("Agrupando portales...");
-/*
+
             fetch('/agrupar_portales', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -863,7 +863,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.error("Error:", err);
                 alert("Error al agrupar portales: " + err.message);
             });
-*/
             btnAgruparPortales.disabled = true;
             btnAgruparGeneral.disabled = false;
             agrupamientoBtn.disabled = false;

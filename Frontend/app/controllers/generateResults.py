@@ -567,6 +567,56 @@ def asignar_tipo_de_calle(datos, conteo):
     return datos
 
 
+def agrupar_portales_duplicados(tabla):
+    """
+    Agrupa los portales que hayan sido visitados varias veces y suma sus tiempos.
+    
+    Parámetro:
+        tabla: lista de diccionarios con campos [n, hora, longitud, latitud, distancia, tiempo, velocidad, esParada, cod_pda, fecha, ...]
+    
+    Retorna:
+        lista de diccionarios con puntos agrupados y tiempos acumulados
+    """
+    if not tabla:
+        return []
+    
+    # Crear dataframe
+    df = pd.DataFrame(tabla)
+
+    # Limpiar datos
+    df.loc[df['tiempo'] == "-", 'tiempo'] = "0 sec"
+    df['tiempo_seg'] = df['tiempo'].str.replace(" sec", "", regex=False).astype(float)
+    df.loc[df['distancia'] == "-", 'distancia'] = "0 m"
+    df['distancia'] = df['distancia'].str.replace(" m", "", regex=False).astype(float)
+
+    # Agrupar puntos
+    df_agrupado = df.groupby(['street', 'number']).agg(
+        n = ('n', 'first'),
+        cod_pda = ('cod_pda', lambda x: list(set(x))),
+        latitud = ('latitud', 'mean'),
+        longitud = ('longitud', 'mean'),
+        distancia = ('distancia', 'mean'),
+        tiempo = ('tiempo_seg', 'sum'),
+        distance = ('distance', 'mean'),
+        nearest_latitud = ('nearest_latitud', 'first'),
+        nearest_longitud = ('nearest_longitud', 'first'),
+        post_code = ('post_code', lambda x: x.mode().iloc[0]),
+        conteo_par_impar = ('conteo_par_impar', 'sum'),
+        conteo_zigzag = ('conteo_zigzag', 'sum'),
+        tipo = ('tipo', lambda x: x.mode().iloc[0]),
+        esParada = ('esParada', 'any'),
+        vecesVisitado = ('tiempo_seg', 'count')
+    ).reset_index()
+
+    # Add constant columns
+    df_agrupado['hora'] = '-'
+    df_agrupado['fecha'] = '-'
+    df_agrupado['velocidad'] = '-'
+
+    return df_agrupado.to_dict('records')
+
+
+
 # ------------------------------------------------------------
 # ENDPOINTS
 # ------------------------------------------------------------
@@ -805,3 +855,59 @@ def agrupar_puntos():
     except Exception as e:
         current_app.logger.error(f"Error al agrupar puntos: {e}")
         return jsonify({"error": f"Error al agrupar puntos: {str(e)}"}), 500
+
+@generateResults_bp.route('/agrupar_portales', methods=['POST'])
+def agrupar_portales():
+    """
+    Endpoint que recibe una tabla de puntos y los agrupa si tienen portales duplicados
+    """
+
+    # Obtener la ruta del archivo de la sesión
+    file_path = Path(os.path.join(current_app.config['UPLOAD_FOLDER'], session['id'], 'table_data.json'))
+    current_app.logger.info(f"La ruta donde se encuentran los datos es {file_path}")
+
+    datos_completos = []
+
+    # Comprobar si la ruta existe y si el archivo realmente está allí
+    if not file_path.exists():
+        current_app.logger.error(f"Ruta de archivo no encontrada en sesión o archivo no existe: {file_path}")
+        # Retorna una lista vacía si no hay datos disponibles
+        return jsonify({"tabla": [], "resumen": {}, "warnings": ["No hay datos cargados para filtrar mostrar."]})
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            datos_completos = json.load(f)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al leer o decodificar datos de usuario: {e}")
+        return jsonify({"tabla": [], "resumen": {}, "warnings": ["Error al cargar datos de usuario."]})
+
+    tabla = datos_completos
+
+    if not tabla:
+        return jsonify({"error": "No hay datos para agrupar"}), 400
+
+    try:
+        # Agrupar puntos duplicados
+        datos_agrupados = agrupar_portales_duplicados(tabla)
+
+        # Reescribir json de la tabla con los portales
+        upload_folder = current_app.config.get("UPLOAD_FOLDER")
+        processed_filename = 'table_data.json'
+        save_path = os.path.join(upload_folder, session.get("id"), processed_filename)
+        
+        # Guardar la lista de diccionarios (el valor de 'tabla') en el disco
+        with open(save_path, 'w', encoding='utf-8') as f:
+            json.dump(datos_agrupados, f, ensure_ascii=False, indent=4)
+        
+        # Recalcular resumen con puntos agrupados
+        resumen_actualizado = calcular_resumen(datos_agrupados)
+
+        return jsonify({
+            "tabla": datos_agrupados,
+            "resumen": resumen_actualizado
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error al agrupar portales: {e}")
+        return jsonify({"error": f"Error al agrupar portales: {str(e)}"}), 500
