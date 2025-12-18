@@ -897,7 +897,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const agrupamiento = agrupamientoInput.value;
 
             console.log("Agrupando portales...");
-/*
+
             fetch('/agrupar_por_tipo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -921,7 +921,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.error("Error:", err);
                 alert("Error al agrupar portales: " + err.message);
             });
-*/
+            btnAgruparGeneral.disabled = true;
         });
     }
 });
