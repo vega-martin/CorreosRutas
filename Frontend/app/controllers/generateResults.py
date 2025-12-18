@@ -638,7 +638,7 @@ def generar_mapa():
         current_app.logger.error("Error:", response.text)
 
     if not os.path.exists(save_path):
-        flash(f"El fichero A o el fichero D (union de los ficheros B y C) no tiene suficientes registros para trabajar.")
+        #flash(f"El fichero A o el fichero D (union de los ficheros B y C) no tiene suficientes registros para trabajar.")
         return redirect(url_for('main.root'))
 
     pdas = get_pdas(save_path)

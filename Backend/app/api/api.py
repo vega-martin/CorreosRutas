@@ -171,8 +171,13 @@ def unifyAllFiles():
     
     current_app.logger.info(f"Se han encontrado {len(files_paths)} archivos en la carperta de la sesion {id}")
     df_A, df_D, read_info = extractBCDataframes(files_paths['A'], files_paths['D'])
-    if ((len(df_A) == 0) or (len(df_D) == 0)):
-        return jsonify({"Registros totales": 0})
+
+    if len(df_D) == 0:
+        df_A['esParada'] = False
+        path = os.path.join(id_path, 'Fichero_E.csv')
+        df_A.to_csv(path, sep=';', index=False)
+        return jsonify({"logs": f'Fichero D sin registros. Se usará solamente el fichero A.'})
+    
     erased_info = unifyADFiles(df_A, df_D, id_path)
 
     
