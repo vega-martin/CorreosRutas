@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="/static/js/index.js"></script>
 
     {% with messages = get_flashed_messages() %}
@@ -69,5 +69,9 @@
     <form action="{{ url_for('main.logout') }}" method="get" onsubmit="return confirmLogout();">
         <button type="submit" class="logout-btn">Limpiar sesión</button>
     </form>
+
+    <div id="loadingOverlay" style="display: flex;">
+        <div class="loader"></div>
+    </div>
 
 {% endblock %}

@@ -1,4 +1,12 @@
+function showLoading() {
+    $("#loadingOverlay").css("display", "flex");
+}
+function hideLoading() {
+    $("#loadingOverlay").css("display", "none");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+    hideLoading();
     // comprobar si los ficheros estan o no
     checkFiles().then(areFiles => {
         enableBtns(areFiles);
@@ -28,6 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Ajax for file A upload
     formA.addEventListener('submit', async (e) => {
         e.preventDefault();
+        showLoading();
         document.getElementById('fileA-logs').value = "Subiendo fichero, aguarde unos momentos";
         const formData = new FormData(e.target);
         submitA.disabled = true;
@@ -37,12 +46,16 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('fileA-logs').value = data.logs;
         unifyFiles().then(areFiles => {
             enableBtns(areFiles);
+        })
+        .finally(() => {
+            hideLoading();
         });
     });
 
     // Ajax for files B and C upload
     formBC.addEventListener('submit', async (e) => {
         e.preventDefault();
+        showLoading();
         document.getElementById('fileBC-logs').value = "Subiendo ficheros, aguarde unos momentos";
         const formData = new FormData(e.target);
         submitBC.disabled = true;
@@ -55,6 +68,9 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('fileBC-logs').value = data.logs;
         unifyFiles().then(areFiles => {
             enableBtns(areFiles);
+        })
+        .finally(() => {
+            hideLoading();
         });
     });
 
