@@ -99,7 +99,73 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("No se pudo descargar el PDF");
         }
     });
+
+    // Para descargar los ficheros intermedios
+    const btnDescargarFicheros = document.getElementById('ficherosIntermedios');
+
+    btnDescargarFicheros.addEventListener("click", async () => {
+        // Descargar fichero D
+        try {
+            const file = "D";
+            const response = await fetch("/get_generated_files", {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file })
+            });
+
+            if (!response.ok) {
+                throw new Error("Error al descargar el CSV");
+            }
+            // Convertir la respuesta a Blob
+            const blob = await response.blob();
+            // Crear URL temporal
+            const url = window.URL.createObjectURL(blob);
+            // Crear enlace temporal para forzar la descarga
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "Fichero_D.csv";
+            document.body.appendChild(a);
+            a.click();
+            // Limpiar
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error(error);
+            alert("No se pudo descargar el PDF");
+        }
+
+        // Descargar fichero E
+        try {
+            const file = "E";
+            const response = await fetch("/get_generated_files", {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file })
+            });
+
+            if (!response.ok) {
+                throw new Error("Error al descargar el CSV");
+            }
+            // Convertir la respuesta a Blob
+            const blob = await response.blob();
+            // Crear URL temporal
+            const url = window.URL.createObjectURL(blob);
+            // Crear enlace temporal para forzar la descarga
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "Fichero_E.csv";
+            document.body.appendChild(a);
+            a.click();
+            // Limpiar
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error(error);
+            alert("No se pudo descargar el PDF");
+        }
+    });
 });
+
 // Confirm logout
 function confirmLogout() {
     return confirm("¿Seguro que deseas cerrar la sesión y eliminar los ficheros subidos?");

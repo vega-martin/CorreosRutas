@@ -251,3 +251,23 @@ def get_fichero_unificado():
         as_attachment=True,
         download_name="Fichero_E.csv"
     )
+
+@api_bp.route("/get_fichero_intermedio", methods=['POST'])
+def get_fichero_intermedio():
+    # Ruta al CSV
+    id = request.form.get('id')
+    base_upload = current_app.config.get("UPLOAD_FOLDER")
+    id_path = os.path.join(base_upload, str(id))
+    csv_path = os.path.join(id_path, 'Fichero_D.csv')
+    current_app.logger.info({csv_path})
+    # Comprobar si existe
+    if not os.path.exists(csv_path):
+        return "El archivo no existe", 404
+
+    # Devolver el CSV
+    return send_file(
+        csv_path,
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name="Fichero_D.csv"
+    )

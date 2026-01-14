@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import re
 import json
-import os, io, csv
+import os, io, csv, requests
 
 options_bp = Blueprint('options', __name__, template_folder='templates')
 
@@ -366,5 +366,30 @@ def get_table():
         mimetype="text/csv",
         headers={
             "Content-Disposition": "attachment; filename=tabla.csv"
+        }
+    )
+
+@options_bp.route('/get_generated_files', methods=["POST", "GET"])
+def get_generated_files():
+    data = request.get_json()
+    file = data.get("file")
+
+    uploaded = session.get('uploaded_files', {})
+    api_url = current_app.config.get("API_URL")
+    data = {"id": session.get("id")}
+
+    if (file == "D"):
+        r = requests.post(f"{api_url}/get_fichero_intermedio", data=data)
+    else:
+        r = requests.post(f"{api_url}/get_fichero_unificado", data=data)
+    
+    r.raise_for_status()
+
+    return Response(
+        r.content,
+        status=r.status_code,
+        mimetype=r.headers.get("Content-Type", "application/octet-stream"),
+        headers={
+            "Content-Disposition": r.headers.get("Content-Disposition")
         }
     )
