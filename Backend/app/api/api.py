@@ -242,7 +242,9 @@ def get_fichero_unificado():
     current_app.logger.info({csv_path})
     # Comprobar si existe
     if not os.path.exists(csv_path):
-        return "El archivo no existe", 404
+        csv_path = os.path.join(id_path, 'Fichero_A.csv')
+        if not os.path.exists(csv_path):
+            return "El archivo no existe", 404
 
     # Devolver el CSV
     return send_file(

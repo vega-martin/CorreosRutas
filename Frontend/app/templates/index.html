@@ -45,7 +45,7 @@
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <button class="accept-btn" id="estadisticasBtn" disabled>Descargar estadísticas</button>
-            <button class="accept-btn" id="ficherosIntermedios">Descargar ficheros<br>generados</button>
+            <button class="accept-btn" id="ficherosIntermedios" disabled>Descargar ficheros<br>generados</button>
         </div>
     </div>
     <br>
@@ -70,7 +70,7 @@
 
     <h2>Sesión</h2>
     <form action="{{ url_for('main.logout') }}" method="get" onsubmit="return confirmLogout();">
-        <button type="submit" class="logout-btn">Limpiar sesión</button>
+        <button type="submit" class="logout-btn" id="logoutBtn">Limpiar sesión</button>
     </form>
 
     <div id="loadingOverlay" style="display: flex;">

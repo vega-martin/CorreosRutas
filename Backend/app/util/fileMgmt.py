@@ -106,6 +106,8 @@ def get_statistics_A(path):
         return jsonify({'info': 'No se pudo leer el fichero.'})
 
     df_length = len(df)
+    df['esParada'] = False
+    df.to_csv(path, sep=';', index=False)
     info = f'Nº elementos iniciales: {df_length}.\n'
 
     df = df.drop_duplicates(ignore_index=True)

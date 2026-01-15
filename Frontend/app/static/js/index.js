@@ -33,6 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
     inputB.addEventListener('change', checkBC);
     inputC.addEventListener('change', checkBC);
 
+    const mapaBtn = document.getElementById("mapaBtn");
     // Ajax for file A upload
     formA.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -49,6 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .finally(() => {
             hideLoading();
+            mapaBtn.disabled = false;
         });
     });
 
@@ -164,6 +166,14 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("No se pudo descargar el PDF");
         }
     });
+
+    const btnLogout = document.getElementById("logoutBtn");
+
+    btnLogout.addEventListener("submit", () => {
+        const mapaBtn = document.getElementById("mapaBtn");
+        mapaBtn.disabled = true;
+    });
+
 });
 
 // Confirm logout
@@ -201,13 +211,16 @@ function enableBtns(areFiles) {
     const estadisticasBtn = document.getElementById("estadisticasBtn");
     const mapaBtn = document.getElementById("mapaBtn");
     const unifyBtn = document.getElementById("unifyBtn");
+    const btnDescargarFicheros = document.getElementById('ficherosIntermedios');
     if (areFiles === true) {
         estadisticasBtn.disabled = false;
         mapaBtn.disabled = false;
         unifyBtn.disabled = false;
+        btnDescargarFicheros.disabled = false;
     } else {
         estadisticasBtn.disabled = true;
         mapaBtn.disabled = true;
         unifyBtn.disabled = true;
+        btnDescargarFicheros.disabled = true;
     }
 }
