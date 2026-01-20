@@ -47,8 +47,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const signoPDA = document.getElementById('signoPDA');
 
     // Botones agrupamiento
-    const btnAgruparPuntos = document.getElementById('btn-agrupar-puntos');
-    const btnAgruparPortales = document.getElementById('btn-agrupar-portales');
     const btnAgruparGeneral = document.getElementById('btn-agrupar-general');
 
     const agrupamientoBtn = document.getElementById('agrupamientoBtn');
@@ -576,7 +574,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const segundos = (t_fin - t_inicio) / 1000;
                 document.getElementById('res-t-ejecucion').textContent = `${segundos.toFixed(3)} s`;
 
-
                 // === Actualizar los títulos ===
                 document.getElementById('titulo-pda').textContent = pda;
                 if (ini === fin) {
@@ -595,19 +592,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 // === Mostrar la tabla y los controles de paginación ===
                 document.getElementById('tabla-resultados').style.display = 'block';
                 document.getElementById('paginador').style.display = 'flex';
-
-
-                if (btnAgruparPuntos) {
-                    btnAgruparPuntos.style.display = 'inline-block';
-                    btnAgruparPuntos.disabled = false;
-                }
-
             })
             .catch(err => {
                 console.error("Error capturado:", err);
                 alert("Ocurrió un error al procesar la solicitud:\n\n" + err.message);
             })
             .finally(() => {
+                agruparPuntosYPortales();
                 hideLoading();
             });
             
@@ -800,72 +791,58 @@ document.addEventListener("DOMContentLoaded", () => {
         btnLimpiar.addEventListener('click', limpiarFiltros);
     }
 
-    if (btnAgruparPuntos) {
-        btnAgruparPuntos.addEventListener('click', (e) => {
-            e.preventDefault();
+    function agruparPuntosYPortales() {
+        console.log("Agrupando puntos duplicados...");
+        fetch('/agrupar_puntos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        })
+        .then(response => {
+            if (!response.ok) throw new Error("Error al agrupar puntos");
+            return response.json();
+        })
+        .then(data => {
+            console.log("Puntos agrupados exitosamente", data);
+            
+            // Actualizar la tabla global
+            tablaDatos = data.tabla;
+            
+            paginaActual = 1;
+            filtradoActivo = false;
+            renderPagina(paginaActual);
 
-            console.log("Agrupando puntos duplicados...");
-
-            fetch('/agrupar_puntos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-            })
-            .then(response => {
-                if (!response.ok) throw new Error("Error al agrupar puntos");
-                return response.json();
-            })
-            .then(data => {
-                console.log("Puntos agrupados exitosamente", data);
-                
-                // Actualizar la tabla global
-                tablaDatos = data.tabla;
-                
-                paginaActual = 1;
-                filtradoActivo = false;
-                renderPagina(paginaActual);
-
-                // alert("Puntos agrupados correctamente");
-            })
-            .catch(err => {
-                console.error("Error:", err);
-                alert("Error al agrupar puntos: " + err.message);
-            });
-            btnAgruparPortales.disabled = false;
-            btnAgruparPuntos.disabled = true;
-        });
-    }
-
-    if (btnAgruparPortales) {
-        btnAgruparPortales.addEventListener('click', (e) => {
-            e.preventDefault();
-
+        })
+        .catch(err => {
+            console.error("Error:", err);
+            alert("Error al agrupar puntos: " + err.message);
+        })
+        .finally(() => {
             console.log("Agrupando portales...");
             fetch('/agrupar_portales', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
             })
-            .then(response => {
-                if (!response.ok) throw new Error("Error al agrupar portales");
-                return response.json();
+            .then(response2 => {
+                if (!response2.ok) throw new Error("Error al agrupar portales");
+                return response2.json();
             })
-            .then(data => {
-                console.log("Portales agrupados exitosamente", data);
+            .then(data2 => {
+                console.log("Portales agrupados exitosamente", data2);
                 
                 // Actualizar la tabla global
-                tablaDatos = data.tabla;
+                tablaDatos = data2.tabla;
                 
                 paginaActual = 1;
                 filtradoActivo = false;
                 renderPagina(paginaActual);
             })
-            .catch(err => {
-                console.error("Error:", err);
-                alert("Error al agrupar portales: " + err.message);
+            .catch(err2 => {
+                console.error("Error:", err2);
+                alert("Error al agrupar portales: " + err2.message);
             });
-            btnAgruparPortales.disabled = true;
-            btnAgruparGeneral.disabled = false;
-            agrupamientoBtn.disabled = false;
         });
+
+        agrupamientoBtn.disabled = false;
     }
 
     if (agrupamientoBtn) { 
@@ -881,6 +858,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 agrupamientoInput.value = value;
                 agrupamientoBtn.textContent = option.textContent;
                 agrupamientoOptions.classList.remove('show');
+                btnAgruparGeneral.disabled = false;
             });
         });
     }
