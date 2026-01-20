@@ -71,6 +71,9 @@ document.addEventListener("DOMContentLoaded", () => {
         unifyFiles().then(areFiles => {
             enableBtns(areFiles);
         })
+        .catch(err => {
+            console.error("Error comprobando archivos:", err);
+        })
         .finally(() => {
             hideLoading();
         });
@@ -103,9 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // Para descargar los ficheros intermedios
-    const btnDescargarFicheros = document.getElementById('ficherosIntermedios');
-
-    btnDescargarFicheros.addEventListener("click", async () => {
+    document.getElementById('ficherosIntermedios').addEventListener("click", async () => {
         // Descargar fichero D
         try {
             const file = "D";
@@ -210,17 +211,16 @@ function unifyFiles() {
 function enableBtns(areFiles) {
     const estadisticasBtn = document.getElementById("estadisticasBtn");
     const mapaBtn = document.getElementById("mapaBtn");
-    const unifyBtn = document.getElementById("unifyBtn");
     const btnDescargarFicheros = document.getElementById('ficherosIntermedios');
     if (areFiles === true) {
+        console.log("todos los ficheros han sido subidos");
         estadisticasBtn.disabled = false;
         mapaBtn.disabled = false;
-        unifyBtn.disabled = false;
         btnDescargarFicheros.disabled = false;
     } else {
+        console.log("faltan ficheros por subir");
         estadisticasBtn.disabled = true;
         mapaBtn.disabled = true;
-        unifyBtn.disabled = true;
         btnDescargarFicheros.disabled = true;
     }
 }
