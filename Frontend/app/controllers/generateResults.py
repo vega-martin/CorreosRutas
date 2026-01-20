@@ -585,6 +585,7 @@ def agrupar_portales_duplicados(tabla):
     # Limpiar datos
     df.loc[df['tiempo'] == "-", 'tiempo'] = "0 sec"
     df['tiempo_seg'] = df['tiempo'].str.replace(" sec", "", regex=False).astype(float)
+    df['tiempo_signed'] = df['tiempo_seg'].where(~df['esParada'], -df['tiempo_seg'])
     df.loc[df['distancia'] == "-", 'distancia'] = "0 m"
     df['distancia'] = df['distancia'].str.replace(" m", "", regex=False).astype(float)
 
@@ -595,7 +596,7 @@ def agrupar_portales_duplicados(tabla):
         latitud = ('latitud', 'mean'),
         longitud = ('longitud', 'mean'),
         distancia = ('distancia', 'mean'),
-        tiempo = ('tiempo_seg', 'sum'),
+        tiempo = ('tiempo_signed', 'sum'),
         distance = ('distance', 'mean'),
         nearest_latitud = ('nearest_latitud', 'first'),
         nearest_longitud = ('nearest_longitud', 'first'),
@@ -606,6 +607,9 @@ def agrupar_portales_duplicados(tabla):
         esParada = ('esParada', 'any'),
         vecesVisitado = ('tiempo_seg', 'count')
     ).reset_index()
+
+    # Eliminar registros con tiempo negativo
+    df_agrupado = df_agrupado[df_agrupado['tiempo'] > 0]
 
     # Add constant columns
     df_agrupado['hora'] = '-'
