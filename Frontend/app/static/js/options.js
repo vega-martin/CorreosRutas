@@ -479,6 +479,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const ini = fechaInicio.value;
             const fin = fechaFin.value;
 
+            // Resetear los relacionado con el agurpamiento
+            document.getElementById("agrupamientoInput").value = "Selecciona metodo de agrupamiento";
+            document.getElementById("agrupamientoBtn").textContent = "Selecciona metodo de agrupamiento";
+            document.getElementById("filtros-clus-diametro").style.display = "none";
+
             // Comprobar si existe un GeoJSON para el codired
             const res = await fetch('/existsGeoJSON', {
                 method: 'POST',
@@ -685,9 +690,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const valueTiempo = document.getElementById('filtroTiempo').value;
             const valueVelocidad = document.getElementById('filtroVelocidad').value;
             const valuePDA = document.getElementById('pdaInputFilter').value;
+            const valueDiametro = document.getElementById('filtroDiametroClus').value;
+            const valuePtsClus = document.getElementById('filtroNumPtsClus').value;
             
             
-            if (!valueDistancia && !valueTiempo && !valueVelocidad && !valuePDA) {
+            if (!valueDistancia && !valueTiempo && !valueVelocidad && !valuePDA && !valueDiametro && !valuePtsClus) {
                 alert("Debes seleccionar algún filtro.");
                 return false;
             }
@@ -698,6 +705,12 @@ document.addEventListener("DOMContentLoaded", () => {
             const inputSignoTiempo = document.getElementById('tiempo-signo').value;
             const inputSignoVelocidad = document.getElementById('velocidad-signo').value;
             const inputSignoPDA = document.getElementById('pda-signo').value;
+
+            // Filtros del agrupamiento
+            console.log("valor filtro diametro:")
+            console.log(valueDiametro)
+            console.log("valor filtro puntos:")
+            console.log(valuePtsClus)
 
             fetch('/filtrar_registros', {
                 method: 'POST',
@@ -710,7 +723,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     velocidad : valueVelocidad,
                     signoVelocidad: inputSignoVelocidad,
                     pda: valuePDA,
-                    signoPDA: inputSignoPDA
+                    signoPDA: inputSignoPDA,
+                    diametro: valueDiametro,
+                    numPts: valuePtsClus
                 })
             })
             .then(response => {
@@ -775,7 +790,11 @@ document.addEventListener("DOMContentLoaded", () => {
             inputDistancia.value = '';
             inputTiempo.value = '';
             inputVelocidad.value = '';
-            inputPDA.value = '';  // Limpiar el campo PDA
+            inputPDA.value = '';
+            pdaBtnFilter.textContent = 'Selecciona una PDA';
+            document.getElementById('filtroDiametroClus').vale = '';
+            document.getElementById('filtroNumPtsClus').vale = '';
+
 
             // Establecer signos por defecto
             document.getElementById('distancia-signo').value = 'menor'; 

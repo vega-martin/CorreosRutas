@@ -302,3 +302,48 @@ def agrupar_diametro():
     current_app.logger.info("Devolviendo informacion")
 
     return jsonify({"tabla": datos_agrupados})
+
+@api_bp.route("/filtrar_clustering", methods=['POST'])
+def filtrar_clustering():
+
+    data = request.get_json(silent=True)
+
+    if not data:
+        return jsonify({"error": "JSON inválido o vacío"}), 400
+
+    session_id = data.get("id")
+    tabla = data.get("tabla")
+    # Parámetros opcionales
+    diametro = data.get("diametro")
+    num_pts = data.get("numPts")
+
+    if not session_id:
+        return jsonify({"error": "Falta id de sesión"}), 400
+
+    if not tabla or not isinstance(tabla, list):
+        return jsonify({"error": "Tabla no válida"}), 400
+    
+    current_app.logger.info(f"filtros: diametro {diametro}, pts {num_pts}")
+
+    try:
+        diametro = float(diametro) if diametro not in (None, "") else 1000.0
+    except ValueError:
+        return jsonify({"error": "Diametro inválido"}), 400
+
+    try:
+        num_pts = int(num_pts) if num_pts not in (None, "") else 10
+    except ValueError:
+        return jsonify({"error": "numPts inválido"}), 400
+
+    current_app.logger.info("Datos recibidos con éxito")
+    current_app.logger.info("Llamando al algoritmo de clusterizado")
+    current_app.logger.info(f"filtros: diametro {diametro}, pts {num_pts}")
+
+    # Llamada al algoritmo
+    datos_agrupados = cluster_por_diametro(tabla, num_pts, diametro)
+
+    current_app.logger.info(f"Tipo de dato del resultado: {type(datos_agrupados)}")
+    current_app.logger.info("Clusterizazo terminado")
+    current_app.logger.info("Devolviendo informacion")
+
+    return jsonify({"tabla": datos_agrupados})

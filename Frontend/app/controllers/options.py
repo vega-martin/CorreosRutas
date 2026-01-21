@@ -203,16 +203,39 @@ def filtrar_registros():
     valorPda = data.get('pda')
 
     current_app.logger.info(f"Valor de la PDA {valorPda} y signo {signoPda}")
-    if signoPda == "igual" and valorPda:
+    if signoPda == "igual" and valorPda is not None:
         resultados_filtrados = [
                 fila for fila in resultados_filtrados
-                if fila.get('cod_pda') == valorPda
+                if valorPda in (fila.get("cod_pda") or [])
             ] 
-    elif signoPda == "no-igual" and valorPda:
+    elif signoPda == "no-igual" and valorPda is not None:
         resultados_filtrados = [
                 fila for fila in resultados_filtrados
-                if fila.get('cod_pda') != valorPda
+                if valorPda not in (fila.get("cod_pda") or [])
             ]
+
+    # Recalcular clusters con nuevos filtros
+    payload = {
+        "id": session.get("id"),
+        "diametro": data.get('diametro'),
+        "numPts": data.get('numPts'),
+        "tabla": datos_completos
+    }
+    current_app.logger.info(f"Valor del diametro {data.get('diametro')} y numpts {data.get('numPts')}")
+    api_url = current_app.config.get("API_URL")
+
+    try:
+        api_response = requests.post(
+            f"{api_url}/filtrar_clustering",
+            json=payload
+        )
+        api_response.raise_for_status()
+    except requests.RequestException as e:
+        current_app.logger.error(f"Error llamando a la API de diámetro: {e}")
+        return jsonify({"error": "Error al procesar agrupación por diámetro"}), 502
+
+    resultados_filtrados = api_response.json().get("tabla")
+
 
     # Aplicar los filtros iterativamente
     for filtro in filtros_recibidos:
