@@ -3,6 +3,7 @@ from app.util.fileMgmt import ensure_folder, rename_file_columns, extractDatafra
 from app.services.unifyFiles import unifyBCFiles, unifyADFiles
 from app.services.dataCleaning import removeOutliers
 from app.util.createPDFs import crear_pdf
+from app.services.Algoritmo_cluster_basico import cluster_por_diametro
 import json
 from io import BytesIO
 from datetime import timedelta, datetime
@@ -273,3 +274,31 @@ def get_fichero_intermedio():
         as_attachment=True,
         download_name="Fichero_D.csv"
     )
+
+@api_bp.route("/agrupar_diametro", methods=['POST'])
+def agrupar_diametro():
+
+    data = request.get_json(silent=True)
+
+    if not data:
+        return jsonify({"error": "JSON inválido o vacío"}), 400
+
+    session_id = data.get("id")
+    tabla = data.get("tabla")
+
+    if not session_id:
+        return jsonify({"error": "Falta id de sesión"}), 400
+
+    if not tabla or not isinstance(tabla, list):
+        return jsonify({"error": "Tabla no válida"}), 400
+
+    current_app.logger.info('Datos recibidos con exito')
+    current_app.logger.info("Llamando al algoritmo de clusterizado")
+
+    datos_agrupados = cluster_por_diametro(tabla)
+
+    current_app.logger.info(f"Tipo de dato del resultado: {type(datos_agrupados)}")
+    current_app.logger.info("Clusterizazo terminado")
+    current_app.logger.info("Devolviendo informacion")
+
+    return jsonify({"tabla": datos_agrupados})

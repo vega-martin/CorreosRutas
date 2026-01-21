@@ -504,6 +504,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 hideLoading();
                 alert("Debes seleccionar una PDA.");
                 return false;
+            } else if (pda === "TODAS") {
+                document.getElementById("filtros-todas-pdas").style.display = "block";
+            } else {
+                document.getElementById("filtros-todas-pdas").style.display = "none";
             }
         
             if (!ini) {
@@ -899,6 +903,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.error("Error:", err);
                 alert("Error al agrupar portales: " + err.message);
             });
+
+            if (agrupamiento === "diametro") {
+                document.getElementById("filtros-clus-diametro").style.display = "block";
+            } else {
+                document.getElementById("filtros-clus-diametro").style.display = "none";
+            }
+
             btnAgruparGeneral.disabled = true;
         });
     }

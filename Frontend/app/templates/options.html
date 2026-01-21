@@ -71,13 +71,13 @@
                         Generar tabla
                     </button>
                     <br><br>
-                    
+
                     <!-- Seleccion metodo de agrupamiento -->
                     <div class="custom-select">
                         <button type="button" class="select-btn" id="agrupamientoBtn" disabled>Selecciona metodo de agrupamiento</button>
                         <div class="options" id="agrupamientoOptions">
                              <div data-value="tiempo">Por tiempo</div>
-                        <!--<div data-value="distancia">Por distancia</div>-->
+                            <div data-value="diametro">Por diámetro</div>
                         </div>
                     </div>
                     <input type="hidden" name="agrupamiento" id="agrupamientoInput">
@@ -145,15 +145,24 @@
                     <input type="number" name="filtroVelocidad" id="filtroVelocidad" placeholder="Velocidad">
                     <br><br>
 
-                    <label for="filtro-pda">PDA:</label>
-                    <select class="select-sign-btn" name="pda-signo" id="pda-signo">
-                        <option value="igual">=</option>
-                        <option value="no-igual">&ne;</option>
-                    </select>
-                    
-                    <button type="button" class="select-btn" id="pdaBtnFilter" disabled>Selecciona una PDA</button>
-                    <div class="options" id="pdaOptionsFilter">
-                        <!-- Las opciones se llenan dinámicamente con JavaScript -->
+                    <div id="filtros-todas-pdas" style="display: none;">
+                        <label for="filtro-pda">PDA:</label>
+                        <select class="select-sign-btn" name="pda-signo" id="pda-signo">
+                            <option value="igual">=</option>
+                            <option value="no-igual">&ne;</option>
+                        </select>
+                        <button type="button" class="select-btn" id="pdaBtnFilter" style="width: 70%;" disabled>Selecciona una PDA</button>
+                        <div class="options" id="pdaOptionsFilter">
+                            <!-- Las opciones se llenan dinámicamente con JavaScript -->
+                        </div>
+                    </div>
+
+                    <div id="filtros-clus-diametro" style="display: none;">
+                        <label for="filtro-diametro">Diámetro del cluster:</label>
+                        <input type="number" name="filtroDiametroClus" id="filtroDiametroClus" placeholder="Diámetro">
+                        <br>
+                        <label for="filtro-pts-clus">Puntos máx del cluster:</label>
+                        <input type="number" name="filtroNumPtsClus" id="filtroNumPtsClus" placeholder="Nº puntos">
                     </div>
 
                     <input type="hidden" name="pda" id="pdaInputFilter">

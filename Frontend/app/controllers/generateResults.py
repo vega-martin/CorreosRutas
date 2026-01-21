@@ -979,7 +979,7 @@ def agrupar_por_tipo():
 
             # Reescribir json de la tabla con los portales
             upload_folder = current_app.config.get("UPLOAD_FOLDER")
-            processed_filename = 'table_data.json'
+            processed_filename = 'table_data_filtered.json'
             save_path = os.path.join(upload_folder, session.get("id"), processed_filename)
             
             # Guardar la lista de diccionarios (el valor de 'tabla') en el disco
@@ -993,7 +993,35 @@ def agrupar_por_tipo():
                         "tabla": datos_agrupados,
                         "resumen": resumen_actualizado
                     })
-        case "distancia":
-            return jsonify({"error": f"Caracteristica no implementada"}), 501
+        case "diametro":
+            payload = {
+                "id": session.get("id"),
+                "tabla": tabla
+            }
+
+            api_url = current_app.config.get("API_URL")
+
+            try:
+                api_response = requests.post(
+                    f"{api_url}/agrupar_diametro",
+                    json=payload,
+                    timeout=30
+                )
+                api_response.raise_for_status()
+            except requests.RequestException as e:
+                current_app.logger.error(f"Error llamando a la API de diámetro: {e}")
+                return jsonify({"error": "Error al procesar agrupación por diámetro"}), 502
+
+            resultado = api_response.json()
+            # Reescribir json de la tabla con los portales
+            upload_folder = current_app.config.get("UPLOAD_FOLDER")
+            processed_filename = 'table_data_filtered.json'
+            save_path = os.path.join(upload_folder, session.get("id"), processed_filename)
+            
+            # Guardar la lista de diccionarios (el valor de 'tabla') en el disco
+            with open(save_path, 'w', encoding='utf-8') as f:
+                json.dump(resultado, f, ensure_ascii=False, indent=4)
+
+            return jsonify(resultado)
         case _:
             return jsonify({"error": f"Error al especificar un algoritmo de agrupacion"}), 406
