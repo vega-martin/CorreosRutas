@@ -442,8 +442,6 @@ def create_cluster_map(cod, diameter = 1000.0, num_pts = 10):
     with open(cluster_table_path, "r", encoding="utf-8") as f:
         clusters = json.load(f)
 
-    clusters = clusters.get("tabla")
-
     if not clusters:
         print("No hay clusters en el JSON.")
         return
@@ -1133,7 +1131,7 @@ def agrupar_por_tipo():
                 current_app.logger.error(f"Error llamando a la API de diámetro: {e}")
                 return jsonify({"error": "Error al procesar agrupación por diámetro"}), 502
 
-            resultado = api_response.json()
+            resultado = api_response.json().get("tabla")
             # Reescribir json de la tabla con los portales
             upload_folder = current_app.config.get("UPLOAD_FOLDER")
             processed_filename = 'table_data_filtered.json'
@@ -1144,6 +1142,6 @@ def agrupar_por_tipo():
                 json.dump(resultado, f, ensure_ascii=False, indent=4)
 
             map_path = create_cluster_map(cod)
-            return jsonify({"url": map_path, "tabla": resultado.get("tabla")})
+            return jsonify({"url": map_path, "tabla": resultado})
         case _:
             return jsonify({"error": f"Error al especificar un algoritmo de agrupacion"}), 406

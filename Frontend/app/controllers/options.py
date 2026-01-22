@@ -232,15 +232,14 @@ def filtrar_registros():
             json=payload
         )
         api_response.raise_for_status()
-        resultado = api_response.json()
+        resultados_filtrados = api_response.json().get("tabla")
         upload_folder = current_app.config.get("UPLOAD_FOLDER")
         processed_filename = 'table_data_filtered.json'
         save_path = os.path.join(upload_folder, session.get("id"), processed_filename)
         
         # Guardar la lista de diccionarios (el valor de 'tabla') en el disco
         with open(save_path, 'w', encoding='utf-8') as f:
-            json.dump(resultado, f, ensure_ascii=False, indent=4)
-        resultados_filtrados = resultado.get("tabla")
+            json.dump(resultados_filtrados, f, ensure_ascii=False, indent=4)
         cod = data.get('cod')
         url = create_cluster_map(cod, data.get('diametro'), data.get('numPts'))
 
@@ -360,21 +359,46 @@ def clusterizar_portales():
     return jsonify({"tabla": puntos_asociados, "resumen": {}, "warnings": []}), 200
 
 
-@options_bp.route("/getTable", methods=["GET"])
+@options_bp.route("/getTable", methods=["POST"])
 def get_table():
-    # Ruta del JSON local
-    json_path = os.path.join(current_app.config["UPLOAD_FOLDER"], session.get("id"), "table_data.json")
+    data_req = request.get_json(silent=True)
+    if not data_req:
+        return "Invalid JSON body", 400
+
+    table_type = data_req.get("type")
+
+    if table_type == "original":
+        json_path = os.path.join(
+            current_app.config["UPLOAD_FOLDER"],
+            session.get("id"),
+            "table_data.json"
+        )
+    elif table_type == "cluster":
+        json_path = os.path.join(
+            current_app.config["UPLOAD_FOLDER"],
+            session.get("id"),
+            "table_data_filtered.json"
+        )
+    else:
+        return "Invalid type", 400
 
     if not os.path.exists(json_path):
         return "JSON file not found", 404
 
-    # Leer JSON
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    if not isinstance(data, list) or len(data) == 0:
-        return "JSON empty or invalid", 400
-    
+    if not isinstance(data, list):
+        return "Invalid JSON format", 400
+
+    if len(data) == 0:
+        return Response(
+            '\ufeff',
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=tabla.csv"}
+        )
+
+    # Normalización numérica
     for dato in data:
         dato['longitud'] = str(dato['longitud']).replace('.', ',')
         dato['latitud'] = str(dato['latitud']).replace('.', ',')
@@ -384,26 +408,18 @@ def get_table():
         dato['distancia'] = str(dato['distancia']).replace(' m', '').replace('.', ',')
         dato['tiempo'] = str(dato['tiempo']).replace(' sec', '')
         dato['velocidad'] = str(dato['velocidad']).replace(' km/h', '').replace('.', ',')
-        
 
-
-    # Convertir a CSV en memoria
     output = io.StringIO()
     writer = csv.DictWriter(output, fieldnames=data[0].keys(), delimiter=';')
     writer.writeheader()
     writer.writerows(data)
-    csv_data = output.getvalue()
 
-    # Ponerle el BOM a los datos
     csv_text = '\ufeff' + output.getvalue()
 
-    # Enviar a frontend como archivo descargable
     return Response(
         csv_text,
         mimetype="text/csv",
-        headers={
-            "Content-Disposition": "attachment; filename=tabla.csv"
-        }
+        headers={"Content-Disposition": "attachment; filename=tabla.csv"}
     )
 
 @options_bp.route('/get_generated_files', methods=["POST", "GET"])

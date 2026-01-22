@@ -84,6 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const agrupamientoInput = document.getElementById('agrupamientoInput');
 
     const btnDescargarTabla = document.getElementById('descargarTabla');
+    let dowloadType = "original"; // Determina que tabla descargar: original o cluster
     
 
     // PAGINACIÓN Y RENDERIZADO
@@ -232,7 +233,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     btnDescargarTabla.addEventListener("click", async () => {
         try {
-            const response = await fetch("/getTable", {  method: "GET",  });
+            console.log(dowloadType);
+            const response = await fetch("/getTable", { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: dowloadType })
+            });
 
             if (!response.ok) {
                 throw new Error("Error al descargar el CSV");
@@ -639,6 +645,8 @@ document.addEventListener("DOMContentLoaded", () => {
             .finally(() => {
                 agruparPuntosYPortales();
                 desactivarTab(1, "Debe generar los clusters antes de visualizar este mapa");
+                dowloadType = "original"
+                btnDescargarTabla.textContent = "Descargar tabla";
                 hideLoading();
             });
             
@@ -971,7 +979,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             activarTab(1);
-
+            dowloadType = "cluster"
+            btnDescargarTabla.textContent = "Descargar clusters";
             btnAgruparGeneral.disabled = true;
         });
     }
