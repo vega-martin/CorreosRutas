@@ -5,6 +5,36 @@ function hideLoading() {
     $("#loadingOverlay").css("display", "none");
 }
 
+function desactivarTab(index, tooltipText) {
+    const tabs = $("#tabs");
+    tabs.tabs("disable", index);
+
+    const li = tabs.find("ul li").eq(index);
+    li.addClass("tab-disabled");
+
+    if (tooltipText) {
+        li.attr("data-tooltip", tooltipText);
+    }
+}
+
+function activarTab(index) {
+    const tabs = $("#tabs");
+    tabs.tabs("enable", index);
+
+    const li = tabs.find("ul li").eq(index);
+    li.removeClass("tab-disabled");
+    li.removeAttr("data-tooltip");
+}
+
+$(function () {
+    $("#tabs").tabs();
+
+    desactivarTab(
+        1,
+        "Debe generar los clusters antes de visualizar este mapa"
+    );
+});
+
 document.addEventListener("DOMContentLoaded", () => {
     hideLoading();
     // --------- VARIABLES GLOBALES --------- //
@@ -608,6 +638,7 @@ document.addEventListener("DOMContentLoaded", () => {
             })
             .finally(() => {
                 agruparPuntosYPortales();
+                desactivarTab(1, "Debe generar los clusters antes de visualizar este mapa");
                 hideLoading();
             });
             
@@ -705,6 +736,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const inputSignoTiempo = document.getElementById('tiempo-signo').value;
             const inputSignoVelocidad = document.getElementById('velocidad-signo').value;
             const inputSignoPDA = document.getElementById('pda-signo').value;
+            const cod = codiredInput.value;
 
             // Filtros del agrupamiento
             console.log("valor filtro diametro:")
@@ -725,7 +757,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     pda: valuePDA,
                     signoPDA: inputSignoPDA,
                     diametro: valueDiametro,
-                    numPts: valuePtsClus
+                    numPts: valuePtsClus,
+                    cod: cod
                 })
             })
             .then(response => {
@@ -753,6 +786,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 // === Mostrar la tabla y los controles de paginación ===
                 document.getElementById('tabla-resultados').style.display = 'block';
                 document.getElementById('paginador').style.display = 'flex';
+
+                if(data.url != '') {
+                    console.log("Mapa cargado:", data.url);
+                    document.getElementById("iMapCluster").src = data.url;
+                }
             })
             .catch(err => {
                 console.error(err);
@@ -896,13 +934,14 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const agrupamiento = agrupamientoInput.value;
+            const cod = codiredInput.value;
 
             console.log("Agrupando portales...");
 
             fetch('/agrupar_por_tipo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ agrupamiento })
+                body: JSON.stringify({ agrupamiento, cod })
             })
             .then(response => {
                 if (!response.ok) throw new Error("Error al agrupar portales");
@@ -917,6 +956,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 paginaActual = 1;
                 filtradoActivo = false;
                 renderPagina(paginaActual);
+                console.log("Mapa cargado:", data.url);
+                document.getElementById("iMapCluster").src = data.url;
             })
             .catch(err => {
                 console.error("Error:", err);
@@ -928,6 +969,8 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 document.getElementById("filtros-clus-diametro").style.display = "none";
             }
+
+            activarTab(1);
 
             btnAgruparGeneral.disabled = true;
         });

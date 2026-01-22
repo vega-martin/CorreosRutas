@@ -1,6 +1,7 @@
 from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template, Response
 from pathlib import Path
 from .geoAnalysis import asociar_direcciones_a_puntos
+from .generateResults import create_cluster_map
 import pandas as pd
 import numpy as np
 import re
@@ -158,6 +159,7 @@ def filtrar_registros():
     # Obtener la ruta del archivo de la sesión
     file_path = Path(os.path.join(current_app.config['UPLOAD_FOLDER'], session['id'], 'table_data.json'))
     datos_completos = []
+    url = ''
 
     # Comprobar si la ruta existe y si el archivo realmente está allí
     if not file_path.exists():
@@ -230,11 +232,22 @@ def filtrar_registros():
             json=payload
         )
         api_response.raise_for_status()
+        resultado = api_response.json()
+        upload_folder = current_app.config.get("UPLOAD_FOLDER")
+        processed_filename = 'table_data_filtered.json'
+        save_path = os.path.join(upload_folder, session.get("id"), processed_filename)
+        
+        # Guardar la lista de diccionarios (el valor de 'tabla') en el disco
+        with open(save_path, 'w', encoding='utf-8') as f:
+            json.dump(resultado, f, ensure_ascii=False, indent=4)
+        resultados_filtrados = resultado.get("tabla")
+        cod = data.get('cod')
+        url = create_cluster_map(cod, data.get('diametro'), data.get('numPts'))
+
     except requests.RequestException as e:
         current_app.logger.error(f"Error llamando a la API de diámetro: {e}")
         return jsonify({"error": "Error al procesar agrupación por diámetro"}), 502
 
-    resultados_filtrados = api_response.json().get("tabla")
 
 
     # Aplicar los filtros iterativamente
@@ -266,6 +279,7 @@ def filtrar_registros():
     return jsonify({
         "tabla": resultados_filtrados,
         # "resumen": {"puntos_totales": len(resultados_filtrados), "distancia_total": "...", "tiempo_total": "...", "velocidad_media": "..."}, # Devuelve algo útil o vacío
+        "url": url,
         "warnings": []
     })
 
