@@ -4,6 +4,7 @@ from .geoAnalysis import asociar_direcciones_a_puntos
 from .generateResults import create_cluster_map
 import pandas as pd
 import numpy as np
+from datetime import date
 import re
 import json
 import os, io, csv, requests
@@ -366,6 +367,11 @@ def get_table():
         return "Invalid JSON body", 400
 
     table_type = data_req.get("type")
+    fecIni = data_req.get("ini")
+    fecFin = data_req.get("fin")
+    fecha_inicio_dt = date.fromisoformat(fecIni)
+    fecha_fin_dt = date.fromisoformat(fecFin)
+    diferencia_dias = (fecha_fin_dt - fecha_inicio_dt).days + 1
 
     if table_type == "original":
         json_path = os.path.join(
@@ -406,7 +412,10 @@ def get_table():
         dato['nearest_latitud'] = str(dato['nearest_latitud']).replace('.', ',')
         dato['nearest_longitud'] = str(dato['nearest_longitud']).replace('.', ',')
         dato['distancia'] = str(dato['distancia']).replace(' m', '').replace('.', ',')
-        dato['tiempo'] = str(dato['tiempo']).replace(' sec', '')
+        tiempo = float(str(dato['tiempo']).replace(' sec', ''))
+        dato['tiempo'] = str(tiempo).replace('.', ',')
+        tiempoMedio = tiempo/diferencia_dias
+        dato['tiempo_medio'] = str(tiempoMedio).replace('.', ',')
         dato['velocidad'] = str(dato['velocidad']).replace(' km/h', '').replace('.', ',')
 
     output = io.StringIO()

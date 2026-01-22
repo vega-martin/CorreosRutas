@@ -237,7 +237,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch("/getTable", { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type: dowloadType })
+                body: JSON.stringify({
+                    type: dowloadType,
+                    ini: fechaInicio.value,
+                    fin: fechaFin.value
+                })
             });
 
             if (!response.ok) {
