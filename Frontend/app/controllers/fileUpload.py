@@ -199,6 +199,18 @@ def check_files_status():
 
 
 
+@fileUpload_bp.route("/check_mandatory_files_status", methods=["POST"])
+def check_mandatory_files_status():
+    """
+    Comprueba si los ficheros obligatorios ya están listos (fichero A)
+    """
+    # Comprobar si estan o no todos los ficheros
+    uploaded_files = session.get("uploaded_files", {})
+    ready = bool(uploaded_files.get("A"))
+    return jsonify({"ready": ready})
+
+
+
 @fileUpload_bp.route("/try_unify_all_files", methods = ['POST'])
 def try_unify_all_files():
     """

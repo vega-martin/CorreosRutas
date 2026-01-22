@@ -10,6 +10,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // comprobar si los ficheros estan o no
     checkFiles().then(areFiles => {
         enableBtns(areFiles);
+    }).finally(() => {
+        checkMandatoryFiles().then(isFile => {
+            console.log("Comprobando existencia de fichero a")
+            console.log(!isFile)
+            document.getElementById("mapaBtn").disabled = !isFile;
+        });
     });
 
     // --- FORM A ---
@@ -185,6 +191,19 @@ function confirmLogout() {
 // Comprobar si se han subido todos los archivos
 function checkFiles() {
     return fetch("/check_files_status", {
+        method: "POST"
+    })
+    .then(response => response.json())
+    .then(data => data.ready)
+    .catch(err => {
+        console.error("Error comprobando archivos:", err);
+        return false; // fallback
+    });
+}
+
+// Comprobar si se han subido los archivos obligatorios (fichero A)
+function checkMandatoryFiles() {
+    return fetch("/check_mandatory_files_status", {
         method: "POST"
     })
     .then(response => response.json())
