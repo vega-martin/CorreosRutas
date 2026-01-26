@@ -2,37 +2,38 @@ import os
 import time
 import shutil
 
-def ejecutar_limpieza_carpeta(directorio_objetivo):
+def clean_user_files(obj_dir):
     """
-    Borra archivos en el directorio dado que tengan más de 24 horas de antigüedad.
+    Erases the files inside 'obj_dir' older than 24 hours
+
+    Args:
+        obj_dir: absolute path to the folder whose contents we want to delete
     """
-    if not directorio_objetivo or not os.path.exists(directorio_objetivo):
-        print(f"El directorio {directorio_objetivo} no existe o no está configurado.")
+    if not obj_dir or not os.path.exists(obj_dir):
+        print(f"The folder {obj_dir} doesn't exist or is not configurated.")
         return
 
-    ahora = time.time()
-    limite_segundos = 10  # 24 horas
+    now = time.time()
+    limite_segundos = 10  # 24 hours
 
-    # Listamos todo lo que hay en 'uploads'
-    for nombre_item in os.listdir(directorio_objetivo):
-        ruta_completa = os.path.join(directorio_objetivo, nombre_item)
+    # Iterate through all the items inside obj_dir
+    for item in os.listdir(obj_dir):
+        abs_path = os.path.join(obj_dir, item)
         
         try:
-            # 1. Obtenemos el tiempo de modificación
-            t_mod = os.path.getmtime(ruta_completa)
-            es_viejo = (ahora - t_mod) > limite_segundos
+            # 1. Get the modification time 
+            t_mod = os.path.getmtime(abs_path)
+            is_old = (now - t_mod) > limite_segundos
 
-            if es_viejo:
-                # CASO A: Es una CARPETA
-                if os.path.isdir(ruta_completa):
-                    # shutil.rmtree borra la carpeta y TODO lo que hay dentro
-                    shutil.rmtree(ruta_completa)
-                    print(f"Carpeta eliminada: {nombre_item}")
-                
-                # CASO B: Es un ARCHIVO suelto
-                elif os.path.isfile(ruta_completa):
-                    os.remove(ruta_completa)
-                    print(f"Archivo eliminado: {nombre_item}")
+            if is_old:
+                # CASE A: a folder
+                if os.path.isdir(abs_path):
+                    shutil.rmtree(abs_path)
+                    print(f"Deleted folder: {item}")
+                # CASE B: a file
+                elif os.path.isfile(abs_path):
+                    os.remove(abs_path)
+                    print(f"Deleted file: {item}")
 
         except Exception as e:
-            print(f"Error al intentar borrar {nombre_item}: {e}")
+            print(f"Exception while trying to delete {item}: {e}")

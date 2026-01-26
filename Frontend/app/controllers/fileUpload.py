@@ -8,19 +8,40 @@ fileUpload_bp = Blueprint('fileUpload', __name__, template_folder='templates')
 
 
 # ------------------------------------------------------------
-# FUNCIONES AUXILIARES
+# AUXILIARY FUNCTIONS
 # ------------------------------------------------------------
 
 def valid_extension(name):
-    """Comprueba si la extensión es valida"""
+    """Check if a file name has a valid extension.
 
+    This function checks whether the file extension of the given
+    file name is allowed according to the application's configuration.
+
+    Args:
+        name (str): Name of the file to check.
+
+    Returns:
+        bool: True if the file has a valid extension, False otherwise.
+    """
     valid_ext = current_app.config['ALLOWED_EXTENSIONS']
     return '.' in name and name.rsplit('.', 1)[1].lower() in valid_ext
 
 
 def ensure_session_folder():
-    """Crea una carpeta única para cada sesión y crea sesión (si no existe)"""
+    """Ensure that a unique folder exists for the current user session.
 
+    This function retrieves the current session ID (creating one if
+    necessary), constructs a user-specific folder path under the
+    configured upload directory, and creates the folder if it does
+    not exist. Logs success or failure.
+
+    Returns:
+        str: Path to the session-specific folder.
+
+    Side Effects:
+        - Creates a directory on the filesystem if it does not exist.
+        - Logs success or error messages to the application logger.
+    """
     session_id = session.get("id")
 
     base_upload = current_app.config.get("UPLOAD_FOLDER")
@@ -35,16 +56,42 @@ def ensure_session_folder():
     return user_folder
 
 
+
 # ------------------------------------------------------------
-# COMPROBACION DE FICHEROS
+# FILE VALIDATION
 # ------------------------------------------------------------
 
 @fileUpload_bp.route('/validateFile', methods=['POST'])
 def valid_file(path, file_type):
+    """Validate the structure of an uploaded CSV file.
+
+    This endpoint reads a CSV file from the given path, checks for
+    required columns based on the file type, and returns a JSON
+    response indicating whether the file is valid. Designed for
+    use with files of types 'A', 'B', or 'C'.
+
+    Args:
+        path (str): Path to the uploaded CSV file.
+        file_type (str): Type of the file, expected values: 'A', 'B', 'C'.
+
+    Returns:
+        flask.Response: JSON response with:
+            - On success (valid CSV and columns):
+                {'message': 'Archivo válido'}, HTTP status 200
+            - On missing columns:
+                {'error': <description>}, HTTP status 400
+            - On CSV read error:
+                {'error': <description>}, HTTP status 500
+
+    Side Effects:
+        - Logs a message to `current_app.logger` if the file is valid.
+    """
     try:
         df = pd.read_csv(path, delimiter=';', low_memory=False)
-    except Exception as e:
-        return jsonify({'error': f'Error al leer el archivo: Asegurese de que el archivo es de tipo CSV.'}), 500
+    except Exception:
+        return jsonify({
+            'error': 'Error al leer el archivo: Asegurese de que el archivo es de tipo CSV.'
+        }), 500
 
     required_columns_map = {
         "A": {'fec_lectura_medicion', 'longitud_wgs84_gd', 'latitud_wgs84_gd', 'cod_inv_pda', 'codired'},
@@ -55,11 +102,14 @@ def valid_file(path, file_type):
     required_columns = required_columns_map.get(file_type)
     
     if not required_columns.issubset(df.columns):
-        return jsonify({'error': f'El fichero CSV \"{file_type}\" debe contener las columnas: {", ".join(required_columns)}'}), 400
+        return jsonify({
+            'error': f'El fichero CSV "{file_type}" debe contener las columnas: {", ".join(required_columns)}'
+        }), 400
     
-    current_app.logger.info('Archivo subido válido')
+    current_app.logger.info('Valid uploaded file')
 
     return jsonify({'message': 'Archivo válido'}), 200
+
 
 
 # ------------------------------------------------------------
@@ -68,6 +118,27 @@ def valid_file(path, file_type):
 
 @fileUpload_bp.route('/uploadFileAToBackend', methods=['POST'])
 def uploadFileAToBackend():
+    """Handle upload, validation, and forwarding of a type-A CSV file.
+
+    This endpoint receives a CSV file of type A from the client,
+    stores it in a session-specific folder, validates its structure,
+    and forwards it to an external backend API for further processing.
+
+    If validation fails, the file is deleted and an error message
+    is returned. On success, the file path is stored in the session
+    and the backend response is included in the logs.
+
+    Returns:
+        flask.Response: JSON response containing:
+            - logs (str): Success or error messages, including
+              backend processing logs when available.
+
+    Side Effects:
+        - Writes and deletes files on the filesystem.
+        - Sends an HTTP POST request to an external backend API.
+        - Mutates the Flask session by updating uploaded file metadata.
+        - Writes informational and error logs to the application logger.
+    """
     file_type = 'A'
     file_key = 'fileA'
     f = request.files.get(file_key)
@@ -108,6 +179,28 @@ def uploadFileAToBackend():
 
 @fileUpload_bp.route('/uploadFilesBCToBackend', methods=['POST'])
 def uploadFilesBCToBackend():
+    """Handle upload, validation, and backend processing of type-B and type-C files.
+
+    This endpoint processes two uploaded CSV files (types B and C) in
+    sequence. Each file is saved to a session-specific directory,
+    validated for required structure, and forwarded to an external
+    backend API. After both files are successfully uploaded, a final
+    backend call is made to unify the processed data.
+
+    If any file fails validation, the operation is aborted and an
+    error response is returned.
+
+    Returns:
+        flask.Response: JSON response containing:
+            - logs (str): Status and processing messages, including
+              backend unification output.
+
+    Side Effects:
+        - Writes and deletes files on the filesystem.
+        - Sends multiple HTTP POST requests to external backend APIs.
+        - Mutates the Flask session with uploaded file metadata.
+        - Logs file handling results to the application logger.
+    """
     for file_type in ('B', 'C'):
         file_key = f'file{file_type}'
         f = request.files.get(file_key)
@@ -169,8 +262,26 @@ def uploadFilesBCToBackend():
 
 @fileUpload_bp.route("/check_files_status", methods=["POST"])
 def check_files_status():
-    """
-    Comprueba si todos los ficheros requeridos ya están listos (3 ficheros y PDF).
+    """Check whether all required files and generated outputs are ready.
+
+    This endpoint verifies that all mandatory user-uploaded files
+    (types A, B, and C) are present in the current session and that
+    the backend has successfully completed the unification process
+    (e.g., PDF generation or equivalent final artifact).
+
+    The file presence check is performed locally using session data,
+    while the unification status is validated by calling a backend
+    API endpoint.
+
+    Returns:
+        flask.Response: JSON response containing:
+            - ready (bool): True if all required files are uploaded
+              and the backend confirms successful unification;
+              False otherwise.
+
+    Side Effects:
+        - Sends an HTTP POST request to the backend API to check
+          unification status.
     """
     # Comprobar si estan o no todos los ficheros
     uploaded_files = session.get("uploaded_files", {})
@@ -201,8 +312,18 @@ def check_files_status():
 
 @fileUpload_bp.route("/check_mandatory_files_status", methods=["POST"])
 def check_mandatory_files_status():
-    """
-    Comprueba si los ficheros obligatorios ya están listos (fichero A)
+    """Check whether mandatory files have been uploaded.
+
+    This endpoint verifies that the mandatory file (type A) has been
+    successfully uploaded and registered in the current user session.
+
+    The validation is performed exclusively using session data and
+    does not involve any backend API calls.
+
+    Returns:
+        flask.Response: JSON response containing:
+            - ready (bool): True if the mandatory file is present in
+              the session; False otherwise.
     """
     # Comprobar si estan o no todos los ficheros
     uploaded_files = session.get("uploaded_files", {})
@@ -213,8 +334,25 @@ def check_mandatory_files_status():
 
 @fileUpload_bp.route("/try_unify_all_files", methods = ['POST'])
 def try_unify_all_files():
-    """
-    Coprueba que se hayan cargado los 3 ficheros. Si se han cargado los unifica
+    """Attempt to unify all required uploaded files.
+
+    This endpoint checks whether all required files (types A, B, and C)
+    have been successfully uploaded in the current session. If so, it
+    triggers a backend process to unify all files into a consolidated
+    result.
+
+    The function returns a readiness flag based on local validation
+    and backend response status.
+
+    Returns:
+        flask.Response: JSON response containing:
+            - ready (bool): True if all required files are present and
+              the backend unification request is successfully triggered;
+              False otherwise.
+
+    Side Effects:
+        - Sends an HTTP POST request to the backend API to initiate
+          file unification.
     """
     # Comprobar si estan o no todos los ficheros
     uploaded_files = session.get("uploaded_files", {})

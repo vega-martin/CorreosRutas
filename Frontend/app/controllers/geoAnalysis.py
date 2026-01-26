@@ -8,9 +8,48 @@ import numpy as np
 
 kd_tree_dic = {}
 
-# Clase nodo para almacenar los datos
 class Node:
-    def __init__(self,longitud,latitud,feature_original,splitting_dimension, left_node=None, right_node=None):
+    """Tree node representing a spatial point and its partitioning metadata.
+
+    This class is typically used in spatial data structures such as
+    k-d trees. Each node stores geographic coordinates, a reference
+    to the original feature, and the dimension used to split the
+    space at this node.
+
+    Attributes:
+        longitud (float): Longitude coordinate of the point.
+        latitud (float): Latitude coordinate of the point.
+        feature_original (Any): Reference to the original data
+            structure or feature associated with this node.
+        splitting_dimension (int): Dimension index used to split
+            the space (e.g., 0 for longitude, 1 for latitude).
+        left_node (Node | None): Left child node in the tree.
+        right_node (Node | None): Right child node in the tree.
+    """
+
+    def __init__(
+        self,
+        longitud,
+        latitud,
+        feature_original,
+        splitting_dimension,
+        left_node=None,
+        right_node=None
+    ):
+        """Initialize a Node instance.
+
+        Args:
+            longitud (float): Longitude coordinate of the point.
+            latitud (float): Latitude coordinate of the point.
+            feature_original (Any): Original feature or data object
+                associated with this node.
+            splitting_dimension (int): Dimension index used to split
+                the space at this node.
+            left_node (Node | None, optional): Left child node.
+                Defaults to None.
+            right_node (Node | None, optional): Right child node.
+                Defaults to None.
+        """
         self.longitud = longitud
         self.latitud = latitud
         self.feature_original = feature_original
@@ -19,45 +58,104 @@ class Node:
         self.right_node = right_node
 
 
-# --- FUNCIONES DE SOPORTE GLOBALES ---
+
+# --- GLOBAL SUPPORT FUNCTIONS ---
 g = Geod(ellps='WGS84')
 
+
 def geodesic_distance_meters(lat1, lon1, lat2, lon2):
-    """Calcula la distancia geodésica entre dos puntos en metros usando pyproj.Geod."""
+    """Compute the geodesic distance between two points in meters.
+
+    The distance is calculated on the WGS84 ellipsoid using
+    `pyproj.Geod.inv`, which accounts for the Earth's curvature.
+
+    Args:
+        lat1 (float): Latitude of the first point.
+        lon1 (float): Longitude of the first point.
+        lat2 (float): Latitude of the second point.
+        lon2 (float): Longitude of the second point.
+
+    Returns:
+        float: Geodesic distance between the two points, in meters.
+    """
     _, _, distance = g.inv(lon1, lat1, lon2, lat2)
     return distance
+
 
 # ------------------------------------
 
 def convertToDataframe(geojson_data):
+    """Convert GeoJSON feature data into a Pandas DataFrame.
+
+    This function extracts point coordinates and selected properties
+    from a GeoJSON FeatureCollection and returns them as a structured
+    Pandas DataFrame. Only features with valid 2D point coordinates
+    are processed.
+
+    GeoJSON coordinates are expected in the format:
+    `[longitude, latitude]`.
+
+    Args:
+        geojson_data (dict): GeoJSON object containing a
+            `FeatureCollection` with point geometries.
+
+    Returns:
+        pandas.DataFrame: DataFrame with the following columns:
+            - longitud (float): Longitude coordinate.
+            - latitud (float): Latitude coordinate.
+            - feature_original (dict): Subset of properties extracted
+              from the original GeoJSON feature, including country,
+              postcode, street, and number.
     """
-    Convierte los datos GeoJSON en un DataFrame de Pandas, extrayendo 
-    las coordenadas y la información relevante de la feature original.
-    """
-    
     data_list = []
     for feature in geojson_data.get('features', []):
         coords = feature.get('geometry', {}).get('coordinates', [])
         if len(coords) == 2:
-            data = feature.get('properties',{})
+            data = feature.get('properties', {})
             data_list.append({
-                # Las coordenadas GeoJSON están en formato [longitud, latitud]
+                # GeoJSON coordinates are in [longitude, latitude] order
                 'longitud': coords[0],
                 'latitud': coords[1],
                 'feature_original': {
-                    'country': data.get('country',""),
-                    'postcode': data.get('postcode',""),
-                    'street': data.get('street',""),
-                    'number': data.get('number',""),
+                    'country': data.get('country', ""),
+                    'postcode': data.get('postcode', ""),
+                    'street': data.get('street', ""),
+                    'number': data.get('number', ""),
                 }
             })
-    
+
     df = pd.DataFrame(data_list)
     return df
 
+
 def create_kd_tree_optimized(coord_array, metadata_array, indices=None, depth=0):
-    """
-    Generar el árbol binario multidimensional de los datos de geojson
+    """Build an optimized k-d tree from spatial coordinate data.
+
+    This function recursively constructs a balanced k-d tree (k=2)
+    from a set of latitude/longitude coordinates. It uses NumPy's
+    `argpartition` to select the median in linear time, avoiding
+    full sorting at each recursion level.
+
+    The tree alternates the splitting dimension at each depth:
+    - 0: latitude
+    - 1: longitude
+
+    Args:
+        coord_array (numpy.ndarray): Array of shape (N, 2) containing
+            spatial coordinates in the form:
+            `[latitud, longitud]`.
+        metadata_array (Sequence[Any]): Array-like structure containing
+            metadata associated with each coordinate. Each entry is
+            attached to the corresponding tree node.
+        indices (numpy.ndarray | None, optional): Indices of
+            `coord_array` to consider at the current recursion level.
+            If None, all points are used. Defaults to None.
+        depth (int, optional): Current recursion depth, used to
+            determine the splitting dimension. Defaults to 0.
+
+    Returns:
+        Node | None: Root node of the constructed k-d tree subtree,
+        or None if no indices are provided.
     """
     if indices is None:
         indices = np.arange(len(coord_array))
@@ -99,17 +197,42 @@ def create_kd_tree_optimized(coord_array, metadata_array, indices=None, depth=0)
 
     return node
 
-# --- FUNCIÓN DE BÚSQUEDA RECURSIVA ---
-
+# --- RECURSIVE SEARCH FUNCTION ---
 def _nearest_neighbor_recursive(current_node, target_point, best_dist_m, nearest_node):
-    """Lógica recursiva del K-D Tree con poda heurística y pyproj.Geod."""
-    
+    """Recursively search a k-d tree for the nearest neighbor.
+
+    This function implements the core recursive logic for a k-d tree
+    nearest-neighbor query with heuristic pruning. Distances are
+    computed using geodesic distance (WGS84) via `pyproj.Geod`.
+
+    The algorithm first explores the subtree closest to the target
+    point and only explores the opposite subtree if the distance to
+    the splitting plane indicates a closer point may exist.
+
+    Args:
+        current_node (Node | None): Current node in the k-d tree.
+        target_point (tuple[float, float]): Target point coordinates
+            in the form `(latitud, longitud)`.
+        best_dist_m (float): Current best distance found, in meters.
+        nearest_node (Node | None): Node corresponding to the current
+            nearest neighbor.
+
+    Returns:
+        tuple[float, Node | None]: A tuple containing:
+            - Best (minimum) distance found, in meters.
+            - Node corresponding to the nearest neighbor.
+    """
     if current_node is None:
         return best_dist_m, nearest_node
 
     target_lat, target_lon = target_point
     
-    current_dist_m = geodesic_distance_meters(target_lat, target_lon, current_node.latitud, current_node.longitud)
+    current_dist_m = geodesic_distance_meters(
+        target_lat,
+        target_lon,
+        current_node.latitud,
+        current_node.longitud
+    )
     
     if current_dist_m < best_dist_m:
         best_dist_m = current_dist_m
@@ -117,40 +240,77 @@ def _nearest_neighbor_recursive(current_node, target_point, best_dist_m, nearest
 
     dim = current_node.splitting_dimension
     
-    # target_point tiene formato (lat, lon), dim=0 es lat, dim=1 es lon
-    target_val = target_point[dim] 
-    node_val = current_node.latitud if dim == 0 else current_node.longitud
-    
-    if target_val < node_val:
-        search_first, search_second = current_node.left_node, current_node.right_node
-    else:
-        search_first, search_second = current_node.right_node, current_node.left_node
-
-    # 3. Búsqueda en el subárbol "cercano"
-    best_dist_m, nearest_node = _nearest_neighbor_recursive(
-        search_first, target_point, best_dist_m, nearest_node
+    # target_point is (lat, lon): dim=0 -> latitude, dim=1 -> longitude
+    target_val = target_point[dim]
+    node_val = (
+        current_node.latitud if dim == 0
+        else current_node.longitud
     )
     
-    # Poda
-    dist_to_plane_sq = (target_val - node_val)**2
+    if target_val < node_val:
+        search_first, search_second = (
+            current_node.left_node,
+            current_node.right_node
+        )
+    else:
+        search_first, search_second = (
+            current_node.right_node,
+            current_node.left_node
+        )
+
+    # Search the "near" subtree first
+    best_dist_m, nearest_node = _nearest_neighbor_recursive(
+        search_first,
+        target_point,
+        best_dist_m,
+        nearest_node
+    )
     
-    # Heurística para convertir D_best (metros) a grados cuadrados para la comparación
-    meters_per_degree = 111320 
-    best_dist_degrees_sq = (best_dist_m / meters_per_degree)**2
+    # Pruning: distance from target to splitting plane
+    dist_to_plane_sq = (target_val - node_val) ** 2
+    
+    # Heuristic conversion: meters to squared degrees
+    meters_per_degree = 111_320
+    best_dist_degrees_sq = (best_dist_m / meters_per_degree) ** 2
     
     if dist_to_plane_sq < best_dist_degrees_sq:
-        # Búsqueda en el subárbol "lejano" (solo si es necesario)
+        # Search the "far" subtree only if necessary
         best_dist_m, nearest_node = _nearest_neighbor_recursive(
-            search_second, target_point, best_dist_m, nearest_node
+            search_second,
+            target_point,
+            best_dist_m,
+            nearest_node
         )
         
     return best_dist_m, nearest_node
 
 
 def find_nearest_address(kd_tree_root, target_lat, target_lon):
-    """Función para iniciar la búsqueda NNS y formatear el resultado."""
-    
-    # target_point se define como (latitud, longitud) para la indexación dim=0 y dim=1
+    """Find the nearest address to a target geographic coordinate.
+
+    This function serves as a public wrapper around the internal
+    k-d tree nearest-neighbor search. It initializes the recursive
+    search, then formats the result into a user-friendly dictionary
+    containing distance and address information.
+
+    Args:
+        kd_tree_root (Node | None): Root node of the k-d tree
+            containing address points.
+        target_lat (float): Latitude of the target location.
+        target_lon (float): Longitude of the target location.
+
+    Returns:
+        dict | None: Dictionary with nearest address information if
+        a neighbor is found, otherwise None. The dictionary contains:
+            - distance_meters (float): Distance to the nearest address.
+            - nearest_latitud (float): Latitude of the nearest point.
+            - nearest_longitud (float): Longitude of the nearest point.
+            - street (str): Street name of the nearest address.
+            - number (str): Street number of the nearest address.
+            - post_code (str): Postal code of the nearest address.
+    """
+    # target_point is defined as (latitude, longitude)
+    # to match dim=0 (lat) and dim=1 (lon) indexing
     target_point = (target_lat, target_lon)
     
     best_dist_m, nearest_node = _nearest_neighbor_recursive(
@@ -171,11 +331,37 @@ def find_nearest_address(kd_tree_root, target_lat, target_lon):
             'number': address_data.get('number', 'N/A'),
             'post_code': address_data.get('postcode', 'N/A')
         }
+
     return None
 
 def initialize_global_tree(file_geojson, cod):
+    """Initialize and cache a global k-d tree from a GeoJSON file.
+
+    This function loads a GeoJSON file, converts its contents into a
+    structured DataFrame, builds an optimized k-d tree from the
+    extracted coordinates, and stores the resulting tree in a global
+    dictionary keyed by the provided code.
+
+    If the tree for the given code already exists, or if the input
+    file is missing or invalid, the function exits silently.
+
+    Args:
+        file_geojson (str): Path to the GeoJSON file containing
+            point features with geographic coordinates.
+        cod (Hashable): Key used to store and retrieve the k-d tree
+            instance from the global cache.
+
+    Side Effects:
+        - Reads data from disk.
+        - Modifies the global `kd_tree_dic` dictionary by adding a
+          new k-d tree entry when successful.
+
+    Returns:
+        None
+    """
     global kd_tree_dic
-    if cod in kd_tree_dic: return
+    if cod in kd_tree_dic:
+        return
 
     if not os.path.exists(file_geojson):
         return
@@ -185,7 +371,8 @@ def initialize_global_tree(file_geojson, cod):
             geojson_data = json.load(f)
         
         df_geojson = convertToDataframe(geojson_data)
-        if df_geojson.empty: return
+        if df_geojson.empty:
+            return
 
         coord_array = df_geojson[['latitud', 'longitud']].to_numpy()
         metadata_array = df_geojson['feature_original'].to_numpy()
@@ -196,42 +383,71 @@ def initialize_global_tree(file_geojson, cod):
     except Exception as e:
         return
 
-# --- FUNCIÓN PRINCIPAL ---
+# --- MAIN FUNCTION ---
+def asociar_direcciones_a_puntos(complete_data, file_geojson, cod):
+    """Associate the nearest address to each user-provided point.
 
-def asociar_direcciones_a_puntos(datos_completos, file_geojson, cod):
-    """
-    Función principal que construye el K-D Tree y asocia la dirección 
-    más cercana a cada punto de la lista de usuario.
-    """
+    This function acts as the main orchestration layer of the workflow.
+    It ensures that a k-d tree is initialized for the specified code,
+    then iterates over a list of user points and enriches each point
+    with the nearest address information obtained from the k-d tree.
 
+    Address matching is performed using geodesic distance (WGS84)
+    and a nearest-neighbor search on a k-d tree.
+
+    Args:
+        complete_data (list[dict]): List of user-provided points.
+            Each dictionary is expected to contain at least:
+            - 'latitud' (float)
+            - 'longitud' (float)
+        file_geojson (str): Path to the GeoJSON file containing
+            address point data.
+        cod (Hashable): Key used to identify and cache the k-d tree
+            instance.
+
+    Side Effects:
+        - Initializes and caches a k-d tree in the global `kd_tree_dic`
+          dictionary if it does not already exist.
+        - Mutates each dictionary in `complete_data` by adding
+          address-related fields.
+
+    Returns:
+        list[dict] | dict: The updated list of points enriched with
+        nearest address data. If initialization fails, a dictionary
+        with an error description is returned.
+    """
     global kd_tree_dic
     if cod not in kd_tree_dic:
         print("Iniciando árbol binario")
         initialize_global_tree(file_geojson, cod)
         if cod not in kd_tree_dic:
-            return {"error": "Fallo al inicializar datos de portales"}
+            return {"error": "Failure to initialize portal data"}
 
     KD_TREE_ROOT = kd_tree_dic[cod]
 
-    for point in datos_completos:
+    for point in complete_data:
         target_lat = point.get('latitud')
         target_lon = point.get('longitud')
         
         if target_lat is not None and target_lon is not None:
             
-            # Buscar la dirección más cercana usando el K-D Tree y Geod
-            nearest_info = find_nearest_address(KD_TREE_ROOT, target_lat, target_lon)
+            # Find nearest address using the k-d tree and geodesic distance
+            nearest_info = find_nearest_address(
+                KD_TREE_ROOT,
+                target_lat,
+                target_lon
+            )
             
             if nearest_info:
-                # Actualizar el diccionario del punto con la información de la dirección
-                point['distance'] = nearest_info['distance_meters'] 
+                # Update point with nearest address information
+                point['distance'] = nearest_info['distance_meters']
                 point['street'] = nearest_info['street']
                 point['number'] = nearest_info['number']
                 point['post_code'] = nearest_info['post_code']
                 point['nearest_latitud'] = nearest_info['nearest_latitud']
                 point['nearest_longitud'] = nearest_info['nearest_longitud']
             else:
-                # Caso si el K-D Tree no se construyó o no encontró nada (p. ej., datos fuera de rango)
+                # Case where no nearest neighbor is found
                 point['distance'] = 'N/A'
                 point['street'] = 'No encontrado'
                 point['number'] = 'N/A'
@@ -239,4 +455,4 @@ def asociar_direcciones_a_puntos(datos_completos, file_geojson, cod):
                 point['nearest_latitud'] = 'N/A'
                 point['nearest_longitud'] = 'N/A'
         
-    return datos_completos
+    return complete_data

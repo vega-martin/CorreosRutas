@@ -4,18 +4,19 @@ from app.controllers.main import main_bp
 from app.controllers.fileUpload import fileUpload_bp
 from app.controllers.generateResults import generateResults_bp
 from app.controllers.options import options_bp
-from app.controllers.tasks import ejecutar_limpieza_carpeta
+from app.controllers.tasks import clean_user_files
 
 scheduler = APScheduler()
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.DevConfig')
-    app.logger.info(f"Localizacion de descargar para la aplicación {app.config.get("UPLOAD_FOLDER")}")
+    uploads = app.config.get("UPLOAD_FOLDER")
+    app.logger.info(f"Uplaods location for the user files: {uploads}")
 
     app.config['SCHEDULER_API_ENABLED'] = True 
     maps_folder = app.config.get("MAPS_FOLDER")
-    app.logger.info(f"Localizacion de descarga para la aplicación {maps_folder}")
+    app.logger.info(f"Maps location folder: {maps_folder}")
 
     scheduler.init_app(app)
     scheduler.start()
@@ -23,7 +24,8 @@ def create_app():
     @scheduler.task('cron', id='limpieza_diaria_job', hour=3, minute=0)
     def scheduled_cleaning():
         with app.app_context():
-            ejecutar_limpieza_carpeta(maps_folder)
+            clean_user_files(maps_folder)
+            clean_user_files(uploads)
 
     # Blueprints
     app.register_blueprint(main_bp)
