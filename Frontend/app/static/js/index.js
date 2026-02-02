@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("estadisticasBtn").addEventListener("click", async () => {
         try {
-            const response = await fetch("/getStadistics", {  method: "GET",  });
+            const response = await fetch("/get_stadistics", {  method: "GET"  });
 
             if (!response.ok) {
                 throw new Error("Error al descargar el PDF");
@@ -116,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Descargar fichero D
         try {
             const file = "D";
-            const response = await fetch("/get_generated_files", {
+            const response = await fetch("/get_generated_file", {
                 method: "POST",
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ file })
@@ -146,7 +146,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Descargar fichero E
         try {
             const file = "E";
-            const response = await fetch("/get_generated_files", {
+            const response = await fetch("/get_generated_file", {
                 method: "POST",
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ file })
@@ -191,7 +191,7 @@ function confirmLogout() {
 // Comprobar si se han subido todos los archivos
 function checkFiles() {
     return fetch("/check_files_status", {
-        method: "POST"
+        method: "GET"
     })
     .then(response => response.json())
     .then(data => data.ready)
@@ -204,7 +204,7 @@ function checkFiles() {
 // Comprobar si se han subido los archivos obligatorios (fichero A)
 function checkMandatoryFiles() {
     return fetch("/check_mandatory_files_status", {
-        method: "POST"
+        method: "GET"
     })
     .then(response => response.json())
     .then(data => data.ready)
@@ -216,9 +216,7 @@ function checkMandatoryFiles() {
 
 // Comprobar si se han subido todos los archivos
 function unifyFiles() {
-    return fetch("/try_unify_all_files", {
-        method: "POST"
-    })
+    return fetch("/try_unify_all_files", {  method: "GET"  })
     .then(response => response.json())
     .then(data => data.ready)
     .catch(err => {

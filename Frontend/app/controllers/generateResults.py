@@ -1,16 +1,11 @@
 from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template, Response
+import folium, statistics, os, urllib, json, requests
+from .geoAnalysis import asociar_direcciones_a_puntos
+from .file_upload import ensure_session_folder
 from geopy.distance import geodesic
+from pathlib import Path
 import pandas as pd
 import numpy as np
-import folium
-import statistics
-import os
-import urllib
-import json
-import requests
-from app.controllers.fileUpload import ensure_session_folder
-from .geoAnalysis import asociar_direcciones_a_puntos
-from pathlib import Path
 
 generateResults_bp = Blueprint('generateResults', __name__, template_folder='templates')
 
@@ -919,28 +914,7 @@ def unifyFiles():
     return redirect(url_for('main.root'))
 
 
-@generateResults_bp.route('/getStadistics')
-def getStadistics():
-    # Preparar datos
-    data = {
-        "id": session.get("id"),
-    }
 
-    api_url = current_app.config.get("API_URL")
-    
-    # Llamar a la API
-    api_response = requests.post(f"{api_url}/descargar_estadisticas", data=data)
-
-    # Verificar éxito
-    if api_response.status_code != 200:
-        return f"Error en la API: {api_response.status_code}", 500
-
-    # Reenviar el contenido del PDF al cliente
-    return Response(
-        api_response.content,           # contenido binario
-        mimetype="application/pdf",     # tipo MIME correcto
-        headers={"Content-Disposition": "attachment; filename=estadisticas.pdf"}
-    )
 
 @generateResults_bp.route('/agrupar_puntos', methods=['POST'])
 def agrupar_puntos():

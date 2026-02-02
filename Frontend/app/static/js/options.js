@@ -234,7 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btnDescargarTabla.addEventListener("click", async () => {
         try {
             console.log(dowloadType);
-            const response = await fetch("/getTable", { 
+            const response = await fetch("/get_table", { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

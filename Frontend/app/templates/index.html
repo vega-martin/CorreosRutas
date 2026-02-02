@@ -22,7 +22,7 @@
         <div class="file-section two-columns">
             <div class="column">
                 <div class="file-A-section">
-                    <form method="POST" action="{{ url_for('fileUpload.uploadFileAToBackend') }}" enctype="multipart/form-data">
+                    <form method="POST" action="{{ url_for('file_upload.upload_file_A') }}" enctype="multipart/form-data">
                         <label for="fileA">Seleccione el fichero A</label>
                         <input type="file" name="fileA" accept=".csv" id="fileA-input" required><br><br>
                         <input type="submit" value="Cargar Fichero A" id="fileA-input-btn" disabled title="Se debe seleccionar un fichero"><br><br><br><br>
@@ -32,7 +32,7 @@
             </div>
             <div class="column">
                 <div class="file-BC-section">
-                    <form method="POST" action="{{ url_for('fileUpload.uploadFilesBCToBackend') }}" enctype="multipart/form-data">
+                    <form method="POST" action="{{ url_for('file_upload.upload_files_B_C') }}" enctype="multipart/form-data">
                         <label for="fileB">Seleccione el fichero B</label>
                         <input type="file" name="fileB" accept=".csv" id="fileB-input" required><br><br>
                         <label for="fileC">Seleccione el fichero C</label>

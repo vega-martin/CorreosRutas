@@ -1,10 +1,12 @@
 from flask import Flask
 from flask_apscheduler import APScheduler
-from app.controllers.main import main_bp
-from app.controllers.fileUpload import fileUpload_bp
-from app.controllers.generateResults import generateResults_bp
-from app.controllers.options import options_bp
-from app.controllers.tasks import clean_user_files
+from .controllers.main import main_bp
+from .controllers.file_upload import file_upload_bp
+from .controllers.file_validation import file_validation_bp
+from .controllers.file_provider import file_provider_bp
+from .controllers.generateResults import generateResults_bp
+from .controllers.options import options_bp
+from .controllers.tasks import clean_user_files
 
 scheduler = APScheduler()
 
@@ -29,7 +31,9 @@ def create_app():
 
     # Blueprints
     app.register_blueprint(main_bp)
-    app.register_blueprint(fileUpload_bp)
+    app.register_blueprint(file_upload_bp)
+    app.register_blueprint(file_validation_bp)
+    app.register_blueprint(file_provider_bp)
     app.register_blueprint(generateResults_bp)
     app.register_blueprint(options_bp)
 
