@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_apscheduler import APScheduler
 from .controllers.main import main_bp
+from .controllers.index import index_bp
 from .controllers.file_upload import file_upload_bp
 from .controllers.file_validation import file_validation_bp
 from .controllers.file_provider import file_provider_bp
@@ -31,6 +32,7 @@ def create_app():
 
     # Blueprints
     app.register_blueprint(main_bp)
+    app.register_blueprint(index_bp)
     app.register_blueprint(file_upload_bp)
     app.register_blueprint(file_validation_bp)
     app.register_blueprint(file_provider_bp)

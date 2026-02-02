@@ -758,33 +758,6 @@ def cluster_por_tiempo(tabla):
 # ENDPOINTS
 # ------------------------------------------------------------
 
-@generateResults_bp.route('/generar_mapa')
-def generar_mapa():
-    uploaded = session.get('uploaded_files', {})
-    api_url = current_app.config.get("API_URL")
-    data = {"id": session.get("id")}
-
-    response = requests.post(f"{api_url}/get_fichero_unificado", data=data)
-    save_path=""
-
-    if response.status_code == 200:
-        upload_dir = current_app.config.get("UPLOAD_FOLDER")
-        save_path = os.path.join(upload_dir, session.get("id"), "Fichero_E.csv")
-        with open(save_path, "wb") as f:
-            f.write(response.content)
-        uploaded["E"] = save_path
-        current_app.logger.info("Se ha descargado el fichero unificado")
-    else:
-        current_app.logger.error("Error:", response.text)
-
-    if not os.path.exists(save_path):
-        #flash(f"El fichero A o el fichero D (union de los ficheros B y C) no tiene suficientes registros para trabajar.")
-        return redirect(url_for('main.root'))
-
-    pdas = get_pdas(save_path)
-
-    return render_template('options.html', pdas=pdas)
-
 @generateResults_bp.route('/generar_mapa/datos_tabla', methods=['GET', 'POST'])
 def datos_tabla():
     data = request.get_json()
