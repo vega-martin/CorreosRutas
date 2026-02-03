@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // --- FORM A ---
-    const formA = document.querySelector('form[action*="uploadFileAToBackend"]');
+    const formA = document.querySelector('form[action*="upload_file_A"]');
     const inputA = formA.querySelector('input[name="fileA"]');
     const submitA = formA.querySelector('input[type="submit"]');
     inputA.addEventListener('change', () => {
@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // --- FORM B+C ---
-    const formBC = document.querySelector('form[action*="uploadFilesBCToBackend"]');
+    const formBC = document.querySelector('form[action*="upload_files_B_C"]');
     const inputB = formBC.querySelector('input[name="fileB"]');
     const inputC = formBC.querySelector('input[name="fileC"]');
     const submitBC = formBC.querySelector('input[type="submit"]');
