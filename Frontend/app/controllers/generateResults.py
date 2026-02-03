@@ -9,20 +9,6 @@ import numpy as np
 
 generateResults_bp = Blueprint('generateResults', __name__, template_folder='templates')
 
-# ------------------------------------------------------------
-# OBTENCIÓN DE OPCIONES
-# ------------------------------------------------------------
-
-def get_pdas(path):
-    try:
-        df = pd.read_csv(path, delimiter=';', low_memory=False)
-    except Exception as e:
-        print(f"Error al leer el archivo CSV: {e}")
-        return []
-
-    pdas = sorted(df['cod_pda'].dropna().unique())
-    current_app.logger.info(f'Se encontraron {len(pdas)} PDAs.')
-    return pdas
 
 
 

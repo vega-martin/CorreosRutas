@@ -275,7 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         codiredBtn.textContent = 'Cargando códigos...';
         
-        fetch('/codireds')
+        fetch('/get_unit_code')
         .then(response => {
             if (!response.ok) throw new Error('Error al cargar códigos de unidad.');
             return response.json();
@@ -319,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
         nuevoGeojson.className = "blue-label";
 
         // Comprobar si existe un GeoJSON para el codired
-        fetch('/existsGeoJSON', {
+        fetch('/exists_geojson', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ cod })
@@ -351,7 +351,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const cargarPdas = (cod) => {
-        fetch(`/pda_por_codired?cod=${encodeURIComponent(cod)}`)
+        fetch(`/get_pdas_per_unit_code?cod=${encodeURIComponent(cod)}`)
         .then(response => response.json())
         .then(data => {
             const pdas = data.pdas;
@@ -392,7 +392,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const cargarPdasFiltrar = (cod) => {
-        fetch(`/pda_por_codired?cod=${encodeURIComponent(cod)}`)
+        fetch(`/get_pdas_per_unit_code?cod=${encodeURIComponent(cod)}`)
         .then(response => response.json())
         .then(data => {
             const pdas = data.pdas;
@@ -429,6 +429,7 @@ document.addEventListener("DOMContentLoaded", () => {
             pdaBtn.textContent = pdaValue;
             pdaInput.value = pdaValue;
             pdaOptions.classList.remove('show');
+            cod = codiredInput.value;
 
             // Show message to user
             waitMessage.textContent = 'Procesando fechas válidas.';
@@ -443,27 +444,27 @@ document.addEventListener("DOMContentLoaded", () => {
             fechasDisponibles.clear();
 
             // Fetch dates
-            fetch(`/fechas_por_pda?pda=${encodeURIComponent(pdaValue)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.fechas && data.fechas.length > 0) {
-                        fechaInicio.disabled = false;
-                        fechaFin.disabled = false;
+            fetch(`/get_dates_per_pda_and_unit_code?pda=${encodeURIComponent(pdaValue)}&unit_code=${encodeURIComponent(cod)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.fechas && data.fechas.length > 0) {
+                    fechaInicio.disabled = false;
+                    fechaFin.disabled = false;
 
-                        fechasDisponibles = new Set(data.fechas);
+                    fechasDisponibles = new Set(data.fechas);
 
-                        fechaInicio.setAttribute("min", data.fechas[0]);
-                        fechaInicio.setAttribute("max", data.fechas[data.fechas.length - 1]);
-                        fechaFin.setAttribute("min", data.fechas[0]);
-                        fechaFin.setAttribute("max", data.fechas[data.fechas.length - 1]);
-                    }
-                })
-                .catch(() => {
-                    waitMessage.textContent = 'Error al cargar las fechas.';
-                })
-                .finally(() => {
-                    waitMessage.style.display = 'none';
-                });
+                    fechaInicio.setAttribute("min", data.fechas[0]);
+                    fechaInicio.setAttribute("max", data.fechas[data.fechas.length - 1]);
+                    fechaFin.setAttribute("min", data.fechas[0]);
+                    fechaFin.setAttribute("max", data.fechas[data.fechas.length - 1]);
+                }
+            })
+            .catch(() => {
+                waitMessage.textContent = 'Error al cargar las fechas.';
+            })
+            .finally(() => {
+                waitMessage.style.display = 'none';
+            });
         });
     }
 
@@ -525,7 +526,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("filtros-clus-diametro").style.display = "none";
 
             // Comprobar si existe un GeoJSON para el codired
-            const res = await fetch('/existsGeoJSON', {
+            const res = await fetch('/exists_geojson', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ cod })
@@ -676,7 +677,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const pdaOptionsFilterContainer = document.getElementById('pdaOptionsFilter');
             pdaOptionsFilterContainer.innerHTML = "";
 
-            fetch(`/pda_por_codired?cod=${encodeURIComponent(codiredInput.value)}`)
+            fetch(`/get_pdas_per_unit_code?cod=${encodeURIComponent(codiredInput.value)}`)
                 .then(response => response.json())
                 .then(data => {
                     const pdas = data.pdas;
@@ -756,7 +757,7 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log("valor filtro puntos:")
             console.log(valuePtsClus)
 
-            fetch('/filtrar_registros', {
+            fetch('/filter_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

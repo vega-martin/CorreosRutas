@@ -1,6 +1,7 @@
 from flask import Blueprint, request, current_app, session, jsonify
 from .file_validation import ensure_session_folder, valid_file
 from werkzeug.utils import secure_filename
+from pathlib import Path
 import os, requests
 
 
@@ -212,3 +213,20 @@ def try_unify_all_files():
             unify_data = {"logs": f"Error al llamar al backend: {e}"}
 
     return jsonify({"ready": ready})
+
+
+
+
+@file_upload_bp.route('/upload_geojson', methods=['POST'])
+def upload_geojson():
+    cod = request.form.get('cod')
+    file = request.files.get('geojson_file')
+
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    static_path = current_app.config.get("GEOJSON_FOLDER")
+    geojson_path = Path(os.path.join(static_path, f'{cod}.geojson'))
+    file.save(geojson_path)
+
+    return jsonify({'success': True})

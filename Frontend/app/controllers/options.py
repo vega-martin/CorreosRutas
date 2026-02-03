@@ -1,60 +1,21 @@
 from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template, Response
 from pathlib import Path
-from .geoAnalysis import asociar_direcciones_a_puntos
-from .generateResults import create_cluster_map
+
 import pandas as pd
 import numpy as np
-import re
-import json
-import os, requests
+import json, os
 
 options_bp = Blueprint('options', __name__, template_folder='templates')
 
-@options_bp.route('/options')
-def options():
-    return render_template('options.html')
 
-def get_fechas_por_pda(df, pda):
-    df_filtrado = df[df['cod_pda'] == pda]
-    fechas = sorted(df_filtrado['solo_fecha'].dropna().unique())
-    return fechas
 
-def get_fechas_por_todas_las_pdas(df):
-    fechas = sorted(df['solo_fecha'].dropna().unique())
-    return fechas
-    
-def extraer_num(text):
-    """Busca el primer número (entero o decimal) en un string y lo devuelve como float."""
-    if text is None:
-        return None
-    # Usa re.search para encontrar el patrón de dígitos y puntos
-    match = re.search(r'[\d\.]+', str(text)) 
-    if match:
-        try:
-            return float(match.group(0))
-        except ValueError:
-            return None
-    return None
-
-def cumple_condicion(val, comp, ref):
-    """Comprueba si el valor de la fila (val) cumple la condición (comp) con la referencia (ref)."""
-    # Si los valores no son numéricos, no se puede comparar
-    if val is None or ref is None:
-        return False
-        
-    if comp == "menor": return val < ref
-    if comp == "menor-igual": return val <= ref
-    if comp == "igual": return val == ref
-    if comp == "no-igual": return val != ref
-    if comp == "mayor": return val > ref
-    if comp == "mayor-igual": return val >= ref
-    return False
 
 # ------------------------------------------------------------
 # ENDPOINTS
 # ------------------------------------------------------------
-@options_bp.route('/codireds', methods=['GET'])
-def codireds():
+
+@options_bp.route('/get_unit_code', methods=['GET'])
+def get_unit_code():
     """
     JSON: Devuelve un JSON con la lista de códigos de las oficinas de los ficheros
     Error: En caso de error, devuelve la razón
@@ -89,8 +50,11 @@ def codireds():
         current_app.logger.error("La columna 'codired' no fue encontrada en el CSV.")
         return jsonify({'codireds': [], 'error': "La columna 'codired' no fue encontrada."})
 
-@options_bp.route('/pda_por_codired')
-def pda_por_codired():
+
+
+
+@options_bp.route('/get_pdas_per_unit_code')
+def get_pdas_per_unit_code():
     cod = request.args.get('cod')
     uploaded = session.get('uploaded_files', {})
     path = uploaded.get('E')
@@ -113,9 +77,12 @@ def pda_por_codired():
     return jsonify({'pdas': pdas})
 
 
-@options_bp.route('/fechas_por_pda')
-def fechas_por_pda():
+
+
+@options_bp.route('/get_dates_per_pda_and_unit_code')
+def get_dates_per_pda_and_unit_code():
     pda = request.args.get('pda')
+    unit_code = request.args.get('unit_code')
     uploaded = session.get('uploaded_files', {})
     path = uploaded.get('E')
     try:
@@ -128,232 +95,28 @@ def fechas_por_pda():
         return jsonify({'fechas': []})
 
     if pda == "TODAS":
-        fechas = get_fechas_por_todas_las_pdas(df)
+        fechas = get_dates_for_all_pdas(df, unit_code)
     else:
-        fechas = get_fechas_por_pda(df, pda)
+        fechas = get_dates_per_pda(df, pda, unit_code)
+
+    current_app.logger.info(f"fechas encontradas en {unit_code} para {pda}:\n{fechas}")
 
     return jsonify({'fechas': fechas})
 
 
-@options_bp.route('/procesar_mapa', methods=['POST'])
-def procesar_mapa():
-    pda = request.form.get('pda')
-    fecha_inicio = request.form.get('fecha_inicio')
-    fecha_fin = request.form.get('fecha_fin')
 
-    if not (pda and fecha_inicio and fecha_fin):
-        flash("Todos los campos son obligatorios", "error")
-        return redirect(url_for('generateResults.generar_mapa'))
 
-    if fecha_inicio >= fecha_fin:
-        flash("La fecha de fin debe ser mayor que la de inicio", "error")
-        return redirect(url_for('generateResults.generar_mapa'))
+# ------------------------------------------------------------
+# AUXILIARY FUNCTIONS
+# ------------------------------------------------------------
 
-    return f"Procesando mapa para PDA: {pda} entre {fecha_inicio} y {fecha_fin}"
-
-# ----- FILTRADO DE REGISTROS EN LA TABLA -----
-@options_bp.route('/filtrar_registros', methods=['POST'])
-def filtrar_registros():
-    data = request.get_json()
-
-    # Obtener la ruta del archivo de la sesión
-    file_path = Path(os.path.join(current_app.config['UPLOAD_FOLDER'], session['id'], 'table_data.json'))
-    datos_completos = []
-    url = ''
-
-    # Comprobar si la ruta existe y si el archivo realmente está allí
-    if not file_path.exists():
-        current_app.logger.error(f"Ruta de archivo no encontrada en sesión o archivo no existe: {file_path}")
-        # Retorna una lista vacía si no hay datos disponibles
-        return jsonify({"tabla": [], "resumen": {}, "warnings": ["No hay datos cargados para filtrar."]})
-
-    # Cargar los datos desde el archivo JSON
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            datos_completos = json.load(f)
-        
-    except json.JSONDecodeError:
-        current_app.logger.error(f"Error al decodificar el archivo JSON: {file_path}")
-        return jsonify({"tabla": [], "resumen": {}, "warnings": ["Error de formato en el archivo de datos."]})
-    except Exception as e:
-        current_app.logger.error(f"Error desconocido al leer el archivo de datos: {e}")
-        return jsonify({"tabla": [], "resumen": {}, "warnings": ["Error al acceder a los datos de la sesión."]})
-    
-    filtros_recibidos = [
-        {
-            "campo": "distancia", 
-            "comp": data.get('signoDistancia'), 
-            "valor_str": data.get('distancia')
-        },
-        {
-            "campo": "tiempo", 
-            "comp": data.get('signoTiempo'), 
-            "valor_str": data.get('tiempo')
-        },
-        {
-            "campo": "velocidad", 
-            "comp": data.get('signoVelocidad'), 
-            "valor_str": data.get('velocidad')
-        }
-    ]
-    
-    # Preparar los datos para el filtrado
-    resultados_filtrados = datos_completos.copy()
-
-    # Filtrar por PDA si se ha proporcionado
-    signoPda = data.get('signoPDA')
-    valorPda = data.get('pda')
-
-    current_app.logger.info(f"Valor de la PDA {valorPda} y signo {signoPda}")
-    if signoPda == "igual" and valorPda is not None:
-        resultados_filtrados = [
-                fila for fila in resultados_filtrados
-                if valorPda in (fila.get("cod_pda") or [])
-            ] 
-    elif signoPda == "no-igual" and valorPda is not None:
-        resultados_filtrados = [
-                fila for fila in resultados_filtrados
-                if valorPda not in (fila.get("cod_pda") or [])
-            ]
-
-    # Recalcular clusters con nuevos filtros
-    payload = {
-        "id": session.get("id"),
-        "diametro": data.get('diametro'),
-        "numPts": data.get('numPts'),
-        "tabla": datos_completos
-    }
-    current_app.logger.info(f"Valor del diametro {data.get('diametro')} y numpts {data.get('numPts')}")
-    api_url = current_app.config.get("API_URL")
-
-    try:
-        api_response = requests.post(
-            f"{api_url}/filtrar_clustering",
-            json=payload
-        )
-        api_response.raise_for_status()
-        resultados_filtrados = api_response.json().get("tabla")
-        upload_folder = current_app.config.get("UPLOAD_FOLDER")
-        processed_filename = 'table_data_filtered.json'
-        save_path = os.path.join(upload_folder, session.get("id"), processed_filename)
-        
-        # Guardar la lista de diccionarios (el valor de 'tabla') en el disco
-        with open(save_path, 'w', encoding='utf-8') as f:
-            json.dump(resultados_filtrados, f, ensure_ascii=False, indent=4)
-        cod = data.get('cod')
-        url = create_cluster_map(cod, data.get('diametro'), data.get('numPts'))
-
-    except requests.RequestException as e:
-        current_app.logger.error(f"Error llamando a la API de diámetro: {e}")
-        return jsonify({"error": "Error al procesar agrupación por diámetro"}), 502
+def get_dates_per_pda(df, pda, unit_code):
+    df_filtered = df[(df['codired'] == int(unit_code)) & (df['cod_pda'] == pda)]
+    return sorted(df_filtered['solo_fecha'].dropna().unique())
 
 
 
-    # Aplicar los filtros iterativamente
-    for filtro in filtros_recibidos:
-        
-        try:
-            # Convertir el valor de referencia a float de forma segura
-            valor_ref = float(filtro['valor_str']) if filtro['valor_str'] else None
-        except (ValueError, TypeError):
-            valor_ref = None 
 
-        if valor_ref is not None and filtro['comp']:
-            current_app.logger.info(f"valores de los filtros puestos: {str(filtro)}")
-            # Se aplica la función cumple_condicion sobre los datos cargados
-            resultados_filtrados = [
-                fila for fila in resultados_filtrados
-                if cumple_condicion(
-                    extraer_num(fila.get(filtro['campo'])),
-                    filtro['comp'],
-                    valor_ref
-                )
-            ]
-
-    # Recalcular resumen
-    # TODO: Recalcular resumen en caso de que sea necesario
-    # resumen_filtrado = calcular_resumen(resultados_filtrados) 
-
-    # Devolver los resultados
-    return jsonify({
-        "tabla": resultados_filtrados,
-        # "resumen": {"puntos_totales": len(resultados_filtrados), "distancia_total": "...", "tiempo_total": "...", "velocidad_media": "..."}, # Devuelve algo útil o vacío
-        "url": url,
-        "warnings": []
-    })
-
-
-# ----------- Llamada geoAnalysis ---------------- #
-@options_bp.route('/upload_geojson', methods=['POST'])
-def upload_geojson():
-    cod = request.form.get('cod')
-    file = request.files.get('geojson_file')
-
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-
-    static_path = current_app.config.get("GEOJSON_FOLDER")
-    geojson_path = Path(os.path.join(static_path, f'{cod}.geojson'))
-    file.save(geojson_path)
-
-    return jsonify({'success': True})
-
-@options_bp.route('/existsGeoJSON', methods=['POST'])
-def existsGeoJSON():
-    data = request.get_json()
-    cod = data.get("cod")
-    static_path = current_app.config.get("GEOJSON_FOLDER")
-    geojson_path = Path(os.path.join(static_path, f'{cod}.geojson'))
-    current_app.logger.info(f"existe el geojson? {geojson_path.exists()}")
-    return jsonify(exists=geojson_path.exists())
-
-
-@options_bp.route('/clusterizar_portales', methods=['POST'])
-def clusterizar_portales():
-    data = request.get_json()
-    cod = data.get("cod")
-    # Por el momento, solo se pasa los datos de la sesión.
-    # Los datos de geojson los proporcionarán ellos.
-
-    # Obtener la ruta del archivo de la sesión
-    file_path = Path(os.path.join(current_app.config['UPLOAD_FOLDER'], session['id'], 'table_data.json'))
-    current_app.logger.info(f"La ruta donde se encuentran los datos es {file_path}")
-
-    datos_completos = []
-
-    # Comprobar si la ruta existe y si el archivo realmente está allí
-    if not file_path.exists():
-        current_app.logger.error(f"Ruta de archivo no encontrada en sesión o archivo no existe: {file_path}")
-        # Retorna una lista vacía si no hay datos disponibles
-        return jsonify({"tabla": [], "resumen": {}, "warnings": ["No hay datos cargados para filtrar mostrar."]})
-
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            datos_completos = json.load(f)
-        
-    except Exception as e:
-        current_app.logger.error(f"Error al leer o decodificar datos de usuario: {e}")
-        return jsonify({"tabla": [], "resumen": {}, "warnings": ["Error al cargar datos de usuario."]})
-    
-    static_dir = current_app.config.get("GEOJSON_FOLDER")
-    file_geojson = os.path.join(static_dir, f'{cod}.geojson')
-    current_app.logger.error(f"Ruta del archivo geojson {file_geojson}")
-
-    puntos_asociados = asociar_direcciones_a_puntos(datos_completos,file_geojson)
-
-    # Manejo de errores devuelto por la función de servicio (e.g., error al cargar GeoJSON)
-    if isinstance(puntos_asociados, dict) and 'error' in puntos_asociados:
-        current_app.logger.error(f"Error en servicio geoAnalysis: {puntos_asociados['error']}")
-        return jsonify({"tabla": [], "resumen": {}, "warnings": [puntos_asociados['error']]}), 500
-    
-    # Reescribir json de la tabla con los portales
-    upload_folder = current_app.config.get("UPLOAD_FOLDER")
-    processed_filename = 'table_data.json'
-    save_path = os.path.join(upload_folder, session.get("id"), processed_filename)
-    
-    # Guardar la lista de diccionarios (el valor de 'tabla') en el disco
-    with open(save_path, 'w', encoding='utf-8') as f:
-        json.dump(puntos_asociados, f, ensure_ascii=False, indent=4)
-
-    # Retorno Final: Devolvemos la lista de puntos de usuario enriquecidos
-    return jsonify({"tabla": puntos_asociados, "resumen": {}, "warnings": []}), 200
+def get_dates_for_all_pdas(df, unit_code):
+    df_filtered = df[df['codired'] == int(unit_code)]
+    return (sorted(df_filtered['solo_fecha'].dropna().unique()))

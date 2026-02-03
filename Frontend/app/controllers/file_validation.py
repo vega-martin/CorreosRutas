@@ -1,5 +1,6 @@
-from flask import Blueprint, current_app, session, jsonify
+from flask import Blueprint, current_app, session, jsonify, request
 import pandas as pd
+from pathlib import Path
 import os, requests
 
 
@@ -82,6 +83,18 @@ def check_mandatory_files_status():
     uploaded_files = session.get("uploaded_files", {})
     ready = bool(uploaded_files.get("A"))
     return jsonify({"ready": ready})
+
+
+
+
+@file_validation_bp.route('/exists_geojson', methods=['POST'])
+def exists_geojson():
+    data = request.get_json()
+    cod = data.get("cod")
+    static_path = current_app.config.get("GEOJSON_FOLDER")
+    geojson_path = Path(os.path.join(static_path, f'{cod}.geojson'))
+    current_app.logger.info(f"existe el geojson? {geojson_path.exists()}")
+    return jsonify(exists=geojson_path.exists())
 
 
 

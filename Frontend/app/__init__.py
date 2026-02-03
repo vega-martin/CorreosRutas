@@ -2,10 +2,12 @@ from flask import Flask
 from flask_apscheduler import APScheduler
 from .controllers.main import main_bp
 from .controllers.index import index_bp
+from .controllers.filters import filters_bp
 from .controllers.file_upload import file_upload_bp
 from .controllers.file_validation import file_validation_bp
 from .controllers.file_provider import file_provider_bp
 from .controllers.generateResults import generateResults_bp
+from .controllers.data_aggregation import data_aggregation_bp
 from .controllers.options import options_bp
 from .controllers.tasks import clean_user_files
 
@@ -33,10 +35,12 @@ def create_app():
     # Blueprints
     app.register_blueprint(main_bp)
     app.register_blueprint(index_bp)
+    app.register_blueprint(options_bp)
+    app.register_blueprint(filters_bp)
     app.register_blueprint(file_upload_bp)
     app.register_blueprint(file_validation_bp)
     app.register_blueprint(file_provider_bp)
     app.register_blueprint(generateResults_bp)
-    app.register_blueprint(options_bp)
+    app.register_blueprint(data_aggregation_bp)
 
     return app
