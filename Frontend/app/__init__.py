@@ -6,8 +6,9 @@ from .controllers.filters import filters_bp
 from .controllers.file_upload import file_upload_bp
 from .controllers.file_validation import file_validation_bp
 from .controllers.file_provider import file_provider_bp
-from .controllers.generateResults import generateResults_bp
+from .controllers.data_generation import data_generation_bp
 from .controllers.data_aggregation import data_aggregation_bp
+from .controllers.data_clusterization import data_clusterization_bp
 from .controllers.options import options_bp
 from .controllers.tasks import clean_user_files
 
@@ -40,7 +41,8 @@ def create_app():
     app.register_blueprint(file_upload_bp)
     app.register_blueprint(file_validation_bp)
     app.register_blueprint(file_provider_bp)
-    app.register_blueprint(generateResults_bp)
+    app.register_blueprint(data_generation_bp)
     app.register_blueprint(data_aggregation_bp)
+    app.register_blueprint(data_clusterization_bp)
 
     return app

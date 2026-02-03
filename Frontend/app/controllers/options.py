@@ -1,9 +1,7 @@
-from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash, render_template, Response
-from pathlib import Path
-
+from flask import Blueprint, request, current_app, session, jsonify
 import pandas as pd
 import numpy as np
-import json, os
+import os
 
 options_bp = Blueprint('options', __name__, template_folder='templates')
 

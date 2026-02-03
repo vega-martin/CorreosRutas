@@ -1,5 +1,5 @@
 from flask import Blueprint, request, current_app, session, jsonify
-from .generateResults import create_cluster_map
+from .map_generation import create_cluster_map
 from pathlib import Path
 import os,json, requests, re
 
