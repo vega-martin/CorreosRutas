@@ -749,8 +749,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             console.log(`Valores: T.acc='${valueTimeAcc}', T.med='${valueTimeMean}', tipo='${valueType}', parada='${valueStop}'`);
             
-            const inputSignoDistancia = document.getElementById('distancia-signo').value;
-            const inputSignoTiempo = document.getElementById('tiempo-signo').value;
+            const inputSignoTimeAcc = document.getElementById('time-acc-signo').value;
+            const inputSignoTimeMean = document.getElementById('time-mean-signo').value;
             const inputSignoPDA = document.getElementById('pda-signo').value;
             const cod = codiredInput.value;
 
@@ -765,9 +765,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     timeAcc : valueTimeAcc,
-                    signoTimeAcc : inputSignoDistancia,
-                    tiempoMean : valueTimeMean,
-                    signoTimeMean : inputSignoTiempo,
+                    signoTimeAcc : inputSignoTimeAcc,
+                    timeMean : valueTimeMean,
+                    signoTimeMean : inputSignoTimeMean,
                     type : valueType,
                     isStop: valueStop,
                     pda: valuePDA,
@@ -856,9 +856,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             // Establecer signos por defecto
-            document.getElementById('distancia-signo').value = 'menor'; 
-            document.getElementById('tiempo-signo').value = 'menor';
-            document.getElementById('velocidad-signo').value = 'menor';
+            document.getElementById('time-acc-signo').value = 'menor'; 
+            document.getElementById('time-mean-signo').value = 'menor';
             document.getElementById('pda-signo').value = 'igual';
 
             // Reiniciar el estado de filtrado

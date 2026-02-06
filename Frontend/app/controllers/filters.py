@@ -29,9 +29,10 @@ def filter_data():
 
     # Cargar los datos desde el archivo JSON
     try:
+        current_app.logger.info("Leyendo tabla de datos")
         with open(file_path, 'r', encoding='utf-8') as f:
             datos_completos = json.load(f)
-        
+    
     except json.JSONDecodeError:
         current_app.logger.error(f"Error al decodificar el archivo JSON: {file_path}")
         return jsonify({"tabla": [], "resumen": {}, "warnings": ["Error de formato en el archivo de datos."]})
@@ -39,101 +40,136 @@ def filter_data():
         current_app.logger.error(f"Error desconocido al leer el archivo de datos: {e}")
         return jsonify({"tabla": [], "resumen": {}, "warnings": ["Error al acceder a los datos de la sesión."]})
     
-    filtros_recibidos = [
+    filtros_numerico_recibidos = [
         {
-            "campo": "distancia", 
-            "comp": data.get('signoDistancia'), 
-            "valor_str": data.get('distancia')
+            "campo": "time_accumulated", 
+            "comp": data.get('signoTimeAcc'), 
+            "valor_str": data.get('timeAcc')
         },
         {
-            "campo": "tiempo", 
-            "comp": data.get('signoTiempo'), 
-            "valor_str": data.get('tiempo')
-        },
-        {
-            "campo": "velocidad", 
-            "comp": data.get('signoVelocidad'), 
-            "valor_str": data.get('velocidad')
+            "campo": "time_mean", 
+            "comp": data.get('signoTimeMean'), 
+            "valor_str": data.get('timeMean')
         }
+        
     ]
     
     # Preparar los datos para el filtrado
     resultados_filtrados = datos_completos.copy()
+    #current_app.logger.info(f"resultados filtrados: {str(resultados_filtrados)}")
 
     # Filtrar por PDA si se ha proporcionado
+    current_app.logger.info("Filtrar PDA si hay")
     signoPda = data.get('signoPDA')
     valorPda = data.get('pda')
-
-    current_app.logger.info(f"Valor de la PDA {valorPda} y signo {signoPda}")
-    if signoPda == "igual" and valorPda is not None:
-        resultados_filtrados = [
-                fila for fila in resultados_filtrados
-                if valorPda in (fila.get("cod_pda") or [])
-            ] 
-    elif signoPda == "no-igual" and valorPda is not None:
-        resultados_filtrados = [
-                fila for fila in resultados_filtrados
-                if valorPda not in (fila.get("cod_pda") or [])
-            ]
+    if valorPda != "":
+        current_app.logger.info(f"Valor de la PDA {valorPda} y signo {signoPda}")
+        if signoPda == "igual" and valorPda is not None:
+            resultados_filtrados = [
+                    fila for fila in resultados_filtrados
+                    if valorPda in (fila.get("cod_pda") or [])
+                ] 
+        elif signoPda == "no-igual" and valorPda is not None:
+            resultados_filtrados = [
+                    fila for fila in resultados_filtrados
+                    if valorPda not in (fila.get("cod_pda") or [])
+                ]
 
     # Recalcular clusters con nuevos filtros
-    payload = {
-        "id": session.get("id"),
-        "diametro": data.get('diametro'),
-        "numPts": data.get('numPts'),
-        "tabla": datos_completos
-    }
-    current_app.logger.info(f"Valor del diametro {data.get('diametro')} y numpts {data.get('numPts')}")
-    api_url = current_app.config.get("API_URL")
+    current_app.logger.info("Recalcular clusteres si es necesario")
+    if data.get('diametro') != "" or data.get('numPts') != "":
+        payload = {
+            "id": session.get("id"),
+            "diametro": data.get('diametro'),
+            "numPts": data.get('numPts'),
+            "maxTime": data.get('maxTimeClus'),
+            "tabla": datos_completos
+        }
+        current_app.logger.info(f"Valor del diametro {data.get('diametro')}, numpts {data.get('numPts')}, maxTime {data.get('maxTimeClus')}")
+        api_url = current_app.config.get("API_URL")
 
-    try:
-        api_response = requests.post(
-            f"{api_url}/filtrar_clustering",
-            json=payload
-        )
-        api_response.raise_for_status()
-        resultados_filtrados = api_response.json().get("tabla")
-        upload_folder = current_app.config.get("UPLOAD_FOLDER")
-        processed_filename = 'table_data_filtered.json'
-        save_path = os.path.join(upload_folder, session.get("id"), processed_filename)
-        
-        # Guardar la lista de diccionarios (el valor de 'tabla') en el disco
-        with open(save_path, 'w', encoding='utf-8') as f:
-            json.dump(resultados_filtrados, f, ensure_ascii=False, indent=4)
-        cod = data.get('cod')
-        url = create_cluster_map(cod, data.get('diametro'), data.get('numPts'))
-
-    except requests.RequestException as e:
-        current_app.logger.error(f"Error llamando a la API de diámetro: {e}")
-        return jsonify({"error": "Error al procesar agrupación por diámetro"}), 502
-
-
-
-    # Aplicar los filtros iterativamente
-    for filtro in filtros_recibidos:
-        
         try:
-            # Convertir el valor de referencia a float de forma segura
-            valor_ref = float(filtro['valor_str']) if filtro['valor_str'] else None
-        except (ValueError, TypeError):
-            valor_ref = None 
+            api_response = requests.post(
+                f"{api_url}/filtrar_clustering",
+                json=payload
+            )
+            api_response.raise_for_status()
+            resultados_filtrados = api_response.json().get("tabla")
+            upload_folder = current_app.config.get("UPLOAD_FOLDER")
+            processed_filename = 'table_data_filtered.json'
+            save_path = os.path.join(upload_folder, session.get("id"), processed_filename)
+            
+            # Guardar la lista de diccionarios (el valor de 'tabla') en el disco
+            with open(save_path, 'w', encoding='utf-8') as f:
+                json.dump(resultados_filtrados, f, ensure_ascii=False, indent=4)
+            cod = data.get('cod')
+            url = create_cluster_map(cod, data.get('diametro'), data.get('numPts'))
 
-        if valor_ref is not None and filtro['comp']:
-            current_app.logger.info(f"valores de los filtros puestos: {str(filtro)}")
-            # Se aplica la función cumple_condicion sobre los datos cargados
-            resultados_filtrados = [
-                fila for fila in resultados_filtrados
-                if cumple_condicion(
-                    extraer_num(fila.get(filtro['campo'])),
-                    filtro['comp'],
-                    valor_ref
-                )
-            ]
+        except requests.RequestException as e:
+            current_app.logger.error(f"Error llamando a la API de diámetro: {e}")
+            return jsonify({"error": "Error al procesar agrupación por diámetro"}), 502
+
+
+    current_app.logger.info("Aplicar filtros generales")
+
+    # Aplicar los filtros numéricos iterativamente
+    if data.get('timeAcc') != "" or data.get('timeMean') != "":
+        for filtro in filtros_numerico_recibidos:
+            try:
+                # Convertir el valor de referencia a float de forma segura
+                valor_ref = float(filtro['valor_str']) if filtro['valor_str'] else None
+            except (ValueError, TypeError):
+                valor_ref = None 
+
+            if valor_ref is not None and filtro['comp']:
+                current_app.logger.info(f"valores de los filtros puestos: {str(filtro)}")
+                
+                # Se aplica la función cumple_condicion sobre los datos cargados
+                resultados_filtrados = [
+                    fila for fila in resultados_filtrados
+                    if cumple_condicion(
+                        extraer_num(fila.get(filtro['campo'])),
+                        filtro['comp'],
+                        valor_ref
+                    )
+                ]
+    # Aplicar filtro de tipo
+    type_filter = data.get('type')
+    if type_filter != "":
+        match type_filter:
+            case "all":
+                resultados_filtrados = resultados_filtrados
+            case "even/odd":
+                resultados_filtrados = [
+                    fila for fila in resultados_filtrados
+                    if fila.get("type") == "par/impar"
+                ]
+            case "zigzag":
+                resultados_filtrados = [
+                    fila for fila in resultados_filtrados
+                    if fila.get("type") == "zigzag"
+                ]
+    # Aplicar filtro de parada
+    stop_filter = data.get('isStop')
+    if type_filter != "":
+        match stop_filter:
+            case "all":
+                resultados_filtrados = resultados_filtrados
+            case "true":
+                resultados_filtrados = [
+                    fila for fila in resultados_filtrados
+                    if fila.get("is_stop") == True
+                ]
+            case "false":
+                resultados_filtrados = [
+                    fila for fila in resultados_filtrados
+                    if fila.get("is_stop") == False
+                ]
 
     # Recalcular resumen
     # TODO: Recalcular resumen en caso de que sea necesario
     # resumen_filtrado = calcular_resumen(resultados_filtrados) 
-
+    current_app.logger.info("Devolver informacion")
     # Devolver los resultados
     return jsonify({
         "tabla": resultados_filtrados,
@@ -168,9 +204,9 @@ def extraer_num(text):
 def cumple_condicion(val, comp, ref):
     """Comprueba si el valor de la fila (val) cumple la condición (comp) con la referencia (ref)."""
     # Si los valores no son numéricos, no se puede comparar
+    current_app.logger.info(f"Condicion: {val} {comp} {ref}")
     if val is None or ref is None:
         return False
-        
     if comp == "menor": return val < ref
     if comp == "menor-igual": return val <= ref
     if comp == "igual": return val == ref
