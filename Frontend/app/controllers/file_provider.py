@@ -72,6 +72,7 @@ def get_table():
         return "Invalid JSON body", 400
 
     table_type = data_req.get("type")
+    cod = data_req.get("cod")
 
     if table_type == "original":
         json_path = os.path.join(
@@ -104,6 +105,8 @@ def get_table():
             headers={"Content-Disposition": "attachment; filename=tabla.csv"}
         )
 
+    current_app.logger.info("DESCARGA DE TABLA HTML: conversion de tipos")
+
     # Normalización numérica
     for dato in data:
         dato['distance_portal'] = str(dato['distance_portal']).replace('.', ',')
@@ -111,6 +114,12 @@ def get_table():
         dato['longitud_portal'] = str(dato['longitud_portal']).replace('.', ',')
         dato['time_accumulated'] = str(dato['time_accumulated']).replace('.', ',')
         dato['time_mean'] = str(dato['time_mean']).replace('.', ',')
+
+    current_app.logger.info("DESCARGA DE TABLA HTML: rellenar tabla")
+
+    mid_data = fill_data(cod, data)
+
+    current_app.logger.info("DESCARGA DE TABLA HTML: renombrar cabecera")
 
     # Renombrar columnas
     if table_type == "original":
@@ -120,6 +129,9 @@ def get_table():
             "number": "numero",
             "latitud_portal" : "latitud",
             "longitud_portal": "longitud",
+            "distance_portal": "distancia_media_al_portal",
+            "post_code" : "cod_postal",
+            "pts_cluster" : "pts_primarios",
             "times_visited": "veces_visitado",
             "time_accumulated" : "tiempo_acumulado",
             "time_mean" : "tiempo_medio",
@@ -135,6 +147,8 @@ def get_table():
             "number": "centroide",
             "latitud_portal" : "latitud",
             "longitud_portal": "longitud",
+            "distance_portal": "distancia_media_al_portal",
+            "post_code" : "cod_postal",
             "pts_cluster" : "pts_primarios",
             "times_visited": "veces_visitado",
             "time_accumulated" : "tiempo_acumulado",
@@ -146,17 +160,16 @@ def get_table():
             }
     else:
         return "Invalid type", 400
-    new_data = [
+    final_data = [
             {new_keys.get(k, k): v for k, v in item.items()}
-            for item in data
+            for item in mid_data
         ]
 
 
-
     output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=new_data[0].keys(), delimiter=';')
+    writer = csv.DictWriter(output, fieldnames=final_data[0].keys(), delimiter=';')
     writer.writeheader()
-    writer.writerows(new_data)
+    writer.writerows(final_data)
 
     csv_text = '\ufeff' + output.getvalue()
 
@@ -165,3 +178,49 @@ def get_table():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=tabla.csv"}
     )
+
+
+def fill_data(cod, og_data):
+    static_dir = current_app.config.get("GEOJSON_FOLDER")
+    geojson_path = os.path.join(static_dir, f'{cod}.geojson')
+
+    with open(geojson_path, "r", encoding="utf-8") as f:
+        geojson_data = json.load(f)
+    
+    geojson_data_list = []
+    for feature in geojson_data.get('features', []):
+        coords = feature.get('geometry', {}).get('coordinates', [])
+        if len(coords) == 2:
+            data = feature.get('properties', {})
+            geojson_data_list.append({
+                # GeoJSON coordinates are in [longitude, latitude] order
+                "cod_pda": "-",
+                "street": data.get('street', ""),
+                "number": data.get('number', ""),
+                "latitud_portal": str(coords[1]).replace('.', ','),
+                "longitud_portal": str(coords[0]).replace('.', ','),
+                "distance_portal": 0,
+                "post_code": data.get('postcode', ""),
+                "pts_cluster" : "-",
+                "times_visited": 0,
+                "time_accumulated" : 0,
+                "time_mean" : 0,
+                "is_stop" : "-",
+                "even_odd_count" : 0,
+                "zigzag_count" : 0,
+                "type" : "-"
+            })
+
+    # Crear índice de lista2 por clave compuesta
+    index_og_data = {
+        (elem["street"], elem["number"]): elem
+        for elem in og_data
+    }
+
+    # Reemplazar elementos en lista1 si hay coincidencia
+    final_data = [
+        index_og_data.get((elem["street"], elem["number"]), elem)
+        for elem in geojson_data_list
+    ]
+
+    return final_data
