@@ -239,9 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    type: dowloadType,
-                    ini: fechaInicio.value,
-                    fin: fechaFin.value
+                    type: dowloadType
                 })
             });
 
@@ -263,7 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
             window.URL.revokeObjectURL(url);
         } catch (error) {
             console.error(error);
-            alert("No se pudo descargar el PDF");
+            alert("No se pudo descargar el CSV");
         }
     });
 

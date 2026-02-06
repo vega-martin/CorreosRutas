@@ -72,11 +72,6 @@ def get_table():
         return "Invalid JSON body", 400
 
     table_type = data_req.get("type")
-    fecIni = data_req.get("ini")
-    fecFin = data_req.get("fin")
-    fecha_inicio_dt = date.fromisoformat(fecIni)
-    fecha_fin_dt = date.fromisoformat(fecFin)
-    diferencia_dias = (fecha_fin_dt - fecha_inicio_dt).days + 1
 
     if table_type == "original":
         json_path = os.path.join(
@@ -111,27 +106,57 @@ def get_table():
 
     # Normalización numérica
     for dato in data:
-        dato['longitud'] = str(dato['longitud']).replace('.', ',')
-        dato['latitud'] = str(dato['latitud']).replace('.', ',')
-        dato['distance'] = str(dato['distance']).replace('.', ',')
-        dato['nearest_latitud'] = str(dato['nearest_latitud']).replace('.', ',')
-        dato['nearest_longitud'] = str(dato['nearest_longitud']).replace('.', ',')
-        dato['distancia'] = str(dato['distancia']).replace(' m', '').replace('.', ',')
-        tiempo = float(str(dato['tiempo']).replace(' sec', ''))
-        dato['tiempo'] = str(tiempo).replace('.', ',')
-        tiempoMedio = tiempo/diferencia_dias
-        dato['tiempo_medio'] = str(tiempoMedio).replace('.', ',')
-        dato['velocidad'] = str(dato['velocidad']).replace(' km/h', '').replace('.', ',')
+        dato['distance_portal'] = str(dato['distance_portal']).replace('.', ',')
+        dato['latitud_portal'] = str(dato['latitud_portal']).replace('.', ',')
+        dato['longitud_portal'] = str(dato['longitud_portal']).replace('.', ',')
+        dato['time_accumulated'] = str(dato['time_accumulated']).replace('.', ',')
+        dato['time_mean'] = str(dato['time_mean']).replace('.', ',')
 
     # Renombrar columnas
-
+    if table_type == "original":
+        new_keys = {
+            "cod_pda": "num_inv",
+            "street" : "calle",
+            "number": "numero",
+            "latitud_portal" : "latitud",
+            "longitud_portal": "longitud",
+            "times_visited": "veces_visitado",
+            "time_accumulated" : "tiempo_acumulado",
+            "time_mean" : "tiempo_medio",
+            "is_stop" : "es_parada",
+            "even_odd_count" : "conteo_par/impar",
+            "zigzag_count" : "conteo_zigzag",
+            "type" : "tipo"
+            }
+    elif table_type == "cluster":
+        new_keys = {
+            "cod_pda": "num_inv",
+            "street" : "calle",
+            "number": "centroide",
+            "latitud_portal" : "latitud",
+            "longitud_portal": "longitud",
+            "pts_cluster" : "pts_primarios",
+            "times_visited": "veces_visitado",
+            "time_accumulated" : "tiempo_acumulado",
+            "time_mean" : "tiempo_medio",
+            "is_stop" : "es_parada",
+            "even_odd_count" : "conteo_par/impar",
+            "zigzag_count" : "conteo_zigzag",
+            "type" : "tipo"
+            }
+    else:
+        return "Invalid type", 400
+    new_data = [
+            {new_keys.get(k, k): v for k, v in item.items()}
+            for item in data
+        ]
 
 
 
     output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=data[0].keys(), delimiter=';')
+    writer = csv.DictWriter(output, fieldnames=new_data[0].keys(), delimiter=';')
     writer.writeheader()
-    writer.writerows(data)
+    writer.writerows(new_data)
 
     csv_text = '\ufeff' + output.getvalue()
 
