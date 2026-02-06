@@ -112,43 +112,62 @@
             <div class="contenedor">
                 <div class="tabla-filtros">
                     <h3>Filtros</h3>
-                    <label for="filtro-distancia">Distancia:</label>
-                    <select class="select-sign-btn" name="distancia-signo" id="distancia-signo">
-                        <option value="menor">&lt;</option>
-                        <option value="menor-igual">&le;</option>
-                        <option value="igual">=</option>
-                        <option value="no-igual">&ne;</option>
-                        <option value="mayor">&gt;</option>
-                        <option value="mayor-igual">&ge;</option>
-                    </select>
-                    <input type="number" name="filtroDistancia" id="filtroDistancia" placeholder="Distancia">
-                    <br><br>
+                    <div class="filtros-generales-grid">
 
-                    <label for="filtro-tiempo">Tiempo:</label>
-                    <select class="select-sign-btn" name="tiempo-signo" id="tiempo-signo">
-                        <option value="menor">&lt;</option>
-                        <option value="menor-igual">&le;</option>
-                        <option value="igual">=</option>
-                        <option value="no-igual">&ne;</option>
-                        <option value="mayor">&gt;</option>
-                        <option value="mayor-igual">&ge;</option>
-                    </select>
-                    <input type="number" name="filtroTiempo" id="filtroTiempo" placeholder="Tiempo">
-                    <br><br>
+                        <!-- Columna izquierda -->
+                        <div class="filtros-col-izq">
+                            <label>Tiempo acumulado:</label>
+                            <div>
+                                <select class="select-sign-btn" id="time-acc-signo">
+                                    <option value="menor">&lt;</option>
+                                    <option value="menor-igual">&le;</option>
+                                    <option value="igual">=</option>
+                                    <option value="no-igual">&ne;</option>
+                                    <option value="mayor">&gt;</option>
+                                    <option value="mayor-igual">&ge;</option>
+                                </select>
+                                <input type="number" id="filter-time-acc" placeholder="Tiempo acumulado">
+                            </div>
 
-                    <label for="filtro-velocidad">Velocidad:</label>
-                    <select class="select-sign-btn" name="velocidad-signo" id="velocidad-signo">
-                        <option value="menor">&lt;</option>
-                        <option value="menor-igual">&le;</option>
-                        <option value="igual">=</option>
-                        <option value="no-igual">&ne;</option>
-                        <option value="mayor">&gt;</option>
-                        <option value="mayor-igual">&ge;</option>
-                    </select>
-                    <input type="number" name="filtroVelocidad" id="filtroVelocidad" placeholder="Velocidad">
-                    <br><br>
+                            <br>
+
+                            <label>Tiempo medio:</label>
+                            <div>
+                                <select class="select-sign-btn" id="time-mean-signo">
+                                    <option value="menor">&lt;</option>
+                                    <option value="menor-igual">&le;</option>
+                                    <option value="igual">=</option>
+                                    <option value="no-igual">&ne;</option>
+                                    <option value="mayor">&gt;</option>
+                                    <option value="mayor-igual">&ge;</option>
+                                </select>
+                                <input type="number" id="filter-time-mean" placeholder="Tiempo medio">
+                            </div>
+                        </div>
+
+                        <!-- Columna derecha -->
+                        <div class="filtros-col-der">
+                            <label>Tipo:</label>
+                            <select class="select-sign-btn" id="type-filter">
+                                <option value="all" selected>Todos</option>
+                                <option value="even/odd">par/impar</option>
+                                <option value="zigzag">zigzag</option>
+                            </select>
+
+                            <br><br>
+
+                            <label>Es parada:</label>
+                            <select class="select-sign-btn" id="stop-filter">
+                                <option value="all" selected>Todos</option>
+                                <option value="true">Sí</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+
+                    </div>
 
                     <div id="filtros-todas-pdas" style="display: none;">
+                        <hr>
                         <label for="filtro-pda">PDA:</label>
                         <select class="select-sign-btn" name="pda-signo" id="pda-signo">
                             <option value="igual">=</option>
@@ -162,11 +181,16 @@
                     </div>
 
                     <div id="filtros-clus-diametro" style="display: none;">
+                        <hr>
+                        <br>
                         <label for="filtro-diametro">Diámetro del cluster:</label>
                         <input type="number" name="filtroDiametroClus" id="filtroDiametroClus" placeholder="Diámetro (1000 m)">
                         <br>
                         <label for="filtro-pts-clus">Puntos máx del cluster:</label>
                         <input type="number" name="filtroNumPtsClus" id="filtroNumPtsClus" placeholder="Nº puntos (10 pts)">
+                        <br>
+                        <label for="filtro-max-time-mean">Tiempo máx acumulado del cluster:</label>
+                        <input type="number" name="filtroMaxTimeAcc" id="filtroMaxTimeAcc" placeholder="Segundos máximos">
                     </div>
 
 

@@ -70,9 +70,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Filtrado
     const btnFilter = document.getElementById('btn-filtrar');
     const btnLimpiar = document.getElementById('btn-limpiar-filtros');
-    const inputDistancia = document.getElementById('filtroDistancia');
-    const inputTiempo = document.getElementById('filtroTiempo');
-    const inputVelocidad = document.getElementById('filtroVelocidad');
+    const inputTimeAcc = document.getElementById('filter-time-acc');
+    const inputTimeMean = document.getElementById('filter-time-mean');
+    const inputDiametro = document.getElementById('filtroDiametroClus');
+    const inputPtsClus = document.getElementById('filtroNumPtsClus');
+    const inputMaxTimeClus = document.getElementById('filtroMaxTimeAcc');
     const inputPDA = document.getElementById('pdaInputFilter');
     const signoPDA = document.getElementById('signoPDA');
 
@@ -730,24 +732,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
             console.log("--> 1. EVENTO DISPARADO Y e.preventDefault() ejecutado.");
 
-            const valueDistancia = document.getElementById('filtroDistancia').value;
-            const valueTiempo = document.getElementById('filtroTiempo').value;
-            const valueVelocidad = document.getElementById('filtroVelocidad').value;
+            const valueTimeAcc = document.getElementById('filter-time-acc').value;
+            const valueTimeMean = document.getElementById('filter-time-mean').value;
+            const valueType = document.getElementById('type-filter').value;
+            const valueStop = document.getElementById('stop-filter').value;
             const valuePDA = document.getElementById('pdaInputFilter').value;
             const valueDiametro = document.getElementById('filtroDiametroClus').value;
             const valuePtsClus = document.getElementById('filtroNumPtsClus').value;
+            const valueMaxTimeClus = document.getElementById('filtroMaxTimeAcc').value;
             
             
-            if (!valueDistancia && !valueTiempo && !valueVelocidad && !valuePDA && !valueDiametro && !valuePtsClus) {
+            if (!valueTimeAcc && !valueTimeMean && !valueType && !valueStop && !valuePDA && !valueDiametro && !valuePtsClus) {
                 alert("Debes seleccionar algún filtro.");
                 return false;
             }
 
-            console.log(`Valores: Distancia='${valueDistancia}', Tiempo='${valueTiempo}', Velocidad='${valueVelocidad}'`);
+            console.log(`Valores: T.acc='${valueTimeAcc}', T.med='${valueTimeMean}', tipo='${valueType}', parada='${valueStop}'`);
             
             const inputSignoDistancia = document.getElementById('distancia-signo').value;
             const inputSignoTiempo = document.getElementById('tiempo-signo').value;
-            const inputSignoVelocidad = document.getElementById('velocidad-signo').value;
             const inputSignoPDA = document.getElementById('pda-signo').value;
             const cod = codiredInput.value;
 
@@ -761,16 +764,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    distancia : valueDistancia,
-                    signoDistancia : inputSignoDistancia,
-                    tiempo : valueTiempo,
-                    signoTiempo : inputSignoTiempo,
-                    velocidad : valueVelocidad,
-                    signoVelocidad: inputSignoVelocidad,
+                    timeAcc : valueTimeAcc,
+                    signoTimeAcc : inputSignoDistancia,
+                    tiempoMean : valueTimeMean,
+                    signoTimeMean : inputSignoTiempo,
+                    type : valueType,
+                    isStop: valueStop,
                     pda: valuePDA,
                     signoPDA: inputSignoPDA,
                     diametro: valueDiametro,
                     numPts: valuePtsClus,
+                    maxTimeClus: valueMaxTimeClus,
                     cod: cod
                 })
             })
@@ -838,10 +842,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnLimpiar) {
 
         function limpiarFiltros() {
-            inputDistancia.value = '';
-            inputTiempo.value = '';
-            inputVelocidad.value = '';
+            inputTimeAcc.value = '';
+            inputTimeMean.value = '';
+            document.getElementById('type-filter').value = 'all';
+            document.getElementById('stop-filter').value = 'all';
             inputPDA.value = '';
+            inputDiametro.value = '';
+            inputPtsClus.value = '';
+            inputMaxTimeClus.value = '';
             pdaBtnFilter.textContent = 'Selecciona una PDA';
             document.getElementById('filtroDiametroClus').vale = '';
             document.getElementById('filtroNumPtsClus').vale = '';
