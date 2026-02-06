@@ -126,32 +126,33 @@ document.addEventListener("DOMContentLoaded", () => {
         filas.forEach(fila => {
             const tr = document.createElement('tr');
             
-            let distanceFormateada = fila.distance;
+            //let distanceFormateada = fila.distance;
             
             // if (typeof fila.distance === 'number') {
             //     distanceFormateada = fila.distance.toFixed(3); 
             // }
 
-            if (fila.es_parada) {
+            if (fila.is_stop) {
                 tr.style.backgroundColor = "#F2FCFF";  // light blue
             }
 
-            const fechaHora = `${fila.fecha}, ${fila.hora}`;
+            //const fechaHora = `${fila.fecha}, ${fila.hora}`;
             const calleCompleta = fila.street ? `${fila.street}, ${fila.number || ''}`.trim() : '';
             //const tipoCalle = parseInt(fila.number) % 2 === 0 ? 'Par' : 'Impar';
 
             const celdas = [
-                fila.cod_pda,
-                fechaHora,
+                String(fila.cod_pda).split(",").join(", "),
+                //fechaHora,
                 calleCompleta,
-                fila.nearest_longitud,
-                fila.nearest_latitud,
-                fila.distancia,
-                fila.tiempo,
-                fila.velocidad,
-                fila.tipo,
-                fila.conteo_par_impar,
-                fila.conteo_zigzag
+                Number(fila.longitud_portal).toFixed(9),
+                Number(fila.latitud_portal).toFixed(9),
+                `${Number(fila.distance_portal).toFixed(3)} m`,
+                `${Number(fila.time_accumulated).toFixed(1)} sec`,
+                `${Number(fila.time_mean).toFixed(1)} sec`,
+                // fila.velocidad,
+                fila.type,
+                fila.even_odd_count,
+                fila.zigzag_count
             ];
             
             celdas.forEach(valor => {

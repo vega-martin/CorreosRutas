@@ -220,29 +220,30 @@ def agrupar_portales_duplicados(tabla):
 
     # Agrupar puntos
     df_agrupado = df.groupby(['street', 'number']).agg(
-        n = ('n', 'first'),
+        #n = ('n', 'first'),
         cod_pda = ('cod_pda', lambda x: list(set(x))),
-        latitud = ('latitud', 'mean'),
-        longitud = ('longitud', 'mean'),
-        distancia = ('distancia', 'mean'),
-        tiempo = ('tiempo_signed', 'sum'),
-        distance = ('distance', 'mean'),
-        nearest_latitud = ('nearest_latitud', 'first'),
-        nearest_longitud = ('nearest_longitud', 'first'),
+        latitud_pt = ('latitud', 'mean'),
+        longitud_pt = ('longitud', 'mean'),
+        distance_last_pt = ('distancia', 'mean'),
+        time_accumulated = ('tiempo_signed', 'sum'),
+        time_mean = ('tiempo_signed', 'mean'),
+        distance_portal = ('distance', 'mean'),
+        latitud_portal = ('nearest_latitud', 'first'),
+        longitud_portal = ('nearest_longitud', 'first'),
         post_code = ('post_code', lambda x: x.mode().iloc[0]),
-        conteo_par_impar = ('conteo_par_impar', 'sum'),
-        conteo_zigzag = ('conteo_zigzag', 'sum'),
-        tipo = ('tipo', lambda x: x.mode().iloc[0]),
-        es_parada = ('es_parada', 'any'),
-        vecesVisitado = ('tiempo_seg', 'count')
+        even_odd_count = ('conteo_par_impar', 'sum'),
+        zigzag_count = ('conteo_zigzag', 'sum'),
+        type = ('tipo', lambda x: x.mode().iloc[0]),
+        is_stop = ('es_parada', 'any'),
+        times_visited = ('tiempo_seg', 'count')
     ).reset_index()
 
     # Eliminar registros con tiempo negativo
-    df_agrupado = df_agrupado[df_agrupado['tiempo'] > 0]
+    df_agrupado = df_agrupado[df_agrupado['time_accumulated'] > 0]
 
     # Add constant columns
-    df_agrupado['hora'] = '-'
-    df_agrupado['fecha'] = '-'
-    df_agrupado['velocidad'] = '-'
+    #df_agrupado['hora'] = '-'
+    #df_agrupado['fecha'] = '-'
+    #df_agrupado['velocidad'] = '-'
 
     return df_agrupado.to_dict('records')
