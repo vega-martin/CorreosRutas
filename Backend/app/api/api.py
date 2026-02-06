@@ -1,16 +1,18 @@
 from flask import Blueprint, render_template, session, redirect, url_for, flash, current_app, request, jsonify, Response, send_file
-from app.util.fileMgmt import ensure_folder, rename_file_columns, extractDataframes, format_date, get_statistics_A, extractBCDataframes
-from app.services.unifyFiles import unifyBCFiles, unifyADFiles
+from app.util.fileMgmt import ensure_folder, rename_file_columns, extractDataframes, format_date, get_statistics_A, extractBCDataframes, preprocess_data, getDataframes
+from app.services.unifyFiles import unifyBCFiles, unifyADFiles, create_D_file, create_E_file
 from app.services.dataCleaning import removeOutliers
 from app.util.createPDFs import crear_pdf
 from app.services.Algoritmo_cluster_basico import cluster_por_diametro
 import json
 from io import BytesIO
 from datetime import timedelta, datetime
+import pandas as pd
 import uuid
 import os
 
 api_bp = Blueprint('api', __name__, template_folder='templates')
+
 
 
 
@@ -30,53 +32,66 @@ def upload_file():
     save_path = os.path.join(save_path_temp, data_filename)
     f.save(save_path)
 
-    rename_file_columns(save_path, type)
-    format_date(save_path, type)
+    statistics_response = preprocess_data(save_path, type)
 
-    if not os.path.exists(save_path):
-        current_app.logger.error(f"Error: el archivo no se guardó en {save_path}")
-        return jsonify({'error': f'El archivo no se guardó correctamente'}), 400
-    
-    current_app.logger.info(f"Archivo guardado correctamente en {save_path}")
-    
-    return jsonify({'error': f'Archivo guardado correctamente'}), 200
+
+    if isinstance(statistics_response, Response):
+        statistics = statistics_response.get_json()
+
+    final_response = {
+        "logs": f"\nArchivo guardado correctamente.\n{statistics.get('info', '')}"
+    }
+
+    return jsonify(final_response), 200
+
+
 
 
 @api_bp.route('/upload_A_file', methods=['POST'])
 def upload_A_file():
-    # Descargar fichero en local
-    current_app.logger.info('Se va a iniciar la descarga en local en el backend')
+    current_app.logger.info("Se va a iniciar la descarga en local en el backend")
+
+    # Get upload base folder
     base_upload = current_app.config.get("UPLOAD_FOLDER")
 
-    id = request.form.get('id')
-    type = request.form.get('type')
-    f = request.files.get('file')
+    # Get request data
+    id = request.form.get("id")
+    type = request.form.get("type")
+    f = request.files.get("file")
 
+    # Save file as CSV
     data_filename = f"Fichero_{type}.csv"
     id_path = ensure_folder(id)
     save_path_temp = os.path.join(base_upload, id_path)
     save_path = os.path.join(save_path_temp, data_filename)
     f.save(save_path)
 
-    rename_file_columns(save_path, type)
-    format_date(save_path, type)
-
     if not os.path.exists(save_path):
-        current_app.logger.error(f"Error: el archivo no se guardó en {save_path}")
-        return jsonify({'error': f'El archivo no se guardó correctamente'}), 400
+        current_app.logger.error(f"El archivo no se guardó en {save_path}")
+        return jsonify({"logs": f"El archivo no se guardó correctamente en el servidor."}), 400
     
     current_app.logger.info(f"Archivo guardado correctamente en {save_path}")
     
-    statistics_response = get_statistics_A(save_path)
+    # Preprocess data and get statistics
+
+    #rename_file_columns(save_path, type)
+    #format_date(save_path, type)
+
+    #statistics_response = get_statistics_A(save_path)
+
+    statistics_response = preprocess_data(save_path, type)
+
 
     if isinstance(statistics_response, Response):
         statistics = statistics_response.get_json()
 
     final_response = {
-        "logs": f'Archivo guardado correctamente.\n{statistics.get('info', '')}'
+        "logs": f"\nArchivo guardado correctamente.\n{statistics.get('info', '')}"
     }
 
     return jsonify(final_response), 200
+
+
 
 
 @api_bp.route('/unifyFilesBC', methods=['POST'])
@@ -90,7 +105,7 @@ def unifyFilesBC():
     for file_type in ('B', 'C'):
         for root, _, files in os.walk(id_path):
             for file in files:
-                if file.endswith('.csv') and f'Fichero_{file_type}' in file:
+                if file.endswith('.pkl') and f'Fichero_{file_type}' in file:
                     wout_extension = os.path.splitext(file)[0]
                     parts = wout_extension.split('_')
                     if len(parts) == 2:
@@ -98,60 +113,55 @@ def unifyFilesBC():
                         files_paths[type] = os.path.join(root, file)
     
     current_app.logger.info(f"Se han encontrado {len(files_paths)} archivos en la carperta de la sesion {id}")
-    df_B, df_C, read_info = extractBCDataframes(files_paths['B'], files_paths['C'])
+    #df_B, df_C, read_info = extractBCDataframes(files_paths['B'], files_paths['C'])
+    df_B, df_C = getDataframes(files_paths['B'], files_paths['C'])
+
     if ((len(df_B) == 0) or (len(df_C) == 0)):
         return jsonify({"Registros totales: 0"})
-    erased_info = unifyBCFiles(df_B, df_C, id_path)
+    #
+    # erased_info = unifyBCFiles(df_B, df_C, id_path)
+    erased_info = create_D_file(df_B, df_C, id_path)
     
-    if isinstance(read_info, Response):
-        read_info = read_info.get_json()
+    #if isinstance(read_info, Response):
+    #    read_info = read_info.get_json()
 
     if isinstance(erased_info, Response):
         erased_info = erased_info.get_json()
 
     final_info = f"""
-INFORMACIÓN SIMPLIFICADA DEL PREPROCESAMIENTO DE LOS FICHEROS B Y C.
-
+INFORMACIÓN SIMPLIFICADA DE LA UNIÓN DE LOS FICHEROS B Y C.
 
 INFORMACIÓN DE LECTURA:
-Registros totales: {erased_info["Informacion inicial"]["Conteo de registros"]["Registros totales"]}.
-    - Pertenecientes al fichero B: {erased_info["Informacion inicial"]["Conteo de registros"]["Registros B"]}.
-    - Pertenecientes al fichero C: {erased_info["Informacion inicial"]["Conteo de registros"]["Registros C"]}.
+Registros totales: {erased_info["B_initial"]["length"] + erased_info["C_initial"]["length"]}.
+    - Pertenecientes al fichero B: {erased_info["B_initial"]["length"]}.
+    - Pertenecientes al fichero C: {erased_info["C_initial"]["length"]}.
 
-Códigos de unidad compartidos: {erased_info["Informacion inicial"]["Conteo codireds"]["Codireds compartidos"]}.
-PDAs compartidas ({erased_info["Informacion inicial"]["Conteo PDAs"]["Num PDAs compartida"]}): {erased_info["Informacion inicial"]["Conteo PDAs"]["PDAs compartidas"]}.
-Fechas compartidas ({erased_info["Informacion inicial"]["Conteo fechas"]["Num fechas compartidas"]}): {erased_info["Informacion inicial"]["Conteo fechas"]["Lista fecha compartida"]}.
+INFORMACIÓN DE LA SINCRONIZACIÓN:
+    - Número de códigos de unidad compartidos: {erased_info["final"]["final"]["unit_codes_length"]}.
+    - Número de PDAs compartidas (Num Inv): {erased_info["final"]["final"]["num_inv_length"]}.
+    - Número de fechas compartidas: {erased_info["final"]["final"]["dates_length"]}.
+    - Registros descartados en la sincornización ({erased_info["sinchronized"]["total_reg_erased"]}):
+        + Pertenecientes al fichero B: {erased_info["sinchronized"]["b_total_reg_erased"]}.
+        + Pertenecientes al fichero C: {erased_info["sinchronized"]["c_total_reg_erased"]}.
 
-Duplicados totales: {erased_info["Duplicados"]["Duplicados totales"]}.
-    - Pertenecientes al fichero B: {erased_info["Duplicados"]["Duplicados B"]}.
-    - Pertenecientes al fichero C: {erased_info["Duplicados"]["Duplicados C"]}.
-Datos totales no duplicados: {erased_info["Duplicados"]["Registros totales no duplicados"]}.
-    - Pertenecientes al fichero B: {erased_info["Duplicados"]["Registros B no duplicados"]}.
-    - Pertenecientes al fichero C: {erased_info["Duplicados"]["Registros C no duplicados"]}.
+INFORMACIÓN DE LA UNIÓN:
+    - Registros totales: {erased_info["final"]["final"]["length"]}.
+    - Registros sin correspondencia (descartados):
+        + Registros totales: {erased_info["final"]["b_unused"] + erased_info["final"]["c_unused"]}.
+        + Registros del fichero B: {erased_info["final"]["b_unused"]}.
+        + Registros del fichero C: {erased_info["final"]["c_unused"]}.
 
-INFORMACIÓN DE SINCRONIZACIÓN Y UNIÓN:
-Registros totales: {erased_info["Información de sincronizacion"]["Conteo de registros"]["Registros totales"]}.
-    - Pertenecientes al fichero B: {erased_info["Información de sincronizacion"]["Conteo de registros"]["Registros B"]}.
-    - Pertenecientes al fichero C: {erased_info["Información de sincronizacion"]["Conteo de registros"]["Registros C"]}.
-
-Registros sin correspondencia (descartados):
-    - Registros totales: {erased_info["Registros_no_usados"]["Totales no usados en la union"]}.
-    - Registros del fichero B: {erased_info["Registros_no_usados"]["B_no_usados en la union"]}.
-    - Registros del fichero C: {erased_info["Registros_no_usados"]["C_no_usados en la union"]}.
-
-Resultado de la unión: {erased_info["Registros_finales"]} registros.
-
+Resultado de la unión: {erased_info["final"]["final"]["length"]} registros.
 
 Para más información descargue el fichero con las estadísticas.
     """
 
 
     final_response = {"logs": final_info}
-    json_path = os.path.join(id_path, "D_statistics.json")
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(erased_info, f, ensure_ascii=False, indent=4)
 
     return jsonify(final_response)
+
+
 
 
 @api_bp.route('/unifyAllFiles', methods=['POST'])
@@ -163,7 +173,7 @@ def unifyAllFiles():
 
     for root, _, files in os.walk(id_path):
         for file in files:
-            if file.endswith('.csv') and 'Fichero_' in file:
+            if file.endswith('.pkl') and 'Fichero_' in file:
                 wout_extension = os.path.splitext(file)[0]
                 parts = wout_extension.split('_')
                 if len(parts) == 2:
@@ -171,35 +181,38 @@ def unifyAllFiles():
                     files_paths[type] = os.path.join(root, file)
     
     current_app.logger.info(f"Se han encontrado {len(files_paths)} archivos en la carperta de la sesion {id}")
-    df_A, df_D, read_info = extractBCDataframes(files_paths['A'], files_paths['D'])
+    #df_A, df_D, read_info = extractBCDataframes(files_paths['A'], files_paths['D'])
+    df_A, df_D = getDataframes(files_paths['A'], files_paths['D'])
 
-    if len(df_D) == 0:
-        df_A['esParada'] = False
-        path = os.path.join(id_path, 'Fichero_E.csv')
-        df_A.to_csv(path, sep=';', index=False)
-        return jsonify({"logs": f'Fichero D sin registros. Se usará solamente el fichero A.'})
+    # if len(df_D) == 0:
+    #     df_A['esParada'] = False
+    #     path = os.path.join(id_path, 'Fichero_E.csv')
+    #     df_A.to_csv(path, sep=';', index=False)
+    #     return jsonify({"logs": f'Fichero D sin registros. Se usará solamente el fichero A.'})
     
-    erased_info = unifyADFiles(df_A, df_D, id_path)
+    #erased_info = unifyADFiles(df_A, df_D, id_path)
 
-    
+    erased_info = create_E_file(df_A, df_D, id_path)
     #outliers_info = removeOutliers(id_path)
     
-    if isinstance(read_info, Response):
-        read_info = read_info.get_json()
+    #if isinstance(read_info, Response):
+    #    read_info = read_info.get_json()
 
     if isinstance(erased_info, Response):
         erased_info = erased_info.get_json()
 
     final_response = {"logs": f'{erased_info}'}
-    json_path = os.path.join(id_path, "E_statistics.json")
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(erased_info, f, ensure_ascii=False, indent=4)
+    #json_path = os.path.join(id_path, "E_statistics.json")
+    #with open(json_path, "w", encoding="utf-8") as f:
+    #    json.dump(erased_info, f, ensure_ascii=False, indent=4)
 
-    current_app.logger.info("EMPEZANDO CREACION DE PDF CON ESTADISTICAS")
-    file_path = os.path.join(id_path, 'estadisticas_union.pdf')
-    crear_pdf(file_path, id_path)
+    #current_app.logger.info("EMPEZANDO CREACION DE PDF CON ESTADISTICAS")
+    #file_path = os.path.join(id_path, 'estadisticas_union.pdf')
+    #crear_pdf(file_path, id_path)
 
     return jsonify(final_response)
+
+
 
 
 @api_bp.route("/estan_unificados", methods = ['POST'])
@@ -210,6 +223,7 @@ def estan_unificados():
     final_file = os.path.join(id_path, 'estadisticas_union.pdf')
     response = {'logs': os.path.exists(final_file)}
     return jsonify(response)
+
 
 
 
@@ -233,6 +247,9 @@ def descargar_estadisticas():
         download_name="estadisticas.pdf"
     )
 
+
+
+
 @api_bp.route("/get_fichero_unificado", methods=['POST'])
 def get_fichero_unificado():
     # Ruta al CSV
@@ -255,6 +272,9 @@ def get_fichero_unificado():
         download_name="Fichero_E.csv"
     )
 
+
+
+
 @api_bp.route("/get_fichero_intermedio", methods=['POST'])
 def get_fichero_intermedio():
     # Ruta al CSV
@@ -274,6 +294,9 @@ def get_fichero_intermedio():
         as_attachment=True,
         download_name="Fichero_D.csv"
     )
+
+
+
 
 @api_bp.route("/agrupar_diametro", methods=['POST'])
 def agrupar_diametro():
@@ -302,6 +325,9 @@ def agrupar_diametro():
     current_app.logger.info("Devolviendo informacion")
 
     return jsonify({"tabla": datos_agrupados})
+
+
+
 
 @api_bp.route("/filtrar_clustering", methods=['POST'])
 def filtrar_clustering():

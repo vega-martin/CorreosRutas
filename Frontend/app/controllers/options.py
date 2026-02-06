@@ -38,7 +38,7 @@ def get_unit_code():
     
     # PROCESAMIENTO
     try:
-        cods = np.sort(df['codired'].dropna().unique()).tolist()
+        cods = np.sort(df['cod_unidad'].dropna().unique()).tolist()
         current_app.logger.info(f"Se han encontrado {len(cods)} códigos de oficinas")
 
         return jsonify({'codireds' : cods})
@@ -67,7 +67,7 @@ def get_pdas_per_unit_code():
         return jsonify({'pdas': []})
     
     current_app.logger.info(f"Buscando regsitros perteneciente a la oficina {cod}")
-    df = df[df['codired'] == int(cod)]
+    df = df[df['cod_unidad'] == int(cod)]
     current_app.logger.info(f"Se han encotrado {len(df)} registros de la oficina {cod}")
     pdas = df['cod_pda'].dropna().unique()
     pdas = np.sort(pdas).tolist()
@@ -109,12 +109,12 @@ def get_dates_per_pda_and_unit_code():
 # ------------------------------------------------------------
 
 def get_dates_per_pda(df, pda, unit_code):
-    df_filtered = df[(df['codired'] == int(unit_code)) & (df['cod_pda'] == pda)]
+    df_filtered = df[(df['cod_unidad'] == int(unit_code)) & (df['cod_pda'] == pda)]
     return sorted(df_filtered['solo_fecha'].dropna().unique())
 
 
 
 
 def get_dates_for_all_pdas(df, unit_code):
-    df_filtered = df[df['codired'] == int(unit_code)]
+    df_filtered = df[df['cod_unidad'] == int(unit_code)]
     return (sorted(df_filtered['solo_fecha'].dropna().unique()))

@@ -5,3 +5,4 @@
 .python-version
 *.csv
 .venvCorreos/
+**/geojson/*

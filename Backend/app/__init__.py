@@ -9,7 +9,8 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object('config.DevConfig')
     
-    app.config['SCHEDULER_API_ENABLED'] = True 
+    app.config['SCHEDULER_API_ENABLED'] = True
+    app.config["SCHEDULER_TIMEZONE"] = "Europe/Madrid"
     
     upload_folder = app.config.get("UPLOAD_FOLDER")
     app.logger.info(f"Localizacion de descarga para la aplicación {upload_folder}")

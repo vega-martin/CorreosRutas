@@ -1,4 +1,5 @@
 from flask import current_app, session
+from .util import parse_coord
 import folium, statistics, os, json
 import pandas as pd
 import numpy as np
@@ -59,7 +60,7 @@ def create_map(cod, pda, fecha_ini, fecha_fin):
         current_app.logger.error(f"Error al leer el archivo CSV: {e}")
         return []
     
-    df = df[df['codired'] == int(cod)]
+    df = df[df['cod_unidad'] == int(cod)]
     current_app.logger.info(f"Encontrados {len(df)} en la oficina {cod}")
 
     if (pda == "TODAS"):
@@ -87,8 +88,8 @@ def create_map(cod, pda, fecha_ini, fecha_fin):
                     for i, dia in enumerate(fechas_unicas)}
         color_mode = "date"
 
-    latitud_centrada = float(pd.to_numeric(df['latitud'].iloc[0].replace(",", "."), errors="coerce"))
-    longitud_centrada = float(pd.to_numeric(df['longitud'].iloc[0].replace(",", "."), errors="coerce"))
+    latitud_centrada = float(pd.to_numeric(parse_coord(df['latitud'].iloc[0]), errors="coerce"))
+    longitud_centrada = float(pd.to_numeric(parse_coord(df['longitud'].iloc[0]), errors="coerce"))
 
 
     mapa = folium.Map(location=[latitud_centrada, longitud_centrada], zoom_start=15, control_scale=True)
@@ -154,7 +155,7 @@ def create_map(cod, pda, fecha_ini, fecha_fin):
             for _, fila in df_filtrado.iterrows():
                 coord = [fila['latitud'], fila['longitud']]
                 coordenadas.append(coord)
-                if bool(fila['esParada']):
+                if bool(fila['es_parada']):
                     my_color = ruta_color
                     my_opcacity = 1
                 else:

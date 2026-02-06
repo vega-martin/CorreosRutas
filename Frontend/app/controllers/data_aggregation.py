@@ -140,7 +140,7 @@ def agrupar_puntos_duplicados(resultados):
     Agrupa puntos consecutivos con las mismas coordenadas y suma sus tiempos.
     
     Parámetro:
-        resultados: lista de diccionarios con campos [n, hora, longitud, latitud, distancia, tiempo, velocidad, esParada, cod_pda, fecha, ...]
+        resultados: lista de diccionarios con campos [n, hora, longitud, latitud, distancia, tiempo, velocidad, es_parada, cod_pda, fecha, ...]
     
     Retorna:
         lista de diccionarios con puntos agrupados y tiempos acumulados
@@ -200,7 +200,7 @@ def agrupar_portales_duplicados(tabla):
     Agrupa los portales que hayan sido visitados varias veces y suma sus tiempos.
     
     Parámetro:
-        tabla: lista de diccionarios con campos [n, hora, longitud, latitud, distancia, tiempo, velocidad, esParada, cod_pda, fecha, ...]
+        tabla: lista de diccionarios con campos [n, hora, longitud, latitud, distancia, tiempo, velocidad, es_parada, cod_pda, fecha, ...]
     
     Retorna:
         lista de diccionarios con puntos agrupados y tiempos acumulados
@@ -214,7 +214,7 @@ def agrupar_portales_duplicados(tabla):
     # Limpiar datos
     df.loc[df['tiempo'] == "-", 'tiempo'] = "0 sec"
     df['tiempo_seg'] = df['tiempo'].str.replace(" sec", "", regex=False).astype(float)
-    df['tiempo_signed'] = df['tiempo_seg'].where(~df['esParada'], -df['tiempo_seg'])
+    df['tiempo_signed'] = df['tiempo_seg'].where(~df['es_parada'], -df['tiempo_seg'])
     df.loc[df['distancia'] == "-", 'distancia'] = "0 m"
     df['distancia'] = df['distancia'].str.replace(" m", "", regex=False).astype(float)
 
@@ -233,7 +233,7 @@ def agrupar_portales_duplicados(tabla):
         conteo_par_impar = ('conteo_par_impar', 'sum'),
         conteo_zigzag = ('conteo_zigzag', 'sum'),
         tipo = ('tipo', lambda x: x.mode().iloc[0]),
-        esParada = ('esParada', 'any'),
+        es_parada = ('es_parada', 'any'),
         vecesVisitado = ('tiempo_seg', 'count')
     ).reset_index()
 

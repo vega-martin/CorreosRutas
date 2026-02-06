@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
             //     distanceFormateada = fila.distance.toFixed(3); 
             // }
 
-            if (fila.esParada) {
+            if (fila.es_parada) {
                 tr.style.backgroundColor = "#F2FCFF";  // light blue
             }
 

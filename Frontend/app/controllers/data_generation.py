@@ -1,6 +1,7 @@
 from flask import Blueprint, request, current_app, redirect, url_for, session, jsonify, flash
 from .geo_analysis import asociar_direcciones_a_puntos
 from .file_upload import ensure_session_folder
+from .util import parse_coord
 from .map_generation import create_map
 from geopy.distance import geodesic
 import os, urllib, json
@@ -63,7 +64,7 @@ def calcular_metricas(df_filtrado):
 
     Parámetro:
         df_filtrado: DataFrame con columnas 
-                     ['fecha_hora', 'solo_fecha', 'solo_hora' 'longitud', 'latitud', 'esParada', 'cod_pda']
+                     ['fecha_hora', 'solo_fecha', 'solo_hora' 'longitud', 'latitud', 'es_parada', 'cod_pda']
 
     Retorna:
         Diccionario con los campos:
@@ -92,20 +93,12 @@ def calcular_metricas(df_filtrado):
                 fila = df_diario_pda.iloc[i]
 
                 hora = fila['solo_hora']
-                esParada = fila['esParada']
+                es_parada = fila['es_parada']
                 cod_pda = fila['cod_pda']
                 fecha = fila['solo_fecha']
 
-                if ((fila['longitud'].count('.') <= 1) and (fila['latitud'].count('.') <= 1)):
-                    lon = float(str(fila['longitud']).replace(',', '.'))
-                    lat = float(str(fila['latitud']).replace(',', '.'))
-                else:
-                    lon_int = fila['longitud'].replace('.', '')
-                    lon_float = lon_int[:2] + '.' + lon_int[2:]
-                    lon = float(lon_float)
-                    lat_int = fila['latitud'].replace('.', '')
-                    lat_float = lat_int[:2] + '.' + lat_int[2:]
-                    lat = float(lat_float)
+                lon = parse_coord(fila['longitud'])
+                lat = parse_coord(fila['latitud'])
 
                 # Primer punto
                 if i == 0:
@@ -116,16 +109,10 @@ def calcular_metricas(df_filtrado):
                     fila_prev = df_diario_pda.iloc[i - 1]
 
                     # Calcular distancia (en km)
-                    if ((fila_prev['longitud'].count('.') <= 1) and (fila_prev['latitud'].count('.') <= 1)):
-                        punto1 = (float(str(fila_prev['latitud']).replace(',', '.')), float(str(fila_prev['longitud']).replace(',', '.')))
-                    else:
-                        lon_int = ''.join(fila_prev['longitud'].split('.'))
-                        lon_float = lon_int[:2] + '.' + lon_int[2:]
-                        lon2 = float(lon_float)
-                        lat_int = ''.join(fila_prev['latitud'].split('.'))
-                        lat_float = lat_int[:2] + '.' + lat_int[2:]
-                        lat2 = float(lat_float)
-                        punto1 = (lat2, lon2)
+                    lon2 = parse_coord(fila_prev['longitud'])
+                    lat2 = parse_coord(fila_prev['latitud'])
+
+                    punto1 = (lat2, lon2)
                     punto2 = (lat, lon)
 
                                 
@@ -137,8 +124,8 @@ def calcular_metricas(df_filtrado):
                     
 
                     # Calcular tiempo en horas
-                    hora_i = pd.to_datetime(fila['solo_hora'], format='%H:%M:%S')
-                    hora_prev = pd.to_datetime(fila_prev['solo_hora'], format='%H:%M:%S')
+                    hora_i = pd.to_timedelta(fila['solo_hora'])
+                    hora_prev = pd.to_timedelta(fila_prev['solo_hora'])
                     delta_t = int((hora_i - hora_prev).total_seconds())
                     tiempo_horas = delta_t / 3600.0
 
@@ -161,7 +148,7 @@ def calcular_metricas(df_filtrado):
                     "distancia": distancia,
                     "tiempo": tiempo,
                     "velocidad": velocidad,
-                    "esParada": bool(esParada),
+                    "es_parada": bool(es_parada),
                     "cod_pda": cod_pda,
                     "fecha": fecha
                 })
@@ -187,7 +174,7 @@ def get_datos(cod, pda, fecha_ini, fecha_fin):
         current_app.logger.error(f"Error al leer el archivo CSV: {e}")
         return []
     
-    df = df[df['codired'] == int(cod)]
+    df = df[df['cod_unidad'] == int(cod)]
 
     # --- FILTRO POR PDA ---
     if pda == "TODAS":
@@ -212,7 +199,7 @@ def get_datos(cod, pda, fecha_ini, fecha_fin):
 
     # Extraer solo las columnas que interesan
     # CAMBIO: se añade cod_pda
-    columnas = ['fecha_hora', 'solo_fecha', 'solo_hora', 'longitud', 'latitud', 'esParada','cod_pda']
+    columnas = ['fecha_hora', 'solo_fecha', 'solo_hora', 'longitud', 'latitud', 'es_parada','cod_pda']
     df_filtrado = df_filtrado[columnas].dropna()
     resultados = calcular_metricas(df_filtrado)
 

@@ -117,7 +117,7 @@ def cluster_por_tiempo(tabla):
     Aplica un filtro donde elimina todos los registros que no superen un tiempo mínimo.
     
     Parámetro:
-        tabla: lista de diccionarios con campos [n, hora, longitud, latitud, distancia, tiempo, velocidad, esParada, cod_pda, fecha, ...]
+        tabla: lista de diccionarios con campos [n, hora, longitud, latitud, distancia, tiempo, velocidad, es_parada, cod_pda, fecha, ...]
     
     Retorna:
         lista de diccionarios con puntos filtrados

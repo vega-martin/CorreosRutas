@@ -166,9 +166,9 @@ def valid_file(path, file_type):
         }), 500
 
     required_columns_map = {
-        "A": {'fec_lectura_medicion', 'longitud_wgs84_gd', 'latitud_wgs84_gd', 'cod_inv_pda', 'codired'},
-        "B": {'Num Inv', 'Fec Actividad', 'Seg Transcurrido', 'Cod Unidad'},
-        "C": {'COD_SECCION', 'INSTANTE', 'LONGITUD', 'LATITUD', 'codired'}
+        "A": {"fec_lectura_medicion", "longitud_wgs84_gd", "latitud_wgs84_gd", "cod_inv_pda", "codired"},
+        "B": {"Num Inv", "Fec Actividad", "Seg Transcurrido", "Cod Unidad", "Cod Actividad", "Seccion", "Turno"},
+        "C": {"COD_SECCION", "INSTANTE_EVENTO", "NUM_GEO_LONGITUD", "NUM_GEO_LATITUD", "COD_NODOEMI", "IND_TURNO"}
     }
 
     required_columns = required_columns_map.get(file_type)

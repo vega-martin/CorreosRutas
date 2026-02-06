@@ -37,8 +37,8 @@ def upload_file_A():
         - Mutates the Flask session by updating uploaded file metadata.
         - Writes informational and error logs to the application logger.
     """
-    file_type = 'A'
-    file_key = 'fileA'
+    file_type = "A"
+    file_key = "fileA"
     f = request.files.get(file_key)
     data_filename = secure_filename(f.filename)
     user_folder = ensure_session_folder()
@@ -70,7 +70,7 @@ def upload_file_A():
         current_app.logger.info(f"Archivo guardado correctamente en {save_path}")
     
     final_response = {
-        "logs": f'Fichero subido correctamente.\n{backend_response.json().get('logs', '')}' 
+        "logs": f"Fichero subido correctamente.\n{backend_response.json().get('logs', '')}"
     }
     return jsonify(final_response)
 
@@ -101,8 +101,11 @@ def upload_files_B_C():
         - Mutates the Flask session with uploaded file metadata.
         - Logs file handling results to the application logger.
     """
-    for file_type in ('B', 'C'):
-        file_key = f'file{file_type}'
+
+    initial_upload_logs = ""
+
+    for file_type in ("B", "C"):
+        file_key = f"file{file_type}"
         f = request.files.get(file_key)
         data_filename = secure_filename(f.filename)
         user_folder = ensure_session_folder()
@@ -121,7 +124,14 @@ def upload_files_B_C():
                 }
             files = {'file': y}
             api_url = current_app.config.get("API_URL")
-            requests.post(f"{api_url}/upload_file", data=data, files=files)
+            backend_upload_response = requests.post(f"{api_url}/upload_file", data=data, files=files)
+
+            if backend_upload_response.content:
+                upload_data = backend_upload_response.json()  # parse JSON
+            else:
+                upload_data = {"logs": "No se recibió respuesta del backend."}
+            
+            initial_upload_logs += f"\n\nLectura inicial fichero {file_type}: {upload_data.get('logs', '')}"
 
         uploaded = session.get("uploaded_files", {})
         uploaded[file_type] = save_path
@@ -150,10 +160,10 @@ def upload_files_B_C():
     except requests.exceptions.RequestException as e:
         unify_data = {"logs": f"Error al llamar al backend: {e}"}
 
-    unify_response = f"Unificando ficheros.\n{unify_data.get('logs', '')}\n"
+    initial_upload_logs += f"\n\nUnificando ficheros.\n{unify_data.get('logs', '')}\n"
 
     final_response = {
-        "logs": f'Ficheros subidos correctamente.\n\n{unify_response}\n'
+        "logs": f'Ficheros subidos correctamente.\n\n{initial_upload_logs}\n'
     }
 
     return jsonify(final_response)
