@@ -90,7 +90,9 @@ def agrupar_por_tipo():
                 current_app.logger.error(f"Error llamando a la API de diámetro: {e}")
                 return jsonify({"error": "Error al procesar agrupación por diámetro"}), 502
 
+            current_app.logger.info("Resultado")
             resultado = api_response.json().get("tabla")
+            #current_app.logger.info(f"Tipo de dato del resultado: {str(resultado)}")
             # Reescribir json de la tabla con los portales
             upload_folder = current_app.config.get("UPLOAD_FOLDER")
             processed_filename = 'table_data_filtered.json'
@@ -99,8 +101,9 @@ def agrupar_por_tipo():
             # Guardar la lista de diccionarios (el valor de 'tabla') en el disco
             with open(save_path, 'w', encoding='utf-8') as f:
                 json.dump(resultado, f, ensure_ascii=False, indent=4)
-
+            current_app.logger.info("Llamar a la creacion del mapa")
             map_path = create_cluster_map(cod)
+            current_app.logger.info("Mapa terminado")
             return jsonify({"url": map_path, "tabla": resultado})
         case _:
             return jsonify({"error": f"Error al especificar un algoritmo de agrupacion"}), 406
@@ -130,6 +133,6 @@ def cluster_por_tiempo(tabla):
     # Crear dataframe
     df = pd.DataFrame(tabla)
 
-    df_filtrado = df[df['tiempo'] >= THRESHOLD]
+    df_filtrado = df[df['time_accumulated'] >= THRESHOLD]
 
     return df_filtrado.to_dict('records')

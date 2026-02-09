@@ -199,7 +199,8 @@ def create_map(cod, pda, fecha_ini, fecha_fin):
     return save_map(cod, pda, fecha, mapa)
 
 
-def create_cluster_map(cod, diameter = 1000.0, num_pts = 10):
+def create_cluster_map(cod, diameter = 1000.0, num_pts = 10, max_time = ""):
+    current_app.logger.info("Empezando creacion del mapa")
     upload_folder = current_app.config.get("UPLOAD_FOLDER")
     processed_filename = 'table_data_filtered.json'
     cluster_table_path = os.path.join(upload_folder, session.get("id"), processed_filename)
@@ -212,8 +213,8 @@ def create_cluster_map(cod, diameter = 1000.0, num_pts = 10):
         return
 
     # Coordenada media de los puntos centrales para centrar el mapa
-    lats = [c["latitud"] for c in clusters if c.get("latitud") is not None]
-    lons = [c["longitud"] for c in clusters if c.get("longitud") is not None]
+    lats = [c["latitud_portal"] for c in clusters if c.get("latitud_portal") is not None]
+    lons = [c["longitud_portal"] for c in clusters if c.get("longitud_portal") is not None]
 
     if not lats or not lons:
         print("No hay coordenadas válidas para centrar el mapa.")
@@ -250,15 +251,15 @@ def create_cluster_map(cod, diameter = 1000.0, num_pts = 10):
 
     # Crear un marcador (seleccionable) por cluster
     for c in clusters:
-        lat = c.get("latitud")
-        lon = c.get("longitud")
+        lat = c.get("latitud_portal")
+        lon = c.get("longitud_portal")
         if lat is None or lon is None:
             continue
 
         calle = c.get("street", "SIN_CALLE")
         numero = c.get("number")
-        tiempo_total = c.get("tiempo", 0)
-        puntos_cluster = c.get("puntos_cluster", [])
+        tiempo_total = c.get("time_accumulated", 0)
+        puntos_cluster = c.get("pts_cluster", [])
 
         num_unificados = len(puntos_cluster)
 
@@ -295,7 +296,14 @@ def create_cluster_map(cod, diameter = 1000.0, num_pts = 10):
     else:
         current_app.logger.info(f"Carpeta creada correctamente: {map_folder}")
 
-    map_name = "cluster_d" + str(int(diameter)) + "_p" + str(num_pts) + ".html"
+    if diameter == "":
+        diameter = 1000.0
+    elif num_pts == "":
+        num_pts = 10
+    elif max_time == "":
+        max_time = "NoTime"
+
+    map_name = "cluster_d" + str(int(diameter)) + "_p" + str(num_pts) + "_t" + str(max_time) + ".html"
     save_path = os.path.join(map_folder, map_name)
     m.save(save_path)
 

@@ -847,12 +847,12 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById('type-filter').value = 'all';
             document.getElementById('stop-filter').value = 'all';
             inputPDA.value = '';
-            inputDiametro.value = '';
-            inputPtsClus.value = '';
-            inputMaxTimeClus.value = '';
+            //inputDiametro.value = '';
+            //inputPtsClus.value = '';
+            //inputMaxTimeClus.value = '';
             pdaBtnFilter.textContent = 'Selecciona una PDA';
-            document.getElementById('filtroDiametroClus').vale = '';
-            document.getElementById('filtroNumPtsClus').vale = '';
+            //document.getElementById('filtroDiametroClus').vale = '';
+            //document.getElementById('filtroNumPtsClus').vale = '';
 
 
             // Establecer signos por defecto
@@ -947,6 +947,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnAgruparGeneral) {
         btnAgruparGeneral.addEventListener('click', (e) => {
             e.preventDefault();
+
+            inputDiametro.value = '';
+            inputPtsClus.value = '';
+            inputMaxTimeClus.value = '';
+            document.getElementById('filtroDiametroClus').vale = '';
+            document.getElementById('filtroNumPtsClus').vale = '';
+            document.getElementById('filtroMaxTimeAcc').vale = '';
 
             if(!agrupamientoInput) {
                 alert("Seleccione un método de agrupamiento.");

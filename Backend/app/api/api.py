@@ -323,6 +323,7 @@ def agrupar_diametro():
     current_app.logger.info(f"Tipo de dato del resultado: {type(datos_agrupados)}")
     current_app.logger.info("Clusterizazo terminado")
     current_app.logger.info("Devolviendo informacion")
+    #current_app.logger.info(f"Tipo de dato del resultado: {str(datos_agrupados)}")
 
     return jsonify({"tabla": datos_agrupados})
 
@@ -342,6 +343,7 @@ def filtrar_clustering():
     # Parámetros opcionales
     diametro = data.get("diametro")
     num_pts = data.get("numPts")
+    max_time = data.get("maxTime")
 
     if not session_id:
         return jsonify({"error": "Falta id de sesión"}), 400
@@ -366,7 +368,15 @@ def filtrar_clustering():
     current_app.logger.info(f"filtros: diametro {diametro}, pts {num_pts}")
 
     # Llamada al algoritmo
-    datos_agrupados = cluster_por_diametro(tabla, num_pts, diametro)
+    current_app.logger.info(f"Tipo de dato del resultado: {type(max_time)}")
+
+    if max_time == "":
+        max_time = -1
+    else:
+        max_time = int(max_time)
+    current_app.logger.info(f"Tipo de dato del resultado: {type(max_time)}")
+
+    datos_agrupados = cluster_por_diametro(tabla, num_pts, diametro, max_time)
 
     current_app.logger.info(f"Tipo de dato del resultado: {type(datos_agrupados)}")
     current_app.logger.info("Clusterizazo terminado")

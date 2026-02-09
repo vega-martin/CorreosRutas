@@ -114,9 +114,12 @@ def get_table():
         dato['longitud_portal'] = str(dato['longitud_portal']).replace('.', ',')
         dato['time_accumulated'] = str(dato['time_accumulated']).replace('.', ',')
         dato['time_mean'] = str(dato['time_mean']).replace('.', ',')
+        dato['number'] = normalizar_numero(dato['number'])
 
     current_app.logger.info("DESCARGA DE TABLA HTML: rellenar tabla")
 
+
+    current_app.logger.info(f"datos: {str(data)}")
     mid_data = fill_data(cod, data)
 
     current_app.logger.info("DESCARGA DE TABLA HTML: renombrar cabecera")
@@ -213,14 +216,24 @@ def fill_data(cod, og_data):
 
     # Crear índice de lista2 por clave compuesta
     index_og_data = {
-        (elem["street"], elem["number"]): elem
+        (elem["latitud_portal"], elem["longitud_portal"]): elem
         for elem in og_data
     }
 
     # Reemplazar elementos en lista1 si hay coincidencia
     final_data = [
-        index_og_data.get((elem["street"], elem["number"]), elem)
+        index_og_data.get((elem["latitud_portal"], elem["longitud_portal"]), elem)
         for elem in geojson_data_list
     ]
 
     return final_data
+
+
+
+
+def normalizar_numero(n):
+    if n == "S-N":
+        return n
+    if isinstance(n, (int, float)):
+        return str(int(n))
+    return str(n)

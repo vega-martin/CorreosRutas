@@ -61,19 +61,22 @@ def es_par(n):
 
 def validar_tipo_por_calle(df):
     """Comprueba que cada calle solo tenga un tipo."""
-    agrupado = df.groupby("street")["tipo"].nunique()
+    agrupado = df.groupby("street")["type"].nunique()
     calles_mal = agrupado[agrupado > 1]
     if not calles_mal.empty:
         raise ValueError(f"Hay calles con más de un tipo: {calles_mal.to_dict()}")
 
 
-def clusterizar_secuencia_puntos(rows, max_puntos, max_dist):
+def clusterizar_secuencia_puntos(rows, max_puntos, max_dist, max_time):
     """
     rows: lista de dicts (misma calle, misma lógica de tipo/paridad, ya ordenados).
     max_puntos: máximo puntos por cluster.
     max_dist: distancia máxima entre el primer y el último (en metros).
+    max_time: tiempo acumulado máximo del cluster
     """
     clusters = []
+    acc_time = 0
+    times_visited = 0
     i = 0
     n = len(rows)
     while i < n:
@@ -81,16 +84,22 @@ def clusterizar_secuencia_puntos(rows, max_puntos, max_dist):
         cluster = [rows[i]]
         j = i + 1
 
+        p_inicio = rows[inicio]
+        acc_time = p_inicio["time_accumulated"]
+        times_visited = p_inicio["times_visited"]
+
         while j < n:
             if len(cluster) == max_puntos:
                 break
-
-            p_inicio = rows[inicio]
+        
             p_nuevo = rows[j]
 
+            if max_time != -1 and acc_time + p_nuevo["time_accumulated"] > max_time:
+                break
+
             d = haversine_m(
-                p_inicio["latitud"], p_inicio["longitud"],
-                p_nuevo["latitud"],  p_nuevo["longitud"]
+                p_inicio["latitud_portal"], p_inicio["longitud_portal"],
+                p_nuevo["latitud_portal"],  p_nuevo["longitud_portal"]
             )
 
             if d is None or d > max_dist:
@@ -99,17 +108,24 @@ def clusterizar_secuencia_puntos(rows, max_puntos, max_dist):
             cluster.append(rows[j])
             j += 1
 
-        clusters.append(cluster)
+            acc_time += p_nuevo["time_accumulated"]
+            times_visited += p_nuevo["times_visited"]
+
+        clusters.append({
+            "puntos": cluster,
+            "time_accumulated": acc_time,
+            "times_visited": times_visited
+        })
         i = j
 
     return clusters
 
 
 def sumar_tiempo_cluster(cluster):
-    """Suma el campo 'tiempo' de todos los puntos del cluster."""
+    """Suma el campo 'time_accumulated' de todos los puntos del cluster."""
     total = 0.0
     for r in cluster:
-        v = str(r.get("tiempo", "")).strip()
+        v = str(r.get("time_accumulated", "")).strip()
         if v in ("", "-", "None", "nan"):
             continue
         v = v.replace(",", ".")
@@ -123,14 +139,14 @@ def sumar_tiempo_cluster(cluster):
 def seleccionar_punto_central_por_distancia(cluster):
     """
     Devuelve el punto del cluster cuya posición geográfica
-    está más cerca del centroide (media de latitudes y longitudes).
+    está más cerca del centroide (media de latitud_portales y longitud_portales).
     """
     if len(cluster) == 1:
         return cluster[0]
 
-    # Centroide simple: media de latitudes y longitudes
-    lats = [p["latitud"] for p in cluster if p.get("latitud") is not None]
-    lons = [p["longitud"] for p in cluster if p.get("longitud") is not None]
+    # Centroide simple: media de latitud_portales y longitud_portales
+    lats = [p["latitud_portal"] for p in cluster if p.get("latitud_portal") is not None]
+    lons = [p["longitud_portal"] for p in cluster if p.get("longitud_portal") is not None]
 
     if not lats or not lons:
         # Si no tenemos coordenadas válidas, devolvemos el central por índice
@@ -143,8 +159,8 @@ def seleccionar_punto_central_por_distancia(cluster):
     mejor_dist = float("inf")
 
     for p in cluster:
-        lat = p.get("latitud")
-        lon = p.get("longitud")
+        lat = p.get("latitud_portal")
+        lon = p.get("longitud_portal")
         if lat is None or lon is None:
             continue
 
@@ -162,7 +178,7 @@ def seleccionar_punto_central_por_distancia(cluster):
 
 # ========= PROCESO PRINCIPAL =========
 
-def cluster_por_diametro(datos, max_pts_cluster = 10, max_distancia_metros = 1000.0):
+def cluster_por_diametro(datos, max_pts_cluster = 10, max_distancia_metros = 1000.0, max_time_accumulated = -1):
     # 1) Leer datos
     # df = pd.read_csv(INPUT_CSV, sep=";", dtype=str)
     df = pd.DataFrame(datos)
@@ -171,9 +187,10 @@ def cluster_por_diametro(datos, max_pts_cluster = 10, max_distancia_metros = 100
     df.columns = [c.strip() for c in df.columns]
 
     # 2) Convertir tipos necesarios
-    df["latitud"] = df["latitud"].apply(to_float_comma)
-    df["longitud"] = df["longitud"].apply(to_float_comma)
+    df["latitud_portal"] = df["latitud_portal"].apply(to_float_comma)
+    df["longitud_portal"] = df["longitud_portal"].apply(to_float_comma)
     df["number"] = df["number"].apply(to_int_safe)
+    df = df[df["number"].notna()]
 
     # 3) Validar tipo único por calle
     validar_tipo_por_calle(df)
@@ -185,13 +202,13 @@ def cluster_por_diametro(datos, max_pts_cluster = 10, max_distancia_metros = 100
 
     # 5) Agrupar por calle
     for street, df_calle in df_sorted.groupby("street"):
-        tipo = df_calle["tipo"].iloc[0]
+        tipo = df_calle["type"].iloc[0]
         rows = df_calle.to_dict(orient="records")
 
         # Tratamos tipo "-" igual que "zigzag": no se separa par/impar
         if tipo == "zigzag" or tipo == "-":
             clusters = clusterizar_secuencia_puntos(
-                rows, max_pts_cluster, max_distancia_metros
+                rows, max_pts_cluster, max_distancia_metros, max_time_accumulated
             )
             clusters_global.extend(clusters)
 
@@ -202,13 +219,13 @@ def cluster_por_diametro(datos, max_pts_cluster = 10, max_distancia_metros = 100
 
             if pares:
                 clusters_p = clusterizar_secuencia_puntos(
-                    pares, max_pts_cluster, max_distancia_metros
+                    pares, max_pts_cluster, max_distancia_metros, max_time_accumulated
                 )
                 clusters_global.extend(clusters_p)
 
             if impares:
                 clusters_i = clusterizar_secuencia_puntos(
-                    impares, max_pts_cluster, max_distancia_metros
+                    impares, max_pts_cluster, max_distancia_metros, max_time_accumulated
                 )
                 clusters_global.extend(clusters_i)
 
@@ -219,8 +236,8 @@ def cluster_por_diametro(datos, max_pts_cluster = 10, max_distancia_metros = 100
     salida = []
 
     for cluster in clusters_global:
-        centro = seleccionar_punto_central_por_distancia(cluster)
-        tiempo_total = sumar_tiempo_cluster(cluster)
+        centro = seleccionar_punto_central_por_distancia(cluster.get("puntos", []))
+        tiempo_total = cluster.get("time_accumulated")
 
         obj = {}
         # Copiar todos los campos originales del centro
@@ -228,10 +245,13 @@ def cluster_por_diametro(datos, max_pts_cluster = 10, max_distancia_metros = 100
             obj[k] = v
 
         # Sobrescribimos 'tiempo' con la suma
-        obj["tiempo"] = tiempo_total
+        obj["time_accumulated"] = tiempo_total
+        obj["time_mean"] = tiempo_total/cluster.get("times_visited", 1)
+        obj["times_visited"] = cluster.get("times_visited", 0)
+        obj["distance_portal"] = 0
 
         # Lista de IDs (o lo que quieras usar) de los puntos del cluster
-        obj["puntos_cluster"] = [r.get("number") for r in cluster]
+        obj["pts_cluster"] = [r.get("number") for r in cluster.get("puntos", [])]
 
         salida.append(obj)
 

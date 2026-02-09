@@ -77,7 +77,7 @@ def filter_data():
 
     # Recalcular clusters con nuevos filtros
     current_app.logger.info("Recalcular clusteres si es necesario")
-    if data.get('diametro') != "" or data.get('numPts') != "":
+    if data.get('diametro') != "" or data.get('numPts') != "" or data.get('maxTime') != "":
         payload = {
             "id": session.get("id"),
             "diametro": data.get('diametro'),
@@ -103,7 +103,7 @@ def filter_data():
             with open(save_path, 'w', encoding='utf-8') as f:
                 json.dump(resultados_filtrados, f, ensure_ascii=False, indent=4)
             cod = data.get('cod')
-            url = create_cluster_map(cod, data.get('diametro'), data.get('numPts'))
+            url = create_cluster_map(cod, data.get('diametro'), data.get('numPts'), data.get('maxTime'))
 
         except requests.RequestException as e:
             current_app.logger.error(f"Error llamando a la API de diámetro: {e}")
