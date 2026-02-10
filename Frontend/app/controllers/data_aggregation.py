@@ -222,9 +222,9 @@ def agrupar_portales_duplicados(tabla):
     df_agrupado = df.groupby(['street', 'number']).agg(
         #n = ('n', 'first'),
         cod_pda = ('cod_pda', lambda x: list(set(x))),
-        latitud_pt = ('latitud', 'mean'),
-        longitud_pt = ('longitud', 'mean'),
-        distance_last_pt = ('distancia', 'mean'),
+        #latitud_pt = ('latitud', 'mean'),
+        #longitud_pt = ('longitud', 'mean'),
+        #distance_last_pt = ('distancia', 'mean'),
         time_accumulated = ('tiempo_signed', 'sum'),
         time_mean = ('tiempo_signed', 'mean'),
         distance_portal = ('distance', 'mean'),
