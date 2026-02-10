@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import os,json
 
-TIME_THRESHOLD = '15s'
+TIME_THRESHOLD = '59s'
 START_TIME = time(7, 30)
 END_TIME = time(22, 0)
 

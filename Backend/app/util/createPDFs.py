@@ -112,14 +112,14 @@ def crear_pdf(ruta_pdf, info_path):
    story.append(Spacer(1, 6))
 
    intro = """
-   <b><u>Entrada:</u></b><br/>
-   - <u>Fichero A</u>: identifica la ruta de reparto de una PDA de correspondencia no registrada (código de unidad, PDA, fecha, latitud y longitud).<br/>
-   - <u>Fichero B</u>: identifica los instantes de entrega de correspondencia registrada (código de unidad, PDA, fecha, tiempo transcurrido, código de actividad, sección y turno).<br/>
-   - <u>Fichero C</u>: identifica las coordenadas de entrega de correspondencia registrada (código de unidad, sección, turno, fecha, latitud y lontiud).<br/>
+   <b>Entrada:</b><br/>
+   - Fichero A: identifica la ruta de reparto de una PDA de correspondencia no registrada (código de unidad, PDA, fecha, latitud y longitud).<br/>
+   - Fichero B: identifica los instantes de entrega de correspondencia registrada (código de unidad, PDA, fecha, tiempo transcurrido, código de actividad, sección y turno).<br/>
+   - Fichero C: identifica las coordenadas de entrega de correspondencia registrada (código de unidad, sección, turno, fecha, latitud y lontiud).<br/>
    <br/>
-   <b><u>Salida:</u></b><br/>
-   - <u>Fichero D</u>: resultado de la unión de B y C.<br/>
-   - <u>Fichero E</u>: resultado de la unión de A y D.<br/>
+   <b>Salida:</b><br/>
+   - Fichero D: resultado de la unión de B y C.<br/>
+   - Fichero E: resultado de la unión de A y D.<br/>
    """
 
    story.append(Paragraph(intro, normal))
@@ -141,7 +141,23 @@ def crear_pdf(ruta_pdf, info_path):
    story.append(Paragraph("Preproceso de B y C", subtitle))
    story.append(Spacer(1, 4))
 
-   story.append(Paragraph("Proceso de carga de datos de los ficheros B y C.", normal))
+   join_info = """
+   El proceso de unificación de los ficheros B y C se hace con el propósito 
+   de asignar coordenadas (proporcionadas en el fichero C) a los puntos de 
+   paradas registradas del fichero B.<br/>
+   Para ello se establece una relación entre los ficheros con los campos 
+   <i>Sección</i>, <i>Turno</i> y <i>Fecha</i>. Con la restricción inicial 
+   de que los registros deben pertenecer a la misma unidad de reparto (el campo 
+   <i>Código de unidad</i> debe coincidir).<br/>
+   Una vez filtrados los registros se establece una ventana de 59 segundos 
+   de margen entre los registros de un fichero y del otro que describren la misma 
+   acción del cartero. Esto se hace debido a que los registros que describen la misma 
+   acción no tienen por qué tener exactamente la misma hora registrada porque se generan 
+   con aplicaciones distintas.<br/>
+   El resultado de este proceso será el fichero D.<br/><br/>
+   """
+
+   story.append(Paragraph(join_info, normal))
    # Estadisticas
    story.append(Paragraph("Información de lectura de los datos", subsubtitle))
    read_D = getInfo(data, "read", "D")
@@ -151,8 +167,8 @@ def crear_pdf(ruta_pdf, info_path):
    story.append(Spacer(1, 4))
    story.append(Paragraph("Información de sincronización de los datos", subsubtitle))
    subtitle_sinchro = """
-   La sincronización consiste en eliminar los códigos de unidad, fechas, secciones y turnos
-   no compartidos entre ambos ficheros.<br/><br/>
+   La sincronización consiste en eliminar los registros con códigos de unidad, 
+   fechas, secciones o turnos no compartidos entre ambos ficheros.<br/><br/>
    """
    story.append(Paragraph(subtitle_sinchro, normal))
    sinchro_D = getInfo(data, "sinchro", "D")
@@ -167,11 +183,14 @@ def crear_pdf(ruta_pdf, info_path):
    story.append(Spacer(1, 4))
 
    # Introduccion para contexto
-   intro_text_AD = """
-   El segundo paso del preprocesado consiste en realizar la unión de los datos del fichero A con los datos del fichero D. 
-   En el fichero A se cuenta con los siguientes campos importantes para el proceso: código de unidad, PDA, fecha, latitud y longitud. 
-   Por otro lado, en el fichero D se cuenta con los siguientes campos importantes para el proceso: código de unidad, PDA, fecha, latitud, lontiud y tiempo transcurrido.<br/>
-   Como resultado de esta unión surge un fichero de datos que a partir de ahora se denominará fichero final. 
+   intro_text_AD = """ 
+   La unión de los ficheros A y D se realiza con el propósito de resaltar q
+   ué puntos de las rutas de los carteros son paradas registradas. De esta forma, 
+   más adelante (en un proceso que no se describirá en este documento) se contrarrestarán 
+   estas paradas registradas a los puntos primarios.<br/>
+   El proceso conserva todos los datos del fichero A y rellena las secuencias temporales 
+   presentadas en este con los datos del fichero D.<br/>
+   El resultado de este proceso será el fichero E.<br/><br/>
    """
    story.append(Paragraph(intro_text_AD, normal))
    # Estadisticas
@@ -181,7 +200,7 @@ def crear_pdf(ruta_pdf, info_path):
    story.append(Paragraph(read_E, normal))
    story.append(Paragraph("Información de sincronización de los datos", subsubtitle))
    subtitle_sinchro = """
-   La sincronización consiste en eliminar los códigos de unidad, PDAs y fechas del fichero E
+   La sincronización consiste en eliminar los códigos de unidad, PDAs y fechas del fichero D 
    que no pertenezcan al fichero A.<br/><br/>
    """
    story.append(Paragraph(subtitle_sinchro, normal))
@@ -377,7 +396,7 @@ def readInfo(dict, type):
       <br/>
       PDAs:<br/>
          - Pertenecientes al fichero B ({b_data["num_inv_length"]}): {b_data["num_inv"]}.<br/>
-         - Pertenecientes al fichero C (0): El fichero no cuenta con un campo "Num Inv".<br/>
+         - Pertenecientes al fichero C (0): El fichero no cuenta con un campo "PDA".<br/>
       <br/>
       Fechas:<br/>
          - Pertenecientes al fichero B ({b_data["dates_length"]}): {b_data["dates"]}.<br/>
@@ -393,25 +412,25 @@ def readInfo(dict, type):
 
    elif type == "E":
       data = dict["E"]
-      b_data = data["A_initial"]
-      c_data = data["D_initial"]
+      a_data = data["A_initial"]
+      d_data = data["D_initial"]
 
       return f"""
-      Registros totales: {b_data["length"] + c_data["length"]}.<br/>
-         - Pertenecientes al fichero B: {b_data["length"]}.<br/>
-         - Pertenecientes al fichero C: {c_data["length"]}.<br/>
+      Registros totales: {a_data["length"] + d_data["length"]}.<br/>
+         - Pertenecientes al fichero A: {a_data["length"]}.<br/>
+         - Pertenecientes al fichero D: {d_data["length"]}.<br/>
       <br/>
       Códigos de unidad:<br/>
-         - Pertenecientes al fichero B ({b_data["unit_codes_length"]}): {b_data["unit_codes"]}.<br/>
-         - Pertenecientes al fichero C ({c_data["unit_codes_length"]}): {c_data["unit_codes"]}<br/>
+         - Pertenecientes al fichero A ({a_data["unit_codes_length"]}): {a_data["unit_codes"]}.<br/>
+         - Pertenecientes al fichero D ({d_data["unit_codes_length"]}): {d_data["unit_codes"]}<br/>
       <br/>
       PDAs:<br/>
-         - Pertenecientes al fichero B ({b_data["num_inv_length"]}): {b_data["num_inv"]}.<br/>
-         - Pertenecientes al fichero C (0): El fichero no cuenta con el campo "Num Inv".<br/>
+         - Pertenecientes al fichero A ({a_data["num_inv_length"]}): {a_data["num_inv"]}.<br/>
+         - Pertenecientes al fichero D (0): El fichero no cuenta con el campo "PDA".<br/>
       <br/>
       Fechas:<br/>
-         - Pertenecientes al fichero B ({b_data["dates_length"]}): {b_data["dates"]}.<br/>
-         - Pertenecientes al fichero C ({c_data["dates_length"]}): {c_data["dates"]}<br/>
+         - Pertenecientes al fichero A ({a_data["dates_length"]}): {a_data["dates"]}.<br/>
+         - Pertenecientes al fichero D ({d_data["dates_length"]}): {d_data["dates"]}<br/>
       <br/>
       """
    else:
