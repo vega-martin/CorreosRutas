@@ -140,7 +140,7 @@ INFORMACIÓN DE LA SINCRONIZACIÓN:
     - Número de códigos de unidad compartidos: {erased_info["final"]["final"]["unit_codes_length"]}.
     - Número de PDAs compartidas (Num Inv): {erased_info["final"]["final"]["num_inv_length"]}.
     - Número de fechas compartidas: {erased_info["final"]["final"]["dates_length"]}.
-    - Registros descartados en la sincornización ({erased_info["sinchronized"]["total_reg_erased"]}):
+    - Registros descartados en la sincronización ({erased_info["sinchronized"]["total_reg_erased"]}):
         + Pertenecientes al fichero B: {erased_info["sinchronized"]["b_total_reg_erased"]}.
         + Pertenecientes al fichero C: {erased_info["sinchronized"]["c_total_reg_erased"]}.
 
@@ -207,8 +207,8 @@ def unifyAllFiles():
     #    json.dump(erased_info, f, ensure_ascii=False, indent=4)
 
     #current_app.logger.info("EMPEZANDO CREACION DE PDF CON ESTADISTICAS")
-    #file_path = os.path.join(id_path, 'estadisticas_union.pdf')
-    #crear_pdf(file_path, id_path)
+    file_path = os.path.join(id_path, 'estadisticas_union.pdf')
+    crear_pdf(file_path, id_path)
 
     return jsonify(final_response)
 
