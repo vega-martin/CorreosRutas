@@ -148,9 +148,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 calleCompleta,
                 Number(fila.longitud_portal).toFixed(9),
                 Number(fila.latitud_portal).toFixed(9),
-                `${Number(fila.distance_portal).toFixed(3)} m`,
-                `${Number(fila.time_accumulated).toFixed(1)} sec`,
-                `${Number(fila.time_mean).toFixed(1)} sec`,
+                `${Number(fila.distance_portal).toFixed(0)} m`,
+                `${Number(fila.time_accumulated).toFixed(0)} sec`,
+                `${Number(fila.time_mean).toFixed(0)} sec`,
                 // fila.velocidad,
                 fila.type,
                 fila.even_odd_count,
@@ -1005,7 +1005,7 @@ document.addEventListener("DOMContentLoaded", () => {
             activarTab(1);
             dowloadType = "cluster"
             btnDescargarTabla.textContent = "Descargar clusters";
-            btnAgruparGeneral.disabled = true;
+            //btnAgruparGeneral.disabled = true;
         });
     }
 });
