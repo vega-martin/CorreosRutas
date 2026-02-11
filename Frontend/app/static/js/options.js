@@ -68,6 +68,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnPrev = document.getElementById('btn-prev');
     const btnNext = document.getElementById('btn-next');
     // Filtrado
+    const openFilters = document.getElementById('open-filters');
+    const closeFilters = document.getElementById('btn-close-filtrar');
+    const dlg = document.getElementById('filter-dlg');
     const btnFilter = document.getElementById('btn-filtrar');
     const btnLimpiar = document.getElementById('btn-limpiar-filtros');
     const inputTimeAcc = document.getElementById('filter-time-acc');
@@ -813,6 +816,8 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(err => {
                 console.error(err);
                 alert("Ocurrió un error al procesar la solicitud.");
+            }).finally(() => {
+                dlg.close();
             });
         });
 
@@ -867,7 +872,8 @@ document.addEventListener("DOMContentLoaded", () => {
             // Volver a la primera página y renderizar la lista ORIGINAL
             paginaActual = 1;
 
-            renderPagina(paginaActual); 
+            renderPagina(paginaActual);
+            dlg.close();
         }
 
         btnLimpiar.addEventListener('click', limpiarFiltros);
@@ -1008,5 +1014,15 @@ document.addEventListener("DOMContentLoaded", () => {
             //btnAgruparGeneral.disabled = true;
         });
     }
+
+    openFilters.addEventListener('click', (e) => {
+        console.log("Abrir Modal");
+        dlg.showModal();
+    });
+
+    closeFilters.addEventListener('click', (e) => {
+        console.log("Cerrar Modal");
+        dlg.close();
+    });
 });
 

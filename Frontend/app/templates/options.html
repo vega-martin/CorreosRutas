@@ -119,12 +119,13 @@
             </div>
             
             <!-- Tabla de filtros -->
+             <!--
             <div class="contenedor">
                 <div class="tabla-filtros">
                     <h3>Filtros</h3>
                     <div class="filtros-generales-grid">
 
-                        <!-- Columna izquierda -->
+                        
                         <div class="filtros-col-izq">
                             <label>Tiempo acumulado:</label>
                             <div>
@@ -155,7 +156,7 @@
                             </div>
                         </div>
 
-                        <!-- Columna derecha -->
+                        
                         <div class="filtros-col-der">
                             <label>Tipo:</label>
                             <select class="select-sign-btn" id="type-filter">
@@ -185,8 +186,7 @@
                         </select>
                         <button type="button" class="select-btn" id="pdaBtnFilter" style="width: 70%;" disabled>Selecciona una PDA</button>
                         <div class="options" id="pdaOptionsFilter">
-                            <!-- Las opciones se llenan dinámicamente con JavaScript -->
-                        </div>
+                            
                         <input type="hidden" name="pda" id="pdaInputFilter">
                     </div>
 
@@ -206,21 +206,21 @@
 
                     <br><br>
                     
-                    <!-- Divisón botones de filtros -->
+                    
                     <div class="filter-actions"> 
-                        <!-- Botón para aplicar filtros -->
+                        
                         <button class="accept-btn" id="btn-filtrar">
                             Filtrar
                         </button>
                         
-                        <!-- Botón para borrar filtros -->
+                        
                         <button class="clear-btn" id="btn-limpiar-filtros">
                             Limpiar
                         </button>
                     </div>
 
                 </div>
-            </div>
+            </div>-->
         </div>
 
         <!-- Columna del mapa -->
@@ -251,7 +251,10 @@
     <div id="tabla-resultados" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h2>Resultados — <span id="titulo-pda"></span> (<span id="titulo-fecha"></span>)</h2>
-            <button class="generate-btn" id="descargarTabla">Descargar tabla</button>
+            <div>
+                <button id="open-filters" class="accept-btn">Filtros</button>
+                <button class="generate-btn" id="descargarTabla">Descargar tabla</button>
+            </div>
         </div>
         <table id="tablaDatos">
             <thead>
@@ -288,5 +291,108 @@
     <div id="loadingOverlay" style="display: flex;">
         <div class="loader"></div>
     </div>
+
+    <dialog id="filter-dlg">
+        <h3>Filtros</h3>
+        <div class="filtros-generales-grid">
+
+            <!-- Columna izquierda -->
+            <div class="filtros-col-izq">
+                <label>Tiempo acumulado:</label>
+                <div>
+                    <select class="select-sign-btn" id="time-acc-signo">
+                        <option value="menor">&lt;</option>
+                        <option value="menor-igual">&le;</option>
+                        <option value="igual">=</option>
+                        <option value="no-igual">&ne;</option>
+                        <option value="mayor">&gt;</option>
+                        <option value="mayor-igual">&ge;</option>
+                    </select>
+                    <input type="number" id="filter-time-acc" placeholder="Tiempo acumulado">
+                </div>
+
+                <br>
+
+                <label>Tiempo medio:</label>
+                <div>
+                    <select class="select-sign-btn" id="time-mean-signo">
+                        <option value="menor">&lt;</option>
+                        <option value="menor-igual">&le;</option>
+                        <option value="igual">=</option>
+                        <option value="no-igual">&ne;</option>
+                        <option value="mayor">&gt;</option>
+                        <option value="mayor-igual">&ge;</option>
+                    </select>
+                    <input type="number" id="filter-time-mean" placeholder="Tiempo medio">
+                </div>
+            </div>
+
+            <!-- Columna derecha -->
+            <div class="filtros-col-der">
+                <label>Tipo:</label>
+                <select class="select-sign-btn" id="type-filter">
+                    <option value="all" selected>Todos</option>
+                    <option value="even/odd">par/impar</option>
+                    <option value="zigzag">zigzag</option>
+                </select>
+
+                <br><br>
+
+                <label>Es parada:</label>
+                <select class="select-sign-btn" id="stop-filter">
+                    <option value="all" selected>Todos</option>
+                    <option value="true">Sí</option>
+                    <option value="false">No</option>
+                </select>
+            </div>
+
+        </div>
+
+        <div id="filtros-todas-pdas" style="display: none;">
+            <hr>
+            <label for="filtro-pda">PDA:</label>
+            <select class="select-sign-btn" name="pda-signo" id="pda-signo">
+                <option value="igual">=</option>
+                <option value="no-igual">&ne;</option>
+            </select>
+            <button type="button" class="select-btn" id="pdaBtnFilter" style="width: 70%;" disabled>Selecciona una PDA</button>
+            <div class="options" id="pdaOptionsFilter">
+                <!-- Las opciones se llenan dinámicamente con JavaScript -->
+            </div>
+            <input type="hidden" name="pda" id="pdaInputFilter">
+        </div>
+
+        <div id="filtros-clus-diametro" style="display: none;">
+            <hr>
+            <br>
+            <label for="filtro-diametro">Diámetro del cluster:</label>
+            <input type="number" name="filtroDiametroClus" id="filtroDiametroClus" placeholder="Diámetro (1000 m)">
+            <br>
+            <label for="filtro-pts-clus">Puntos máx del cluster:</label>
+            <input type="number" name="filtroNumPtsClus" id="filtroNumPtsClus" placeholder="Nº puntos (10 pts)">
+            <br>
+            <label for="filtro-max-time-mean">Tiempo máx acumulado del cluster:</label>
+            <input type="number" name="filtroMaxTimeAcc" id="filtroMaxTimeAcc" placeholder="Segundos máximos">
+        </div>
+
+
+        <br><br>
+        
+        <!-- Divisón botones de filtros -->
+        <div class="filter-actions" style="justify-content:space-between;">
+            <button class="clear-btn" id="btn-close-filtrar">
+                Cerrar
+            </button>
+            <!-- Botón para aplicar filtros -->
+            <button class="accept-btn" id="btn-filtrar">
+                Filtrar
+            </button>
+            
+            <!-- Botón para borrar filtros -->
+            <button class="clear-btn" id="btn-limpiar-filtros">
+                Limpiar
+            </button>
+        </div>
+    </dialog>
 
 {% endblock %}
