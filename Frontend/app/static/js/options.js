@@ -526,6 +526,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("agrupamientoInput").value = "Selecciona metodo de agrupamiento";
             document.getElementById("agrupamientoBtn").textContent = "Selecciona metodo de agrupamiento";
             document.getElementById("filtros-clus-diametro").style.display = "none";
+            btnAgruparGeneral.disabled = true;
 
             // Comprobar si existe un GeoJSON para el codired
             const res = await fetch('/exists_geojson', {
@@ -965,6 +966,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             console.log("Agrupando portales...");
 
+            showLoading();
+
             fetch('/agrupar_por_tipo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -989,6 +992,8 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(err => {
                 console.error("Error:", err);
                 alert("Error al agrupar portales: " + err.message);
+            }).finally(() => {
+                hideLoading();
             });
 
             if (agrupamiento === "diametro") {
