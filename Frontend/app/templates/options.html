@@ -56,7 +56,7 @@
                     
                     <input type="hidden" name="pda" id="pdaInput">
                     
-                    <h2>4. Seleccionar fecha</h2>
+                    <h2>4. Seleccionar rango de fechas</h2>
                     
                     <div class="fechas-grid">
                         <!-- Columna izquierda -->
@@ -84,25 +84,52 @@
                     </button>
                     <br>
 
+                </form>
+            </div>
+        </div>
+        
+        <!-- Tabla de resultados y tabla de filtros -->
+        <div class="double-column">
+            
+            <div class="contenedor">
+                <div class="tabla-resumen">
                     <h2>6. Generar clústers</h2>
                     <!-- Seleccion metodo de agrupamiento -->
                     <div class="custom-select">
                         <button type="button" class="select-btn" id="agrupamientoBtn" disabled>Selecciona metodo de agrupamiento</button>
                         <div class="options" id="agrupamientoOptions">
-                             <div data-value="tiempo">Por tiempo</div>
-                            <div data-value="diametro">Por diámetro</div>
+                             <div data-value="tiempo">Filtrar puntos primarios</div>
+                            <div data-value="diametro">Agrupar puntos primarios</div>
                         </div>
                     </div>
                     <input type="hidden" name="agrupamiento" id="agrupamientoInput">
+
+                    <div id="filtros-clus-diametro" style="display: none;">
+                        <hr>
+                        <br>
+                        <label for="filtro-diametro">Diámetro del cluster:</label>
+                        <input type="number" name="filtroDiametroClus" id="filtroDiametroClus" style="width:40%;" placeholder="Diámetro (1000 m)">
+                        <br>
+                        <label for="filtro-pts-clus">Puntos máx del cluster:</label>
+                        <input type="number" name="filtroNumPtsClus" id="filtroNumPtsClus" style="width:40%;" placeholder="Nº puntos (10 pts)">
+                        <br>
+                        <label for="filtro-max-time-mean">Seg. máx acum. del cluster:</label>
+                        <input type="number" name="filtroMaxTimeAcc" id="filtroMaxTimeAcc" style="width:40%;" placeholder="Seg. máx">
+                        <br>
+                    </div>
+                    <div id="filtros-clus" style="display: none;">
+                        <hr>
+                        <br>
+                        <label for="filtro-max-time">Seg. máx acum. del punto:</label>
+                        <input type="number" name="filtroMaxTime" id="filtroMaxTime" style="width: 40%;" placeholder="Seg. máx (100 s)">
+                        <br>
+                    </div>
+                    <br>
                     <button type="button" class="accept-btn" id="btn-agrupar-general" disabled>
                         Agrupar
                     </button>
-                </form>
+                </div>
             </div>
-        </div>
-
-        <!-- Tabla de resultados y tabla de filtros -->
-        <div class="double-column">
 
             <!-- Tabla de resumen -->
             <div class="contenedor">
@@ -259,7 +286,7 @@
         <table id="tablaDatos">
             <thead>
                 <tr>
-                    <th>Num Inv</th>
+                    <th>PDA</th>
                     <!-- <th>Fecha y Hora</th> -->
                     <!-- Calle, Nº  -->
                     <th>Portal</th>
@@ -355,24 +382,11 @@
                 <option value="igual">=</option>
                 <option value="no-igual">&ne;</option>
             </select>
-            <button type="button" class="select-btn" id="pdaBtnFilter" style="width: 70%;" disabled>Selecciona una PDA</button>
+            <button type="button" class="select-btn" id="pdaBtnFilter" style="width: 50%;" disabled>Selecciona una PDA</button>
             <div class="options" id="pdaOptionsFilter">
                 <!-- Las opciones se llenan dinámicamente con JavaScript -->
             </div>
             <input type="hidden" name="pda" id="pdaInputFilter">
-        </div>
-
-        <div id="filtros-clus-diametro" style="display: none;">
-            <hr>
-            <br>
-            <label for="filtro-diametro">Diámetro del cluster:</label>
-            <input type="number" name="filtroDiametroClus" id="filtroDiametroClus" placeholder="Diámetro (1000 m)">
-            <br>
-            <label for="filtro-pts-clus">Puntos máx del cluster:</label>
-            <input type="number" name="filtroNumPtsClus" id="filtroNumPtsClus" placeholder="Nº puntos (10 pts)">
-            <br>
-            <label for="filtro-max-time-mean">Tiempo máx acumulado del cluster:</label>
-            <input type="number" name="filtroMaxTimeAcc" id="filtroMaxTimeAcc" placeholder="Segundos máximos">
         </div>
 
 

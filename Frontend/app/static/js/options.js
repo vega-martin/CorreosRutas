@@ -947,9 +947,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 agrupamientoBtn.textContent = option.textContent;
                 agrupamientoOptions.classList.remove('show');
                 btnAgruparGeneral.disabled = false;
+                
+                if(value=== 'tiempo') {
+                    console.log("Agrupamiento es tiempo");
+                    document.getElementById("filtros-clus-diametro").style.display = "none";
+                    document.getElementById("filtros-clus").style.display = "block";
+                } else if (value === 'diametro') {
+                    console.log("Agrupamiento es diametro");
+                    document.getElementById("filtros-clus-diametro").style.display = "block";
+                    document.getElementById("filtros-clus").style.display = "none";
+                } else {
+                    console.log("Agrupamiento es otro");
+                    document.getElementById("filtros-clus-diametro").style.display = "none";
+                    document.getElementById("filtros-clus").style.display = "none";
+                }
             });
         });
     }
+
 
     if (btnAgruparGeneral) {
         btnAgruparGeneral.addEventListener('click', (e) => {
